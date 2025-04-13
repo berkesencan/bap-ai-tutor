@@ -27,6 +27,8 @@ class Course {
         userId,
         createdAt: new Date(),
         updatedAt: new Date(),
+        externalId: { type: String },
+        source: { type: String }
       };
       
       await courseRef.set(courseDoc);

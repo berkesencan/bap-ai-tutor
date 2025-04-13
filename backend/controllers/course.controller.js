@@ -1,4 +1,5 @@
 const Course = require('../models/course.model');
+const Assignment = require('../models/assignment.model');
 
 /**
  * Course controller for handling course-related operations
@@ -165,6 +166,60 @@ class CourseController {
       });
     } catch (error) {
       next(error);
+    }
+  }
+
+  // Import courses and assignments from Gradescope
+  static async importFromGradescope(req, res) {
+    try {
+      const { courses, assignments } = req.body;
+      const userId = req.user.uid;
+
+      // Process courses
+      const importedCourses = [];
+      for (const course of courses) {
+        const newCourse = {
+          name: course.name,
+          code: course.code,
+          description: `Imported from Gradescope: ${course.name}`,
+          userId,
+          externalId: course.id,
+          source: 'gradescope'
+        };
+
+        // Add course to database
+        const createdCourse = await Course.create(newCourse);
+        importedCourses.push(createdCourse);
+
+        // Process assignments for this course
+        if (assignments[course.id] && assignments[course.id].length > 0) {
+          for (const assignment of assignments[course.id]) {
+            const newAssignment = {
+              title: assignment.name,
+              description: `Imported from Gradescope`,
+              dueDate: new Date().setDate(new Date().getDate() + 7), // Default to 1 week from now
+              courseId: createdCourse.id,
+              userId,
+              externalId: assignment.id,
+              source: 'gradescope'
+            };
+
+            // Add assignment to database
+            await Assignment.create(newAssignment);
+          }
+        }
+      }
+
+      res.status(200).json({
+        message: 'Successfully imported courses and assignments from Gradescope',
+        courses: importedCourses
+      });
+    } catch (error) {
+      console.error('Error importing from Gradescope:', error);
+      res.status(500).json({
+        error: 'Failed to import from Gradescope',
+        details: error.message
+      });
     }
   }
 }

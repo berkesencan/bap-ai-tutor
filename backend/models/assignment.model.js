@@ -21,7 +21,9 @@ class Assignment {
         status = 'pending',
         platform,
         url,
-        notes
+        notes,
+        externalId,
+        source
       } = assignmentData;
       
       const assignmentRef = db.collection('assignments').doc();
@@ -38,6 +40,8 @@ class Assignment {
         notes,
         courseId,
         userId,
+        externalId,
+        source,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
