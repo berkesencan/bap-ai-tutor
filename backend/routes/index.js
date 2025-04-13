@@ -7,17 +7,13 @@ const studyRoutes = require('./study.routes');
 const aiRoutes = require('./ai.routes');
 const analyticsRoutes = require('./analytics.routes');
 
-const router = express.Router();
-
-// Mount routes
-router.use('/courses', courseRoutes);
-router.use('/assignments', assignmentRoutes);
-router.use('/schedule', scheduleRoutes);
-router.use('/study', studyRoutes);
-router.use('/ai', aiRoutes);
-router.use('/analytics', analyticsRoutes);
-
+// Export all routes
 module.exports = {
   auth: authRoutes,
-  ...router
+  courses: courseRoutes,
+  assignments: assignmentRoutes,
+  schedules: scheduleRoutes,
+  study: studyRoutes,
+  ai: aiRoutes,
+  analytics: analyticsRoutes
 }; 

@@ -20,6 +20,27 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
+/**
+ * Helper function to handle errors in controllers
+ * @param {Error} error - Error object
+ * @param {Response} res - Express response object
+ */
+const handleError = (error, res) => {
+  console.error('Error:', error);
+  
+  const statusCode = error.statusCode || 500;
+  const message = error.message || 'Internal Server Error';
+  
+  res.status(statusCode).json({
+    success: false,
+    error: {
+      message,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+    },
+  });
+};
+
 module.exports = {
   errorHandler,
+  handleError,
 }; 

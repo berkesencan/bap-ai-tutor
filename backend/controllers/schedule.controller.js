@@ -52,6 +52,86 @@ class ScheduleController {
   }
   
   /**
+   * Get schedule for the current user
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getSchedule(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      
+      const schedules = await Schedule.getByUserId(userId);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          schedules,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  /**
+   * Get weekly schedule for the current user
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getWeeklySchedule(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      
+      const schedules = await Schedule.getByUserId(userId);
+      
+      // Group schedules by day of week
+      const weeklySchedule = Array(7).fill().map(() => []);
+      
+      schedules.forEach(schedule => {
+        weeklySchedule[schedule.dayOfWeek].push(schedule);
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          weeklySchedule,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  /**
+   * Get daily schedule for the current user
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getDailySchedule(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      const schedules = await Schedule.getByUserId(userId);
+      
+      // Filter schedules for today
+      const dailySchedule = schedules.filter(schedule => schedule.dayOfWeek === today);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          dailySchedule,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  /**
    * Get a schedule by ID
    * @param {Request} req - Express request object
    * @param {Response} res - Express response object

@@ -1,8 +1,8 @@
 const express = require('express');
 const { body } = require('express-validator');
 const StudyController = require('../controllers/study.controller');
-const { validateRequest } = require('../middleware/validate');
-const { authenticate } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const auth = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ const router = express.Router();
  */
 router.post(
   '/',
-  authenticate,
+  auth,
   [
     body('courseId').isString().notEmpty(),
     body('startTime').isISO8601(),
@@ -23,7 +23,7 @@ router.post(
     body('topics').optional().isArray(),
     body('topics.*').isString()
   ],
-  validateRequest,
+  validate,
   StudyController.createSession
 );
 
@@ -32,14 +32,14 @@ router.post(
  * @desc    Get all study sessions for current user
  * @access  Private
  */
-router.get('/', authenticate, StudyController.getSessions);
+router.get('/', auth, StudyController.getSessions);
 
 /**
  * @route   GET /api/study/:id
  * @desc    Get a study session by ID
  * @access  Private
  */
-router.get('/:id', authenticate, StudyController.getSession);
+router.get('/:id', auth, StudyController.getSession);
 
 /**
  * @route   PUT /api/study/:id
@@ -48,7 +48,7 @@ router.get('/:id', authenticate, StudyController.getSession);
  */
 router.put(
   '/:id',
-  authenticate,
+  auth,
   [
     body('startTime').optional().isISO8601(),
     body('duration').optional().isInt({ min: 1 }),
@@ -57,7 +57,7 @@ router.put(
     body('topics').optional().isArray(),
     body('topics.*').isString()
   ],
-  validateRequest,
+  validate,
   StudyController.updateSession
 );
 
@@ -66,20 +66,20 @@ router.put(
  * @desc    Delete a study session
  * @access  Private
  */
-router.delete('/:id', authenticate, StudyController.deleteSession);
+router.delete('/:id', auth, StudyController.deleteSession);
 
 /**
  * @route   GET /api/study/stats
  * @desc    Get study statistics for current user
  * @access  Private
  */
-router.get('/stats', authenticate, StudyController.getStats);
+router.get('/stats', auth, StudyController.getStats);
 
 /**
  * @route   GET /api/study/course/:courseId
  * @desc    Get study sessions for a specific course
  * @access  Private
  */
-router.get('/course/:courseId', authenticate, StudyController.getCourseSessions);
+router.get('/course/:courseId', auth, StudyController.getCourseSessions);
 
 module.exports = router; 

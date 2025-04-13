@@ -5,12 +5,12 @@ const AssignmentController = require('../controllers/assignment.controller');
 const router = express.Router();
 
 /**
- * @route POST /api/courses/:courseId/assignments
+ * @route POST /api/assignments/course/:courseId
  * @desc Create a new assignment for a course
  * @access Private
  */
 router.post(
-  '/courses/:courseId/assignments',
+  '/course/:courseId',
   [
     body('title').notEmpty().withMessage('Assignment title is required'),
     body('description').notEmpty().withMessage('Assignment description is required'),
@@ -25,11 +25,11 @@ router.post(
 );
 
 /**
- * @route GET /api/courses/:courseId/assignments
+ * @route GET /api/assignments/course/:courseId
  * @desc Get all assignments for a course
  * @access Private
  */
-router.get('/courses/:courseId/assignments', AssignmentController.getByCourse);
+router.get('/course/:courseId', AssignmentController.getByCourse);
 
 /**
  * @route GET /api/assignments

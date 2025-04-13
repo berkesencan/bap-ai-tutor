@@ -5,11 +5,17 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 // Import routes
-const routes = require('./routes');
+const authRoutes = require('./routes/auth.routes');
+const assignmentRoutes = require('./routes/assignment.routes');
+const scheduleRoutes = require('./routes/schedule.routes');
+const courseRoutes = require('./routes/course.routes');
+const studyRoutes = require('./routes/study.routes');
+const aiRoutes = require('./routes/ai.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
 
 // Import middleware
 const { errorHandler } = require('./middleware/error.middleware');
-const { authMiddleware } = require('./middleware/auth.middleware');
+const { verifyToken: authMiddleware } = require('./middleware/auth.middleware');
 
 // Initialize Express app
 const app = express();
@@ -22,9 +28,16 @@ app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
-// Apply authentication middleware to all routes except auth routes
-app.use('/api/auth', routes.auth);
-app.use('/api', authMiddleware, routes);
+// Apply routes - unprotected routes
+app.use('/api/auth', authRoutes);
+
+// Protected routes with auth middleware
+app.use('/api/assignments', authMiddleware, assignmentRoutes);
+app.use('/api/schedules', authMiddleware, scheduleRoutes);
+app.use('/api/courses', authMiddleware, courseRoutes);
+app.use('/api/study', authMiddleware, studyRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/analytics', authMiddleware, analyticsRoutes);
 
 // Root route
 app.get('/', (req, res) => {
