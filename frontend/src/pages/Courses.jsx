@@ -89,9 +89,14 @@ function Courses() {
                     <h2 className="text-xl font-semibold text-gray-800">{course.code}</h2>
                     <h3 className="text-lg text-gray-700 mb-2">{course.name}</h3>
                   </div>
-                  {course.source === 'gradescope' && (
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Gradescope</span>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {course.source === 'gradescope' && (
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Gradescope</span>
+                    )}
+                    {course.term && (
+                      <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">{course.term}</span>
+                    )}
+                  </div>
                 </div>
                 
                 <p className="text-gray-600 text-sm mb-4">
@@ -103,12 +108,23 @@ function Courses() {
                 </p>
                 
                 <div className="mt-4 flex justify-between">
-                  <Link 
-                    to={`/courses/${course.id}`} 
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    View Details
-                  </Link>
+                  {course.source === 'gradescope' && course.externalId ? (
+                    <a 
+                      href={`https://www.gradescope.com/courses/${course.externalId}`}
+                      target="_blank"
+                      rel="noopener noreferrer" 
+                      className="text-blue-500 hover:text-blue-700"
+                    >
+                      View on Gradescope
+                    </a>
+                  ) : (
+                    <Link 
+                      to={`/courses/${course.id}`} 
+                      className="text-blue-500 hover:text-blue-700"
+                    >
+                      View Details
+                    </Link>
+                  )}
                   <Link 
                     to={`/assignments?courseId=${course.id}`} 
                     className="text-blue-500 hover:text-blue-700"

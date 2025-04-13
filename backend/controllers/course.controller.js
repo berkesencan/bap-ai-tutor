@@ -187,7 +187,8 @@ class CourseController {
           platform: 'Gradescope',
           userId,
           externalId: course.id,
-          source: 'gradescope'
+          source: 'gradescope',
+          term: course.term || null
         };
 
         console.log('Creating course with data:', JSON.stringify(newCourse));

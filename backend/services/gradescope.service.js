@@ -108,76 +108,41 @@ class GradescopeService {
     }
   }
 
-  async getCourses() {
-    if (!this.isLoggedIn) {
-      throw new Error('Not logged in');
-    }
+/** 
+   * Retrieves course details (id, name, code, term, assignmentCount) as per the screenshot.
+   * Taken from the first code, which matches the desired output.
+   */
+async getCourses() {
+  if (!this.isLoggedIn) {
+    throw new Error('Not logged in');
+  }
+  
+  try {
+    console.log('Fetching courses from Gradescope account page...');
+    const response = await this.session.get('https://www.gradescope.com/account');
+    const $ = cheerio.load(response.data);
     
-    try {
-      console.log('Fetching courses from Gradescope account page...');
-      const response = await this.session.get('https://www.gradescope.com/account');
-      const $ = cheerio.load(response.data);
+    console.log('Parsing course data from HTML...');
+    const courses = {};
+    let currentTerm = '';
+    
+    $('.courseList--term').each((i, termElem) => {
+      currentTerm = $(termElem).text().trim();
+      console.log(`Processing term: ${currentTerm}`);
       
-      // For debugging: Save a sample of the HTML to see what we're working with
-      console.log('HTML sample from courses page:');
-      console.log($.html().substring(0, 1000));
+      const courseList = $(termElem).next('.courseList--coursesForTerm');
+      if (courseList.length === 0) {
+        console.log(`No course list found for term ${currentTerm}`);
+        return;
+      }
       
-      console.log('Parsing course data from HTML...');
-      const courses = {};
-      
-      console.log('Course container exists:', $('.courseList--coursesForTerm').length > 0);
-      
-      // First, locate each course list in each term section
-      $('.courseList--coursesForTerm').each((termIndex, termElem) => {
-        const termName = $(termElem).prev('.courseList--term').text().trim();
-        console.log(`Processing term: ${termName}`);
-        
-        // For each term, find the course boxes (links)
-        $(termElem).find('a.courseBox').each((i, elem) => {
-          // Get href attribute (course URL)
-          const courseUrl = $(elem).attr('href');
-          
+      courseList.find('a.courseBox').each((j, courseBox) => {
+        try {
+          const courseUrl = $(courseBox).attr('href');
           if (!courseUrl) {
-            console.log('Warning: Found course element without href:', $(elem).html().substring(0, 100));
-            return; // Skip this element
+            console.log('Warning: Found course element without href');
+            return;
           }
-          
-          // Extract course ID from URL
-          const courseId = courseUrl.split('/').pop();
-          
-          // Extract course name and code
-          const courseName = $(elem).find('.courseBox--name').text().trim();
-          const courseCode = $(elem).find('.courseBox--courseCode').text().trim();
-          
-          // Extract professor name
-          const professorElem = $(elem).find('.courseBox--instructor');
-          const professor = professorElem.length ? professorElem.text().trim() : 'Unknown';
-          
-          console.log(`Found course: ${courseCode || 'NO CODE FOUND'} - ${courseName} (ID: ${courseId}, Professor: ${professor})`);
-          console.log(`Course HTML: ${$(elem).html().substring(0, 200)}`);
-          
-          courses[courseId] = {
-            id: courseId,
-            name: courseName,
-            code: courseCode || 'No Code', // Provide default if code is missing
-            professor: professor,
-            term: termName
-          };
-        });
-      });
-      
-      // If no courses found with the first approach, try alternative selectors
-      if (Object.keys(courses).length === 0) {
-        console.log('No courses found with primary selector, trying alternatives...');
-        
-        // Try alternative selector: directly find course boxes
-        courseList.find('a.courseBox').each((j, courseBox) => {
-          const courseUrl = $(elem).attr('href');
-          
-          if (!courseUrl) {
-            return; // Skip this element
-          }
-          
           const courseId = courseUrl.split('/').pop();
           const courseCode = $(courseBox).find('.courseBox--shortname').text().trim();
           const courseName = $(courseBox).find('.courseBox--name').text().trim();
@@ -189,64 +154,31 @@ class GradescopeService {
               assignmentCount = parseInt(match[1], 10);
             }
           }
-
-          console.log(`Found course (alt method): ${courseCode} - ${courseName} (ID: ${courseId})`);
-          console.log(`Course HTML: ${$(elem).html().substring(0, 200)}`);
-          
-          courses[courseId] = {
-            id: courseId,
-            name: courseName,
-            code: courseCode || 'No Code',
-            professor: professor
-          };
-        });
-      }
-      
-      // If still no courses, check for newer Gradescope interface
-      if (Object.keys(courses).length === 0) {
-        console.log('Trying modern Gradescope interface selectors...');
-        
-        // Try newer UI selectors
-        $('.js-courseList .js-courseCard').each((i, elem) => {
-          const courseLink = $(elem).find('a').first();
-          const courseUrl = courseLink.attr('href');
-          
-          if (!courseUrl) {
-            return;
-          }
-          
-          const courseId = courseUrl.split('/').pop();
-          const courseName = $(elem).find('.courseCard--name').text().trim();
-          const courseCode = $(elem).find('.courseCard--shortname').text().trim();
-          const professorElem = $(elem).find('.courseCard--instructor, .instructor-name');
-          const professor = professorElem.length ? professorElem.text().trim() : 'Unknown';
-          
-          console.log(`Found course (modern UI): ${courseCode} - ${courseName} (ID: ${courseId})`);
-          console.log(`Course HTML: ${$(elem).html().substring(0, 200)}`);
-          
+          console.log(`Found course: ${courseCode} - ${courseName} (ID: ${courseId}, Assignments: ${assignmentCount})`);
           courses[courseId] = {
             id: courseId,
             name: courseName || 'Unnamed Course',
             code: courseCode || 'No Code',
-            professor: professor
+            term: currentTerm,
+            assignmentCount: assignmentCount || 0
           };
-        });
-      }
-      
-      console.log(`Found ${Object.keys(courses).length} courses in total`);
-      
-      // If we still have no courses, log the HTML for debugging
-      if (Object.keys(courses).length === 0) {
-        console.log('No courses found with any selector. HTML snippet:');
-        console.log($.html().substring(0, 1000));
-      }
-      
-      return courses;
-    } catch (error) {
-      console.error('Error in getCourses:', error);
-      throw new Error(`Failed to get courses: ${error.message}`);
+        } catch (err) {
+          console.log(`Error parsing course: ${err.message}`);
+        }
+      });
+    });
+    
+    console.log(`Found ${Object.keys(courses).length} courses in total`);
+    if (Object.keys(courses).length === 0) {
+      console.log('No courses found. HTML snippet:');
+      console.log($.html().substring(0, 1000));
     }
+    return courses;
+  } catch (error) {
+    console.error('Error in getCourses:', error);
+    throw new Error(`Failed to get courses: ${error.message}`);
   }
+}
 
   async getAssignments(courseId) {
     if (!this.isLoggedIn) {
@@ -287,38 +219,44 @@ class GradescopeService {
               return; // Skip this element
             }
             
-            const assignmentId = assignmentUrl.split('/').pop();
-            const assignmentName = linkElem.text().trim();
-            
-            // Get due date
-            const dueDateElem = $(row).find('td:nth-child(2)');
-            const dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
-            console.log(`Due date text: "${dueDate}"`);
-            
-            // Get grade if available
-            const gradeElem = $(row).find('td:nth-child(3)');
-            const gradeText = gradeElem.length ? gradeElem.text().trim() : null;
-            console.log(`Grade text: "${gradeText}"`);
-            
-            // Parse grade information
-            let grade = null;
-            let maxPoints = null;
-            if (gradeText && gradeText.includes('/')) {
-              const parts = gradeText.split('/');
-              grade = parseFloat(parts[0].trim());
-              maxPoints = parseFloat(parts[1].trim());
+            // Extract assignment ID correctly - get the segment after '/assignments/' 
+            const assignmentsMatch = assignmentUrl.match(/\/assignments\/([^/]+)/);
+            if (assignmentsMatch && assignmentsMatch[1]) {
+              const assignmentId = assignmentsMatch[1];
+              const assignmentName = linkElem.text().trim();
+              
+              // Get due date
+              const dueDateElem = $(row).find('td:nth-child(2)');
+              const dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
+              console.log(`Due date text: "${dueDate}"`);
+              
+              // Get grade if available
+              const gradeElem = $(row).find('td:nth-child(3)');
+              const gradeText = gradeElem.length ? gradeElem.text().trim() : null;
+              console.log(`Grade text: "${gradeText}"`);
+              
+              // Parse grade information
+              let grade = null;
+              let maxPoints = null;
+              if (gradeText && gradeText.includes('/')) {
+                const parts = gradeText.split('/');
+                grade = parseFloat(parts[0].trim());
+                maxPoints = parseFloat(parts[1].trim());
+              }
+              
+              console.log(`Found assignment: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+              console.log(`Row HTML: ${$(row).html().substring(0, 200)}`);
+              
+              assignments.push({
+                id: assignmentId,
+                name: assignmentName || 'Unnamed Assignment',
+                dueDate: dueDate,
+                grade: !isNaN(grade) ? grade : null,
+                maxPoints: !isNaN(maxPoints) ? maxPoints : null
+              });
+            } else {
+              console.log('Warning: Could not extract assignment ID from URL:', assignmentUrl);
             }
-            
-            console.log(`Found assignment: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
-            console.log(`Row HTML: ${$(row).html().substring(0, 200)}`);
-            
-            assignments.push({
-              id: assignmentId,
-              name: assignmentName || 'Unnamed Assignment',
-              dueDate: dueDate,
-              grade: !isNaN(grade) ? grade : null,
-              maxPoints: !isNaN(maxPoints) ? maxPoints : null
-            });
           } catch (err) {
             console.log('Error parsing assignment row:', err.message);
           }
@@ -345,7 +283,53 @@ class GradescopeService {
               const allLinks = $(elem).find('a[href*="/assignments/"]');
               if (allLinks.length > 0) {
                 const assignmentUrl = allLinks.first().attr('href');
-                const assignmentId = assignmentUrl.split('/').pop();
+                
+                // Extract assignment ID correctly
+                const assignmentsMatch = assignmentUrl.match(/\/assignments\/([^/]+)/);
+                if (assignmentsMatch && assignmentsMatch[1]) {
+                  const assignmentId = assignmentsMatch[1];
+                  const assignmentName = $(elem).find('.assignment-name, .dashboard-card__title, h3').text().trim();
+                  
+                  // Look for due date
+                  const dueDateElem = $(elem).find('.assignment-due-date, .due-date, .dashboard-card__due-date');
+                  const dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
+                  
+                  // Look for grade
+                  const gradeElem = $(elem).find('.assignment-grade, .grade, .dashboard-card__grade');
+                  const gradeText = gradeElem.length ? gradeElem.text().trim() : null;
+                  
+                  // Parse grade information
+                  let grade = null;
+                  let maxPoints = null;
+                  if (gradeText && gradeText.includes('/')) {
+                    const parts = gradeText.split('/');
+                    grade = parseFloat(parts[0].trim());
+                    maxPoints = parseFloat(parts[1].trim());
+                  }
+                  
+                  console.log(`Found dashboard assignment (nested link): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+                  console.log(`Card HTML: ${$(elem).html().substring(0, 200)}`);
+                  
+                  assignments.push({
+                    id: assignmentId,
+                    name: assignmentName || 'Dashboard Assignment',
+                    dueDate: dueDate,
+                    grade: !isNaN(grade) ? grade : null,
+                    maxPoints: !isNaN(maxPoints) ? maxPoints : null
+                  });
+                } else {
+                  console.log('Warning: Could not extract assignment ID from URL:', assignmentUrl);
+                }
+              }
+              return;
+            }
+            
+            // Process direct link
+            if (assignmentUrl.includes('/assignments/')) {
+              // Extract assignment ID correctly
+              const assignmentsMatch = assignmentUrl.match(/\/assignments\/([^/]+)/);
+              if (assignmentsMatch && assignmentsMatch[1]) {
+                const assignmentId = assignmentsMatch[1];
                 const assignmentName = $(elem).find('.assignment-name, .dashboard-card__title, h3').text().trim();
                 
                 // Look for due date
@@ -365,7 +349,7 @@ class GradescopeService {
                   maxPoints = parseFloat(parts[1].trim());
                 }
                 
-                console.log(`Found dashboard assignment (nested link): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+                console.log(`Found dashboard assignment: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
                 console.log(`Card HTML: ${$(elem).html().substring(0, 200)}`);
                 
                 assignments.push({
@@ -375,42 +359,9 @@ class GradescopeService {
                   grade: !isNaN(grade) ? grade : null,
                   maxPoints: !isNaN(maxPoints) ? maxPoints : null
                 });
+              } else {
+                console.log('Warning: Could not extract assignment ID from URL:', assignmentUrl);
               }
-              return;
-            }
-            
-            // Process direct link
-            if (assignmentUrl.includes('/assignments/')) {
-              const assignmentId = assignmentUrl.split('/').pop();
-              const assignmentName = $(elem).find('.assignment-name, .dashboard-card__title, h3').text().trim();
-              
-              // Look for due date
-              const dueDateElem = $(elem).find('.assignment-due-date, .due-date, .dashboard-card__due-date');
-              const dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
-              
-              // Look for grade
-              const gradeElem = $(elem).find('.assignment-grade, .grade, .dashboard-card__grade');
-              const gradeText = gradeElem.length ? gradeElem.text().trim() : null;
-              
-              // Parse grade information
-              let grade = null;
-              let maxPoints = null;
-              if (gradeText && gradeText.includes('/')) {
-                const parts = gradeText.split('/');
-                grade = parseFloat(parts[0].trim());
-                maxPoints = parseFloat(parts[1].trim());
-              }
-              
-              console.log(`Found dashboard assignment: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
-              console.log(`Card HTML: ${$(elem).html().substring(0, 200)}`);
-              
-              assignments.push({
-                id: assignmentId,
-                name: assignmentName || 'Dashboard Assignment',
-                dueDate: dueDate,
-                grade: !isNaN(grade) ? grade : null,
-                maxPoints: !isNaN(maxPoints) ? maxPoints : null
-              });
             }
           } catch (err) {
             console.log('Error parsing dashboard card:', err.message);
@@ -432,44 +383,54 @@ class GradescopeService {
             
             if (!assignmentUrl || !assignmentUrl.includes('/assignments/')) return;
             
-            const assignmentId = assignmentUrl.split('/').pop();
-            const assignmentName = linkElem.text().trim();
-            
-            // Look for due date in other cells
-            const cells = $(elem).find('td');
-            let dueDate = null;
-            let gradeText = null;
-            
-            // Inspect cells for due date and grade information
-            if (cells.length >= 2) {
-              const dateCell = cells.eq(1); // Second cell is often due date
-              dueDate = dateCell.text().trim();
+            // Process assignment URL
+            if (!assignmentUrl) {
+              console.log('Warning: Found alternative table row without assignment URL');
+              return;
             }
             
-            if (cells.length >= 3) {
-              const gradeCell = cells.eq(2); // Third cell is often grade
-              gradeText = gradeCell.text().trim();
+            // Extract assignment ID correctly
+            const assignmentsMatch = assignmentUrl.match(/\/assignments\/([^/]+)/);
+            if (assignmentsMatch && assignmentsMatch[1]) {
+              const assignmentId = assignmentsMatch[1];
+              const assignmentName = $(elem).find('a[href*="/assignments/"]').text().trim() || 'Untitled Assignment';
+              
+              // Look for due date
+              let dueDate = null;
+              const dateCell = $(elem).find('td').eq(1); // Assuming date is in the second column
+              if (dateCell.length) {
+                dueDate = dateCell.text().trim();
+              }
+              
+              // Look for grade
+              let gradeText = null;
+              const gradeCell = $(elem).find('td').eq(2); // Assuming grade is in the third column
+              if (gradeCell.length) {
+                gradeText = gradeCell.text().trim();
+              }
+              
+              // Parse grade information
+              let grade = null;
+              let maxPoints = null;
+              if (gradeText && gradeText.includes('/')) {
+                const parts = gradeText.split('/');
+                grade = parseFloat(parts[0].trim());
+                maxPoints = parseFloat(parts[1].trim());
+              }
+              
+              console.log(`Found assignment (alt table): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+              console.log(`Row HTML: ${$(elem).html().substring(0, 200)}`);
+              
+              assignments.push({
+                id: assignmentId,
+                name: assignmentName || 'Alternative Table Assignment',
+                dueDate: dueDate,
+                grade: !isNaN(grade) ? grade : null,
+                maxPoints: !isNaN(maxPoints) ? maxPoints : null
+              });
+            } else {
+              console.log('Warning: Could not extract assignment ID from URL:', assignmentUrl);
             }
-            
-            // Parse grade information
-            let grade = null;
-            let maxPoints = null;
-            if (gradeText && gradeText.includes('/')) {
-              const parts = gradeText.split('/');
-              grade = parseFloat(parts[0].trim());
-              maxPoints = parseFloat(parts[1].trim());
-            }
-            
-            console.log(`Found assignment (alt table): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
-            console.log(`Row HTML: ${$(elem).html().substring(0, 200)}`);
-            
-            assignments.push({
-              id: assignmentId,
-              name: assignmentName || 'Unnamed Assignment',
-              dueDate: dueDate,
-              grade: !isNaN(grade) ? grade : null,
-              maxPoints: !isNaN(maxPoints) ? maxPoints : null
-            });
           } catch (err) {
             console.log('Error parsing alt assignment row:', err.message);
           }
@@ -485,22 +446,20 @@ class GradescopeService {
           try {
             const assignmentUrl = $(elem).attr('href');
             
-            // Extract the assignment ID from the URL
-            // The URL pattern is usually /courses/{courseId}/assignments/{assignmentId}
-            const urlParts = assignmentUrl.split('/');
-            const assignmentId = urlParts[urlParts.length - 1];
+            if (!assignmentUrl || !assignmentUrl.includes('/assignments/')) return;
             
-            // Check if this is an assignment for the current course
-            if (assignmentUrl.includes(`/courses/${courseId}/assignments/`)) {
-              const assignmentName = $(elem).text().trim();
+            // Extract assignment ID correctly
+            const assignmentsMatch = assignmentUrl.match(/\/assignments\/([^/]+)/);
+            if (assignmentsMatch && assignmentsMatch[1]) {
+              const assignmentId = assignmentsMatch[1];
               
-              // Skip if we've already added this assignment
-              if (assignments.find(a => a.id === assignmentId)) return;
+              // Find the closest containing element that might have assignment info
+              const container = $(elem).closest('tr, .card, .tile, div');
+              const assignmentName = $(elem).text().trim() || container.find('h3, .title, strong').text().trim() || 'Linked Assignment';
               
-              // Try to find parent containers with more information
-              const container = $(elem).closest('tr, .dashboard-card, .assignment-tile');
-              let dueDate = null;
+              // Look for grade and due date in nearby elements
               let gradeText = null;
+              let dueDate = null;
               
               if (container.length) {
                 // Look for due date
@@ -531,6 +490,8 @@ class GradescopeService {
                 grade: !isNaN(grade) ? grade : null,
                 maxPoints: !isNaN(maxPoints) ? maxPoints : null
               });
+            } else {
+              console.log('Warning: Could not extract assignment ID from URL:', assignmentUrl);
             }
           } catch (err) {
             console.log('Error parsing assignment link:', err.message);

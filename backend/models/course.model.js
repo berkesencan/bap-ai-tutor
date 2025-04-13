@@ -20,7 +20,8 @@ class Course {
         schedule, 
         platform,
         externalId,
-        source
+        source,
+        term
       } = courseData;
       
       const courseRef = db.collection('courses').doc();
@@ -37,7 +38,8 @@ class Course {
         createdAt: new Date(),
         updatedAt: new Date(),
         externalId: externalId || null,
-        source: source || 'manual'
+        source: source || 'manual',
+        term: term || null
       };
       
       console.log('Setting course document:', JSON.stringify(courseDoc));

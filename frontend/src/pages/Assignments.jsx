@@ -106,6 +106,12 @@ function Assignments() {
     return course ? `${course.code}: ${course.name}` : 'Unknown Course';
   };
 
+  // Get course external ID from course ID
+  const getCourseExternalId = (courseId) => {
+    const course = courses.find(c => c.id === courseId);
+    return course && course.source === 'gradescope' ? course.externalId : null;
+  };
+
   if (loading && courses.length === 0) {
     return (
       <div className="assignments p-6">
@@ -228,22 +234,23 @@ function Assignments() {
               </div>
               
               <div className="mt-4 flex justify-end space-x-2">
-                {assignment.source === 'gradescope' && (
+                {assignment.source === 'gradescope' && assignment.externalId && getCourseExternalId(assignment.courseId) ? (
                   <a 
-                    href={`https://www.gradescope.com/courses/${assignment.externalId}`}
+                    href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:text-blue-700 text-sm"
                   >
                     View on Gradescope
                   </a>
+                ) : (
+                  <Link 
+                    to={`/assignments/${assignment.id}`}
+                    className="text-blue-500 hover:text-blue-700 text-sm"
+                  >
+                    Details
+                  </Link>
                 )}
-                <Link 
-                  to={`/assignments/${assignment.id}`}
-                  className="text-blue-500 hover:text-blue-700 text-sm"
-                >
-                  Details
-                </Link>
               </div>
             </div>
           ))}
