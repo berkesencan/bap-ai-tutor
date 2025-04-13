@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { FaRobot } from 'react-icons/fa';
+import './Navbar.css';
 
 export const Navbar = () => {
   const { currentUser, logout } = useAuth();
@@ -8,87 +10,75 @@ export const Navbar = () => {
   const location = useLocation();
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Sound effect states
+  const [soundPlayed, setSoundPlayed] = useState(false);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const audioRef = useRef(null);
+
+  // Initialize audio element
+  useEffect(() => {
+    // Create audio element
+    const audio = new Audio();
+    
+    // Try to load the r2d2 sound
+    const soundPath = '/sounds/r2d2.wav';
+    audio.src = soundPath;
+    
+    // Handle successful load
+    const handleCanPlayThrough = () => {
+      console.log(`Navbar audio loaded successfully from ${soundPath}`);
+      setAudioLoaded(true);
+      audio.removeEventListener('error', handleError);
+    };
+    
+    // Handle load error
+    const handleError = (e) => {
+      console.warn(`Failed to load navbar audio from ${soundPath}`, e);
+      setAudioLoaded(false);
+    };
+    
+    // Set up event listeners
+    audio.addEventListener('canplaythrough', handleCanPlayThrough);
+    audio.addEventListener('error', handleError);
+    
+    // Start loading
+    audio.load();
+    
+    // Set the ref
+    audioRef.current = audio;
+    
+    // Cleanup
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  // Function to play robot sound
+  const playRobotSound = () => {
+    console.log("Navbar robot clicked! Attempting to play sound...");
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play()
+        .then(() => {
+          console.log("Navbar sound played successfully!");
+          setSoundPlayed(true);
+          setTimeout(() => setSoundPlayed(false), 500);
+        })
+        .catch(error => {
+          console.error("Error playing navbar sound:", error);
+          // Visual feedback if sound fails
+          setSoundPlayed(true);
+          setTimeout(() => setSoundPlayed(false), 500);
+        });
+    }
+  };
 
   useEffect(() => {
-    // CSS classes for responsive design
-    const styles = `
-      .navbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        position: relative;
-        z-index: 1000;
-      }
-      .navbar-links {
-        display: none;
-        flex-direction: column;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background-color: #fff;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
-        width: 100%;
-      }
-      .navbar-links.open {
-        display: flex !important;
-      }
-      .navbar-links a, .navbar-links button {
-        padding: 0.5rem 1rem;
-        text-decoration: none;
-        color: #333;
-        display: block;
-      }
-      .navbar-links a:hover, .navbar-links button:hover {
-        color: #007bff;
-        background-color: #f5f5f5;
-      }
-      .hamburger {
-        display: none;
-        cursor: pointer;
-        z-index: 1001;
-      }
-      .hamburger div {
-        width: 25px;
-        height: 3px;
-        background-color: #333;
-        margin: 4px 0;
-      }
-      @media (min-width: 769px) {
-        .navbar-links {
-          display: flex;
-          flex-direction: row;
-          position: static;
-          background-color: transparent;
-          box-shadow: none;
-        }
-      }
-      @media (max-width: 768px) {
-        .navbar-links {
-          display: none;
-        }
-        .navbar-links.open {
-          display: flex !important;
-        }
-        .hamburger {
-          display: block;
-        }
-      }
-    `;
-
-    // Add styles to the document
-    const styleSheet = document.createElement("style");
-    styleSheet.type = "text/css";
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
-
-    // Clean up function
-    return () => {
-      document.head.removeChild(styleSheet);
-    };
-  }, []); // Empty dependency array means this effect runs once on mount
+    // CSS is now in Navbar.css
+  }, []);
 
   // Effect to close menu when location changes
   useEffect(() => {
@@ -121,6 +111,10 @@ export const Navbar = () => {
   const publicNav = (
     <nav className="navbar">
       <div className="navbar-brand">
+        <div className={`navbar-robot ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} onClick={playRobotSound}>
+          <FaRobot className="navbar-robot-icon" />
+          {soundPlayed && <span className="navbar-sound-wave"></span>}
+        </div>
         <Link to="/">BAP AI Tutor</Link>
       </div>
       <div className="hamburger" onClick={toggleMenu}>
@@ -129,7 +123,6 @@ export const Navbar = () => {
         <div></div>
       </div>
       <div className={`navbar-links ${isMenuOpen ? 'open' : ''}`}>
-        <Link to="/test-ai" className={`nav-link ${isActive('/test-ai')}`}>Test AI</Link>
         <Link to="/login" className="btn btn-primary">Log In</Link>
         <Link to="/signup" className="btn btn-secondary">Sign Up</Link>
       </div>
@@ -140,6 +133,10 @@ export const Navbar = () => {
   const privateNav = (
     <nav className="navbar">
       <div className="navbar-brand">
+        <div className={`navbar-robot ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} onClick={playRobotSound}>
+          <FaRobot className="navbar-robot-icon" />
+          {soundPlayed && <span className="navbar-sound-wave"></span>}
+        </div>
         <Link to="/dashboard">BAP AI Tutor</Link>
       </div>
       <div className="hamburger" onClick={toggleMenu}>
@@ -153,7 +150,6 @@ export const Navbar = () => {
         <Link to="/assignments" className={`nav-link ${isActive('/assignments')}`}>Assignments</Link>
         <Link to="/ai-tutor" className={`nav-link ${isActive('/ai-tutor')}`}>AI Tutor</Link>
         <Link to="/connect" className={`nav-link ${isActive('/connect')}`}>Connect</Link>
-        <Link to="/test-ai" className={`nav-link ${isActive('/test-ai')}`}>Test AI</Link>
         <Link to="/settings" className={`nav-link ${isActive('/settings')}`}>Settings</Link>
         <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
       </div>

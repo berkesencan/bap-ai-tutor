@@ -15,7 +15,6 @@ import Courses from './pages/Courses';
 import Assignments from './pages/Assignments';
 import AiTutorPage from './pages/AiTutorPage';
 import Settings from './pages/Settings';
-import TestAI from './pages/TestAI';
 
 function App() {
   return (
@@ -27,7 +26,6 @@ function App() {
             <Route index element={<Home />} />
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<Signup />} />
-            <Route path="test-ai" element={<TestAI />} />
             
             {/* Protected routes */}
             <Route path="dashboard" element={

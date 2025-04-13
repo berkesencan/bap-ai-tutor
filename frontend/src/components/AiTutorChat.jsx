@@ -1,16 +1,121 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { postChatMessage, testGemini } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import './AiTutorChat.css'; // Import the CSS file
 
 const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate(); // Add navigation hook
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [error, setError] = useState(null);
   const [lastApiResponse, setLastApiResponse] = useState(null);
   const inputRef = useRef(null);
+  // Audio element reference
+  const audioRef = useRef(null);
+  // State to track when sound was played
+  const [soundPlayed, setSoundPlayed] = useState(false);
+  // Track audio loading state
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioError, setAudioError] = useState(null);
+
+  // Initialize audio and try multiple sources
+  useEffect(() => {
+    // Create the audio element
+    const audio = new Audio();
+    
+    // Try different paths - now using the r2d2.wav file
+    const possiblePaths = [
+      '/sounds/r2d2.wav',
+      `${window.location.origin}/sounds/r2d2.wav`
+    ];
+    
+    // Track which one succeeded
+    let loadedPath = null;
+    
+    // Function to try loading the next path
+    const tryNextPath = (index) => {
+      if (index >= possiblePaths.length) {
+        console.error("All audio paths failed to load", possiblePaths);
+        setAudioError("Failed to load robot sound from any location");
+        return;
+      }
+      
+      const path = possiblePaths[index];
+      console.log(`Trying to load audio from: ${path}`);
+      
+      audio.src = path;
+      
+      // Handle successful load
+      const handleCanPlayThrough = () => {
+        console.log(`Audio loaded successfully from ${path}`);
+        loadedPath = path;
+        setAudioLoaded(true);
+        setAudioError(null);
+        // Remove the error listener for this path
+        audio.removeEventListener('error', handleError);
+      };
+      
+      // Handle load error - try next path
+      const handleError = (e) => {
+        console.warn(`Failed to load audio from ${path}`, e);
+        // Remove listeners for this path
+        audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+        // Try the next path
+        tryNextPath(index + 1);
+      };
+      
+      // Set up event listeners
+      audio.addEventListener('canplaythrough', handleCanPlayThrough);
+      audio.addEventListener('error', handleError);
+      
+      // Start loading
+      audio.load();
+    };
+    
+    // Start with the first path
+    tryNextPath(0);
+    
+    // Set the ref
+    audioRef.current = audio;
+    
+    // Cleanup
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  // Play robot sound function
+  const playRobotSound = () => {
+    console.log("Robot clicked! Attempting to play sound...");
+    if (audioRef.current) {
+      if (!audioLoaded) {
+        console.warn("Audio not yet loaded, showing visual feedback only");
+        setSoundPlayed(true);
+        setTimeout(() => setSoundPlayed(false), 500);
+        return;
+      }
+      
+      audioRef.current.currentTime = 0;
+      audioRef.current.play()
+        .then(() => {
+          console.log("Sound played successfully!");
+          setSoundPlayed(true);
+          setTimeout(() => setSoundPlayed(false), 500);
+        })
+        .catch(error => {
+          console.error("Error playing sound:", error);
+          // Visual feedback if sound fails
+          setSoundPlayed(true);
+          setTimeout(() => setSoundPlayed(false), 500);
+        });
+    }
+  };
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -98,6 +203,14 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
     inputRef.current?.focus();
   };
 
+  // Handle navigation to different pages based on quick prompt selection
+  const handleNavigateToPage = (page) => {
+    playRobotSound(); // Play sound for feedback
+    setTimeout(() => {
+      navigate(page);
+    }, 300); // Small delay to let sound play
+  };
+
   // Helper function to render text with **bold** formatting
   const renderFormattedContent = (text) => {
     const parts = text.split(/(\*{2})/); // Split by '**', keeping the delimiter
@@ -116,9 +229,16 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
 
   return (
     <div className="chat-container">
+      {/* Remove the embedded audio element since we're creating it in JavaScript */}
+      
       <div className="chat-header">
         <h2>
-          <FaRobot className="chat-header-icon" /> AI Tutor Chat
+          <div className={`robot-logo-clickable ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} onClick={playRobotSound}>
+            <FaRobot className="chat-header-icon" />
+            {soundPlayed && <span className="sound-wave"></span>}
+            {!audioLoaded && <span className="sound-status-indicator"></span>}
+          </div>
+          AI Tutor Chat
         </h2>
         <p>Ask me anything about your courses or assignments!</p>
       </div>
@@ -126,8 +246,13 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
       <div className="messages-area">
         {chatHistory.length === 0 ? (
           <div className="initial-prompt-container">
-            <div className="initial-prompt-icon-wrapper">
+            <div 
+              className={`initial-prompt-icon-wrapper ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} 
+              onClick={playRobotSound}
+            >
               <FaRobot />
+              {soundPlayed && <span className="big-sound-wave"></span>}
+              {!audioLoaded && <span className="big-sound-status-indicator"></span>}
             </div>
             <h3>How can I help you today?</h3>
             <p>
@@ -138,7 +263,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
             <div className="prompt-buttons-grid">
               <button 
                 className="prompt-button"
-                onClick={() => handleQuickPrompt("Explain the concept of neural networks in AI.")}
+                onClick={() => handleNavigateToPage('/ai-tutor?tab=concept')}
               >
                 <div className="prompt-button-icon-wrapper">
                   <FaLightbulb />
@@ -151,7 +276,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
               
               <button 
                 className="prompt-button"
-                onClick={() => handleQuickPrompt("Create a study plan for my upcoming Computer Science midterm. I need to cover algorithms, data structures, and system design.")}
+                onClick={() => handleNavigateToPage('/ai-tutor?tab=studyPlan')}
               >
                 <div className="prompt-button-icon-wrapper">
                   <FaBookOpen />
@@ -164,7 +289,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
               
               <button 
                 className="prompt-button"
-                onClick={() => handleQuickPrompt("Generate 5 practice questions for Data Structures covering trees and graphs.")}
+                onClick={() => handleNavigateToPage('/ai-tutor?tab=practice')}
               >
                 <div className="prompt-button-icon-wrapper">
                   <FaGraduationCap />

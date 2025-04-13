@@ -126,6 +126,56 @@
   white-space: pre-wrap;
 }
 
+/* Completely revised feedback styling */
+/* Remove the previous implementations that might be causing conflicts */
+.bg-green-50, .bg-red-50, .text-green-800, .text-red-800 {
+  /* Reset any previous definitions */
+}
+
+/* Feedback container styles */
+.answer-feedback-correct {
+  background-color: #d1fae5 !important; /* Light green background */
+  border: 1px solid #10b981 !important; 
+  border-left: 4px solid #10b981 !important; /* Accent border on left */
+}
+
+.answer-feedback-incorrect {
+  background-color: #fee2e2 !important; /* Light red background */
+  border: 1px solid #ef4444 !important;
+  border-left: 4px solid #ef4444 !important; /* Accent border on left */
+}
+
+/* Text styles */
+.feedback-text-correct {
+  color: #047857 !important; /* Darker green for text */
+  font-weight: 600 !important;
+}
+
+.feedback-text-incorrect {
+  color: #b91c1c !important; /* Darker red for text */
+  font-weight: 600 !important;
+}
+
+/* Icon styles */
+.feedback-icon-correct {
+  color: #10b981 !important; /* Medium green for icons */
+  font-size: 1.25rem !important;
+  margin-right: 0.5rem !important;
+}
+
+.feedback-icon-incorrect {
+  color: #ef4444 !important; /* Medium red for icons */
+  font-size: 1.25rem !important;
+  margin-right: 0.5rem !important;
+}
+
+/* Feedback header styling */
+.feedback-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
 /* Error Display */
 .error-container {
   margin-top: 1.5rem; /* mt-6 */

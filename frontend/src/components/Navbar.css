@@ -1,0 +1,162 @@
+/* Navbar.css - Main styles for the application navbar */
+
+/* Main navbar container */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  position: relative;
+  z-index: 1000;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Brand area (logo + title) */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.navbar-brand a {
+  text-decoration: none;
+  color: #16a34a; /* Green color matching the AI tutor theme */
+  transition: color 0.2s ease;
+}
+
+.navbar-brand a:hover {
+  color: #15803d; /* Darker green on hover */
+}
+
+/* Robot icon in navbar */
+.navbar-robot {
+  margin-right: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.2s ease;
+  width: 2rem;
+  height: 2rem;
+}
+
+.navbar-robot:hover {
+  transform: scale(1.2);
+}
+
+.navbar-robot.robot-active {
+  transform: scale(0.9);
+}
+
+.navbar-robot-icon {
+  color: #16a34a; /* Green matching theme */
+  font-size: 1.25rem;
+}
+
+.navbar-robot.loaded .navbar-robot-icon {
+  color: #16a34a; /* Normal green when loaded */
+}
+
+.navbar-robot.not-loaded .navbar-robot-icon {
+  color: #9ca3af; /* Gray when not loaded */
+  opacity: 0.8;
+}
+
+/* Sound wave animation for navbar robot */
+.navbar-sound-wave {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: rgba(22, 163, 74, 0.2); /* Light green background */
+  z-index: -1;
+  animation: navbar-ripple 0.5s ease-out;
+}
+
+@keyframes navbar-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* Navbar links area */
+.navbar-links {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 100%;
+}
+
+.navbar-links.open {
+  display: flex !important;
+}
+
+.navbar-links a, .navbar-links button {
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  color: #333;
+  display: block;
+}
+
+.navbar-links a:hover, .navbar-links button:hover {
+  color: #16a34a; /* Green on hover */
+  background-color: #f5f5f5;
+}
+
+.nav-link.active {
+  font-weight: bold;
+  color: #16a34a; /* Green for active link */
+  border-bottom: 2px solid #16a34a;
+}
+
+/* Hamburger menu for mobile */
+.hamburger {
+  display: none;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.hamburger div {
+  width: 25px;
+  height: 3px;
+  background-color: #333;
+  margin: 4px 0;
+  transition: all 0.2s ease;
+}
+
+/* Responsive styles */
+@media (min-width: 769px) {
+  .navbar-links {
+    display: flex;
+    flex-direction: row;
+    position: static;
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-links {
+    display: none;
+  }
+  .navbar-links.open {
+    display: flex !important;
+  }
+  .hamburger {
+    display: block;
+  }
+} 

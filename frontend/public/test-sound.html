@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sound Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    button {
+      background-color: #16a34a;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #15803d;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #f5f5f5;
+    }
+    .success {
+      color: #16a34a;
+      font-weight: bold;
+    }
+    .error {
+      color: #dc2626;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Robot Sound Test Page</h1>
+  <p>This page tests if the robot sound files can be played in your browser.</p>
+  
+  <h2>Test: R2D2 Sound</h2>
+  <button id="playR2D2Button">Play R2D2 Sound (WAV)</button>
+  <audio id="r2d2Audio" src="./sounds/r2d2.wav"></audio>
+  <div id="r2d2Result" class="result">Result will appear here</div>
+  
+  <h2>Browser Audio Support</h2>
+  <div id="browserInfo" class="result">Checking browser audio support...</div>
+  
+  <script>
+    // Helper function to format a result
+    function showResult(elementId, success, message) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = `<span class="${success ? 'success' : 'error'}">${success ? 'SUCCESS' : 'ERROR'}</span>: ${message}`;
+    }
+    
+    // Test R2D2 sound
+    document.getElementById('playR2D2Button').addEventListener('click', function() {
+      console.log('Playing R2D2 sound...');
+      const audio = document.getElementById('r2d2Audio');
+      audio.currentTime = 0;
+      
+      audio.play()
+        .then(() => {
+          console.log('R2D2 sound played successfully!');
+          showResult('r2d2Result', true, 'R2D2 sound played successfully!');
+        })
+        .catch(error => {
+          console.error('Error playing R2D2 sound:', error);
+          showResult('r2d2Result', false, `Error: ${error.message || 'Unknown error'}`);
+        });
+    });
+    
+    // Check browser audio support
+    window.addEventListener('load', function() {
+      const infoElement = document.getElementById('browserInfo');
+      let info = '<h3>Your browser info:</h3>';
+      
+      // Check if Audio API is supported
+      info += `<p>Audio API supported: <strong>${typeof Audio !== 'undefined' ? 'Yes' : 'No'}</strong></p>`;
+      
+      // Check if audio element is supported
+      info += `<p>Audio element supported: <strong>${!!document.createElement('audio').canPlayType ? 'Yes' : 'No'}</strong></p>`;
+      
+      // Check audio format support
+      const audioElement = document.createElement('audio');
+      info += `<p>MP3 support: <strong>${audioElement.canPlayType('audio/mpeg') ? 'Yes' : 'No'}</strong></p>`;
+      info += `<p>WAV support: <strong>${audioElement.canPlayType('audio/wav') ? 'Yes' : 'No'}</strong></p>`;
+      
+      // Check if autoplay is allowed
+      info += `<p>Note: Many browsers block autoplay of audio until the user interacts with the page.</p>`;
+      
+      // Add direct file link
+      info += `<p><a href="./sounds/r2d2.wav" target="_blank">Direct link to r2d2.wav</a> (right-click to download)</p>`;
+      
+      infoElement.innerHTML = info;
+    });
+  </script>
+</body>
+</html> 
