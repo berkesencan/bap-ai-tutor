@@ -16,6 +16,7 @@ import Assignments from './pages/Assignments';
 import AiTutorPage from './pages/AiTutorPage';
 import Settings from './pages/Settings';
 import TestAI from './pages/TestAI';
+import Connect from './pages/Connect';
 
 function App() {
   return (
@@ -48,6 +49,11 @@ function App() {
             <Route path="ai-tutor" element={
               <ProtectedRoute>
                 <AiTutorPage />
+              </ProtectedRoute>
+            } />
+            <Route path="connect" element={
+              <ProtectedRoute>
+                <Connect />
               </ProtectedRoute>
             } />
             <Route path="settings" element={

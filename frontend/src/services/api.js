@@ -150,6 +150,15 @@ export const getAssignmentsForCourse = async (courseId) => {
   }
 };
 
+export const getAllAssignments = async () => {
+  try {
+    const response = await apiClient.get('/assignments');
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 export const createAssignment = async (courseId, assignmentData) => {
   try {
     // Note: Route based on backend/routes/assignment.routes.js
@@ -161,5 +170,42 @@ export const createAssignment = async (courseId, assignmentData) => {
 };
 
 // Add functions for schedule, study sessions, user profile etc.
+
+// Gradescope Endpoints
+export const gradescopeLogin = async (credentials) => {
+  try {
+    const response = await apiClient.post('/gradescope/login', credentials);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getGradescopeCourses = async () => {
+  try {
+    const response = await apiClient.get('/gradescope/courses');
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getGradescopeAssignments = async (courseId) => {
+  try {
+    const response = await apiClient.get(`/gradescope/courses/${courseId}/assignments`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const importGradescopeData = async (data) => {
+  try {
+    const response = await apiClient.post('/courses/import', data);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
 
 export default apiClient; 

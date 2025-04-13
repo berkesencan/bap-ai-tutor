@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import { 
+  gradescopeLogin, 
+  getGradescopeCourses, 
+  getGradescopeAssignments,
+  importGradescopeData
+} from '../services/api';
 
 const Connect = () => {
   const { currentUser } = useAuth();
@@ -24,62 +29,53 @@ const Connect = () => {
     try {
       console.log('Attempting to connect to Gradescope with email:', gradescopeEmail);
       
-      // Get the Firebase auth token
-      const idToken = await currentUser.getIdToken(true); // Force token refresh
-      console.log('Retrieved Firebase ID token (first 10 chars):', idToken.substring(0, 10) + '...');
-      
-      // Test authentication first
-      console.log('Testing authentication with /api/auth-test endpoint...');
-      try {
-        const authTestResponse = await axios.get('/api/auth-test', {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
-        console.log('Auth test successful:', authTestResponse.data);
-      } catch (authError) {
-        console.error('Auth test failed:', authError);
-        throw new Error(`Authentication test failed: ${authError.message}`);
-      }
-      
-      console.log('Proceeding to Gradescope login...');
-      
       // Login to Gradescope
-      const loginResponse = await axios.post('/api/gradescope/login', {
+      console.log('Proceeding to Gradescope login...');
+      const loginResponse = await gradescopeLogin({
         email: gradescopeEmail,
         password: gradescopePassword
-      }, {
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        }
       });
       
       console.log('Login response:', loginResponse);
       
+      if (!loginResponse.success) {
+        throw new Error(loginResponse.error || loginResponse.message || 'Failed to connect to Gradescope');
+      }
+      
       // Fetch courses
-      const coursesResponse = await axios.get('/api/gradescope/courses', {
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        }
-      });
-      setCourses(Object.values(coursesResponse.data));
+      const coursesResponse = await getGradescopeCourses();
+      
+      console.log('Courses response:', coursesResponse);
+      
+      if (!coursesResponse.success) {
+        throw new Error(coursesResponse.error || 'Failed to fetch courses');
+      }
+      
+      setCourses(Array.isArray(coursesResponse.data) ? coursesResponse.data : Object.values(coursesResponse.data));
       setIsConnected(true);
       
       // Initialize selected courses state
       const initialSelectedCourses = {};
-      Object.values(coursesResponse.data).forEach(course => {
+      const courseList = Array.isArray(coursesResponse.data) ? coursesResponse.data : Object.values(coursesResponse.data);
+      
+      courseList.forEach(course => {
         initialSelectedCourses[course.id] = false;
       });
       setSelectedCourses(initialSelectedCourses);
     } catch (error) {
       console.error('Error connecting to Gradescope:', error);
-      console.error('Error response:', error.response);
-      console.error('Error details:', error.response?.data);
       
-      if (error.response?.status === 403) {
-        setError('Authentication required. Please make sure you are logged in and try again.');
+      if (error.response) {
+        console.error('Error response:', error.response);
+        console.error('Error details:', error.response.data);
+        
+        if (error.response.status === 403) {
+          setError('Authentication required. Please make sure you are logged in and try again.');
+        } else {
+          setError(error.response.data?.error || error.response.data?.message || `Failed to connect to Gradescope: ${error.message}`);
+        }
       } else {
-        setError(error.response?.data?.error || error.response?.data?.message || `Failed to connect to Gradescope: ${error.message}`);
+        setError(error.message || 'Failed to connect to Gradescope');
       }
     } finally {
       setIsLoading(false);
@@ -98,12 +94,13 @@ const Connect = () => {
     // If selecting a course, fetch its assignments
     if (updatedSelection[courseId] && !assignments[courseId]) {
       try {
-        const idToken = await currentUser.getIdToken();
-        const response = await axios.get(`/api/gradescope/courses/${courseId}/assignments`, {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
+        const response = await getGradescopeAssignments(courseId);
+        
+        if (!response.success) {
+          console.error('Failed to fetch assignments:', response.error);
+          return;
+        }
+        
         setAssignments({
           ...assignments,
           [courseId]: response.data
@@ -131,23 +128,27 @@ const Connect = () => {
         }
       }
       
-      // Get auth token
-      const idToken = await currentUser.getIdToken();
-      
-      // Send to backend
-      await axios.post('/api/courses/import', {
+      // Import data
+      const importResponse = await importGradescopeData({
         courses: coursesToImport,
         assignments: assignmentsToImport
-      }, {
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        }
       });
+      
+      console.log('Import response:', importResponse);
+      
+      if (!importResponse.success && !importResponse.courses && !importResponse.message) {
+        throw new Error(importResponse.error || 'Failed to import data');
+      }
       
       setImportSuccess(true);
     } catch (error) {
       console.error('Error importing data:', error);
-      setError(error.response?.data?.error || error.response?.data?.message || 'Failed to import data');
+      
+      if (error.response?.data) {
+        setError(error.response.data.error || error.response.data.message || 'Failed to import data');
+      } else {
+        setError(error.message || 'Failed to import data');
+      }
     } finally {
       setImporting(false);
     }

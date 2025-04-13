@@ -12,25 +12,35 @@ class Course {
    */
   static async create(courseData, userId) {
     try {
-      const { name, code, professor, description, schedule, platform } = courseData;
+      const { 
+        name, 
+        code, 
+        professor, 
+        description, 
+        schedule, 
+        platform,
+        externalId,
+        source
+      } = courseData;
       
       const courseRef = db.collection('courses').doc();
       
       const courseDoc = {
         id: courseRef.id,
-        name,
-        code,
-        professor,
-        description,
-        schedule,
-        platform,
+        name: name || 'Unnamed Course',
+        code: code || 'No Code',
+        professor: professor || 'Unknown',
+        description: description || '',
+        schedule: schedule || null,
+        platform: platform || 'Unknown',
         userId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        externalId: { type: String },
-        source: { type: String }
+        externalId: externalId || null,
+        source: source || 'manual'
       };
       
+      console.log('Setting course document:', JSON.stringify(courseDoc));
       await courseRef.set(courseDoc);
       
       return courseDoc;
