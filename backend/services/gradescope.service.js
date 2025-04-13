@@ -1,13 +1,21 @@
 const axios = require('axios');
 const qs = require('querystring');
 const cheerio = require('cheerio');
+const tough = require('tough-cookie');
+const { wrapper } = require('axios-cookiejar-support');
 
 class GradescopeService {
   constructor() {
-    this.session = axios.create({
+    // Create a cookie jar
+    this.cookieJar = new tough.CookieJar();
+    
+    // Create axios instance with cookie jar support
+    this.session = wrapper(axios.create({
       withCredentials: true,
       maxRedirects: 5,
-    });
+      jar: this.cookieJar
+    }));
+    
     this.isLoggedIn = false;
     this.account = null;
   }
@@ -23,35 +31,60 @@ class GradescopeService {
       const csrfToken = $('meta[name="csrf-token"]').attr('content');
       console.log('Got CSRF token:', csrfToken);
       
+      // Check for login form
+      if (!$('form[action="/login"]').length) {
+        console.error('Login form not found on page');
+        throw new Error('Could not find login form');
+      }
+      
       // Login
-      console.log('Attempting login with CSRF token...');
+      console.log('Preparing login data with CSRF token...');
       const loginData = {
         'authenticity_token': csrfToken,
         'session[email]': email,
         'session[password]': password,
         'session[remember_me]': 1
       };
-      console.log('Login data:', loginData);
       
+      console.log('Sending login request...');
       const loginResponse = await this.session.post('https://www.gradescope.com/login', 
         qs.stringify(loginData), 
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRF-Token': csrfToken,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Origin': 'https://www.gradescope.com',
+            'Referer': 'https://www.gradescope.com/login'
           }
         });
       
       console.log('Login response status:', loginResponse.status);
-      console.log('Login response headers:', loginResponse.headers);
       console.log('Response URL:', loginResponse.request.res.responseUrl);
       
-      // Check if login was successful
+      // Check if login was successful - a successful login redirects to /account
       if (loginResponse.request.res.responseUrl.includes('login')) {
+        // Load the response to look for error messages
+        const $error = cheerio.load(loginResponse.data);
+        const errorMsg = $error('.alert-error').text().trim() || 'Invalid email or password';
         console.error('Login failed - redirected back to login page');
-        throw new Error('Login failed. Check credentials.');
+        console.error('Error message from page:', errorMsg);
+        throw new Error(`Login failed: ${errorMsg}`);
       }
+      
+      // Try to fetch account page to verify login
+      console.log('Verifying login by fetching account page...');
+      const accountResponse = await this.session.get('https://www.gradescope.com/account');
+      
+      if (accountResponse.request.res.responseUrl.includes('login')) {
+        console.error('Account page verification failed, redirected to login');
+        throw new Error('Login session was not established properly');
+      }
+      
+      // Extract account info if needed
+      const $account = cheerio.load(accountResponse.data);
+      const userName = $account('.courseList--userName').text().trim();
+      console.log('Successfully logged in as:', userName);
       
       this.isLoggedIn = true;
       console.log('Login successful!');
@@ -61,7 +94,15 @@ class GradescopeService {
       if (error.response) {
         console.error('Response status:', error.response.status);
         console.error('Response headers:', error.response.headers);
-        console.error('Response data:', error.response.data);
+        if (error.response.data && typeof error.response.data === 'string') {
+          console.error('Response contains HTML? Length:', error.response.data.length);
+          // Look for error messages in the HTML
+          const $errorPage = cheerio.load(error.response.data);
+          const pageErrors = $errorPage('.alert-error').text().trim();
+          if (pageErrors) {
+            console.error('Error messages found in response:', pageErrors);
+          }
+        }
       }
       throw new Error(`Login failed: ${error.message}`);
     }
@@ -73,24 +114,136 @@ class GradescopeService {
     }
     
     try {
+      console.log('Fetching courses from Gradescope account page...');
       const response = await this.session.get('https://www.gradescope.com/account');
       const $ = cheerio.load(response.data);
       
+      // For debugging: Save a sample of the HTML to see what we're working with
+      console.log('HTML sample from courses page:');
+      console.log($.html().substring(0, 1000));
+      
+      console.log('Parsing course data from HTML...');
       const courses = {};
-      $('.courseList--coursesForTerm .courseBox').each((i, elem) => {
-        const courseId = $(elem).attr('href').split('/').pop();
-        const courseName = $(elem).find('.courseBox--name').text().trim();
-        const courseCode = $(elem).find('.courseBox--courseCode').text().trim();
+      
+      console.log('Course container exists:', $('.courseList--coursesForTerm').length > 0);
+      
+      // First, locate each course list in each term section
+      $('.courseList--coursesForTerm').each((termIndex, termElem) => {
+        const termName = $(termElem).prev('.courseList--term').text().trim();
+        console.log(`Processing term: ${termName}`);
         
-        courses[courseId] = {
-          id: courseId,
-          name: courseName,
-          code: courseCode
-        };
+        // For each term, find the course boxes (links)
+        $(termElem).find('a.courseBox').each((i, elem) => {
+          // Get href attribute (course URL)
+          const courseUrl = $(elem).attr('href');
+          
+          if (!courseUrl) {
+            console.log('Warning: Found course element without href:', $(elem).html().substring(0, 100));
+            return; // Skip this element
+          }
+          
+          // Extract course ID from URL
+          const courseId = courseUrl.split('/').pop();
+          
+          // Extract course name and code
+          const courseName = $(elem).find('.courseBox--name').text().trim();
+          const courseCode = $(elem).find('.courseBox--courseCode').text().trim();
+          
+          // Extract professor name
+          const professorElem = $(elem).find('.courseBox--instructor');
+          const professor = professorElem.length ? professorElem.text().trim() : 'Unknown';
+          
+          console.log(`Found course: ${courseCode || 'NO CODE FOUND'} - ${courseName} (ID: ${courseId}, Professor: ${professor})`);
+          console.log(`Course HTML: ${$(elem).html().substring(0, 200)}`);
+          
+          courses[courseId] = {
+            id: courseId,
+            name: courseName,
+            code: courseCode || 'No Code', // Provide default if code is missing
+            professor: professor,
+            term: termName
+          };
+        });
       });
+      
+      // If no courses found with the first approach, try alternative selectors
+      if (Object.keys(courses).length === 0) {
+        console.log('No courses found with primary selector, trying alternatives...');
+        
+        // Try alternative selector: directly find course boxes
+        courseList.find('a.courseBox').each((j, courseBox) => {
+          const courseUrl = $(elem).attr('href');
+          
+          if (!courseUrl) {
+            return; // Skip this element
+          }
+          
+          const courseId = courseUrl.split('/').pop();
+          const courseCode = $(courseBox).find('.courseBox--shortname').text().trim();
+          const courseName = $(courseBox).find('.courseBox--name').text().trim();
+          const assignmentsText = $(courseBox).find('.courseBox--assignments').text().trim();
+          let assignmentCount = 0;
+          if (assignmentsText) {
+            const match = assignmentsText.match(/(\d+)/);
+            if (match) {
+              assignmentCount = parseInt(match[1], 10);
+            }
+          }
+
+          console.log(`Found course (alt method): ${courseCode} - ${courseName} (ID: ${courseId})`);
+          console.log(`Course HTML: ${$(elem).html().substring(0, 200)}`);
+          
+          courses[courseId] = {
+            id: courseId,
+            name: courseName,
+            code: courseCode || 'No Code',
+            professor: professor
+          };
+        });
+      }
+      
+      // If still no courses, check for newer Gradescope interface
+      if (Object.keys(courses).length === 0) {
+        console.log('Trying modern Gradescope interface selectors...');
+        
+        // Try newer UI selectors
+        $('.js-courseList .js-courseCard').each((i, elem) => {
+          const courseLink = $(elem).find('a').first();
+          const courseUrl = courseLink.attr('href');
+          
+          if (!courseUrl) {
+            return;
+          }
+          
+          const courseId = courseUrl.split('/').pop();
+          const courseName = $(elem).find('.courseCard--name').text().trim();
+          const courseCode = $(elem).find('.courseCard--shortname').text().trim();
+          const professorElem = $(elem).find('.courseCard--instructor, .instructor-name');
+          const professor = professorElem.length ? professorElem.text().trim() : 'Unknown';
+          
+          console.log(`Found course (modern UI): ${courseCode} - ${courseName} (ID: ${courseId})`);
+          console.log(`Course HTML: ${$(elem).html().substring(0, 200)}`);
+          
+          courses[courseId] = {
+            id: courseId,
+            name: courseName || 'Unnamed Course',
+            code: courseCode || 'No Code',
+            professor: professor
+          };
+        });
+      }
+      
+      console.log(`Found ${Object.keys(courses).length} courses in total`);
+      
+      // If we still have no courses, log the HTML for debugging
+      if (Object.keys(courses).length === 0) {
+        console.log('No courses found with any selector. HTML snippet:');
+        console.log($.html().substring(0, 1000));
+      }
       
       return courses;
     } catch (error) {
+      console.error('Error in getCourses:', error);
       throw new Error(`Failed to get courses: ${error.message}`);
     }
   }
@@ -101,25 +254,337 @@ class GradescopeService {
     }
     
     try {
+      console.log(`Fetching assignments for course ${courseId}...`);
       const response = await this.session.get(`https://www.gradescope.com/courses/${courseId}`);
       const $ = cheerio.load(response.data);
       
+      // For debugging: Save a sample of the HTML to see what we're working with
+      console.log('HTML sample from assignments page:');
+      console.log($.html().substring(0, 1000));
+      
+      // Check if we're on a dashboard page
+      const isDashboard = $('title').text().includes('Dashboard');
+      console.log(`Page appears to be a dashboard view: ${isDashboard}`);
+      
+      console.log('Parsing assignments from HTML...');
       const assignments = [];
-      $('.assignments .table--primaryLink').each((i, elem) => {
-        const assignmentId = $(elem).attr('href').split('/').pop();
-        const assignmentName = $(elem).text().trim();
+      
+      // Log the page title for debugging
+      console.log('Page title:', $('title').text());
+      
+      // Method 1: Try traditional assignment table
+      console.log('Trying standard assignment table selectors...');
+      if ($('.assignments').length > 0) {
+        console.log('Found .assignments table, processing rows...');
         
-        assignments.push({
-          id: assignmentId,
-          name: assignmentName
+        $('.assignments tbody tr').each((i, row) => {
+          try {
+            const linkElem = $(row).find('.table--primaryLink');
+            const assignmentUrl = linkElem.attr('href');
+            
+            if (!assignmentUrl) {
+              console.log('Warning: Found assignment row without href');
+              return; // Skip this element
+            }
+            
+            const assignmentId = assignmentUrl.split('/').pop();
+            const assignmentName = linkElem.text().trim();
+            
+            // Get due date
+            const dueDateElem = $(row).find('td:nth-child(2)');
+            const dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
+            console.log(`Due date text: "${dueDate}"`);
+            
+            // Get grade if available
+            const gradeElem = $(row).find('td:nth-child(3)');
+            const gradeText = gradeElem.length ? gradeElem.text().trim() : null;
+            console.log(`Grade text: "${gradeText}"`);
+            
+            // Parse grade information
+            let grade = null;
+            let maxPoints = null;
+            if (gradeText && gradeText.includes('/')) {
+              const parts = gradeText.split('/');
+              grade = parseFloat(parts[0].trim());
+              maxPoints = parseFloat(parts[1].trim());
+            }
+            
+            console.log(`Found assignment: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+            console.log(`Row HTML: ${$(row).html().substring(0, 200)}`);
+            
+            assignments.push({
+              id: assignmentId,
+              name: assignmentName || 'Unnamed Assignment',
+              dueDate: dueDate,
+              grade: !isNaN(grade) ? grade : null,
+              maxPoints: !isNaN(maxPoints) ? maxPoints : null
+            });
+          } catch (err) {
+            console.log('Error parsing assignment row:', err.message);
+          }
         });
-      });
+      }
+      
+      // Method 2: Dashboard view with cards
+      if (assignments.length === 0 && isDashboard) {
+        console.log('Trying dashboard card selectors...');
+        
+        // Output counts of potential assignment containers for debugging
+        console.log('Dashboard cards count:', $('.dashboard-section__cards .dashboard-card').length);
+        console.log('Assignment tiles count:', $('.assignment-tile').length);
+        
+        // Method 2a: Try modern dashboard cards
+        $('.dashboard-section__cards .dashboard-card, .assignment-tile').each((i, elem) => {
+          try {
+            // Look for anchor tag or element with title
+            const linkElem = $(elem).find('a').first();
+            const assignmentUrl = linkElem.attr('href');
+            
+            // If no direct href, try finding one within the card
+            if (!assignmentUrl) {
+              const allLinks = $(elem).find('a[href*="/assignments/"]');
+              if (allLinks.length > 0) {
+                const assignmentUrl = allLinks.first().attr('href');
+                const assignmentId = assignmentUrl.split('/').pop();
+                const assignmentName = $(elem).find('.assignment-name, .dashboard-card__title, h3').text().trim();
+                
+                // Look for due date
+                const dueDateElem = $(elem).find('.assignment-due-date, .due-date, .dashboard-card__due-date');
+                const dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
+                
+                // Look for grade
+                const gradeElem = $(elem).find('.assignment-grade, .grade, .dashboard-card__grade');
+                const gradeText = gradeElem.length ? gradeElem.text().trim() : null;
+                
+                // Parse grade information
+                let grade = null;
+                let maxPoints = null;
+                if (gradeText && gradeText.includes('/')) {
+                  const parts = gradeText.split('/');
+                  grade = parseFloat(parts[0].trim());
+                  maxPoints = parseFloat(parts[1].trim());
+                }
+                
+                console.log(`Found dashboard assignment (nested link): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+                console.log(`Card HTML: ${$(elem).html().substring(0, 200)}`);
+                
+                assignments.push({
+                  id: assignmentId,
+                  name: assignmentName || 'Dashboard Assignment',
+                  dueDate: dueDate,
+                  grade: !isNaN(grade) ? grade : null,
+                  maxPoints: !isNaN(maxPoints) ? maxPoints : null
+                });
+              }
+              return;
+            }
+            
+            // Process direct link
+            if (assignmentUrl.includes('/assignments/')) {
+              const assignmentId = assignmentUrl.split('/').pop();
+              const assignmentName = $(elem).find('.assignment-name, .dashboard-card__title, h3').text().trim();
+              
+              // Look for due date
+              const dueDateElem = $(elem).find('.assignment-due-date, .due-date, .dashboard-card__due-date');
+              const dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
+              
+              // Look for grade
+              const gradeElem = $(elem).find('.assignment-grade, .grade, .dashboard-card__grade');
+              const gradeText = gradeElem.length ? gradeElem.text().trim() : null;
+              
+              // Parse grade information
+              let grade = null;
+              let maxPoints = null;
+              if (gradeText && gradeText.includes('/')) {
+                const parts = gradeText.split('/');
+                grade = parseFloat(parts[0].trim());
+                maxPoints = parseFloat(parts[1].trim());
+              }
+              
+              console.log(`Found dashboard assignment: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+              console.log(`Card HTML: ${$(elem).html().substring(0, 200)}`);
+              
+              assignments.push({
+                id: assignmentId,
+                name: assignmentName || 'Dashboard Assignment',
+                dueDate: dueDate,
+                grade: !isNaN(grade) ? grade : null,
+                maxPoints: !isNaN(maxPoints) ? maxPoints : null
+              });
+            }
+          } catch (err) {
+            console.log('Error parsing dashboard card:', err.message);
+          }
+        });
+      }
+      
+      // Method 3: Try alternative assignment table structure
+      if (assignments.length === 0) {
+        console.log('Trying alternative table selectors...');
+        
+        $('.table--assignmentTable tr, table tr').each((i, elem) => {
+          try {
+            // Skip header row
+            if ($(elem).find('th').length > 0) return;
+            
+            const linkElem = $(elem).find('a').first();
+            const assignmentUrl = linkElem.attr('href');
+            
+            if (!assignmentUrl || !assignmentUrl.includes('/assignments/')) return;
+            
+            const assignmentId = assignmentUrl.split('/').pop();
+            const assignmentName = linkElem.text().trim();
+            
+            // Look for due date in other cells
+            const cells = $(elem).find('td');
+            let dueDate = null;
+            let gradeText = null;
+            
+            // Inspect cells for due date and grade information
+            if (cells.length >= 2) {
+              const dateCell = cells.eq(1); // Second cell is often due date
+              dueDate = dateCell.text().trim();
+            }
+            
+            if (cells.length >= 3) {
+              const gradeCell = cells.eq(2); // Third cell is often grade
+              gradeText = gradeCell.text().trim();
+            }
+            
+            // Parse grade information
+            let grade = null;
+            let maxPoints = null;
+            if (gradeText && gradeText.includes('/')) {
+              const parts = gradeText.split('/');
+              grade = parseFloat(parts[0].trim());
+              maxPoints = parseFloat(parts[1].trim());
+            }
+            
+            console.log(`Found assignment (alt table): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+            console.log(`Row HTML: ${$(elem).html().substring(0, 200)}`);
+            
+            assignments.push({
+              id: assignmentId,
+              name: assignmentName || 'Unnamed Assignment',
+              dueDate: dueDate,
+              grade: !isNaN(grade) ? grade : null,
+              maxPoints: !isNaN(maxPoints) ? maxPoints : null
+            });
+          } catch (err) {
+            console.log('Error parsing alt assignment row:', err.message);
+          }
+        });
+      }
+      
+      // Method 4: Search for any links that might be assignments
+      if (assignments.length === 0) {
+        console.log('Last resort: searching for assignment links in the entire page...');
+        
+        // Find all links that have /assignments/ in their href
+        $('a[href*="/assignments/"]').each((i, elem) => {
+          try {
+            const assignmentUrl = $(elem).attr('href');
+            
+            // Extract the assignment ID from the URL
+            // The URL pattern is usually /courses/{courseId}/assignments/{assignmentId}
+            const urlParts = assignmentUrl.split('/');
+            const assignmentId = urlParts[urlParts.length - 1];
+            
+            // Check if this is an assignment for the current course
+            if (assignmentUrl.includes(`/courses/${courseId}/assignments/`)) {
+              const assignmentName = $(elem).text().trim();
+              
+              // Skip if we've already added this assignment
+              if (assignments.find(a => a.id === assignmentId)) return;
+              
+              // Try to find parent containers with more information
+              const container = $(elem).closest('tr, .dashboard-card, .assignment-tile');
+              let dueDate = null;
+              let gradeText = null;
+              
+              if (container.length) {
+                // Look for due date
+                const dueDateElem = container.find('.due-date, [data-due-date]');
+                dueDate = dueDateElem.length ? dueDateElem.text().trim() : null;
+                
+                // Look for grade
+                const gradeElem = container.find('.grade, [data-grade]');
+                gradeText = gradeElem.length ? gradeElem.text().trim() : null;
+              }
+              
+              // Parse grade information
+              let grade = null;
+              let maxPoints = null;
+              if (gradeText && gradeText.includes('/')) {
+                const parts = gradeText.split('/');
+                grade = parseFloat(parts[0].trim());
+                maxPoints = parseFloat(parts[1].trim());
+              }
+              
+              console.log(`Found assignment link: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+              console.log(`Parent container HTML: ${container.html()?.substring(0, 200)}`);
+              
+              assignments.push({
+                id: assignmentId,
+                name: assignmentName || 'Link Assignment',
+                dueDate: dueDate,
+                grade: !isNaN(grade) ? grade : null,
+                maxPoints: !isNaN(maxPoints) ? maxPoints : null
+              });
+            }
+          } catch (err) {
+            console.log('Error parsing assignment link:', err.message);
+          }
+        });
+      }
+      
+      console.log(`Found ${assignments.length} assignments in total`);
+      
+      // If we still have no assignments, log more HTML for debugging
+      if (assignments.length === 0) {
+        console.log('No assignments found with any selector. Logging more HTML details:');
+        
+        // Log some potential containers that might hold assignments
+        const potentialContainers = [
+          '.dashboard-section',
+          '.dashboard-cards',
+          '.table--assignmentTable',
+          'table',
+          '.gradebook',
+          '.content-box'
+        ];
+        
+        potentialContainers.forEach(selector => {
+          const count = $(selector).length;
+          console.log(`Count of "${selector}": ${count}`);
+          if (count > 0) {
+            console.log(`First "${selector}" HTML:`, $(selector).first().html()?.substring(0, 200) + '...');
+          }
+        });
+        
+        // Log all links in the page to see if we can identify assignment links
+        console.log('All links in page:');
+        const linkTexts = [];
+        $('a').each((i, elem) => {
+          const href = $(elem).attr('href');
+          const text = $(elem).text().trim();
+          if (href && text && href.includes('/assignments/')) {
+            linkTexts.push(`${text} (${href})`);
+          }
+        });
+        console.log(linkTexts.slice(0, 10).join('\n'));
+        
+        // Log a larger HTML snippet
+        console.log('HTML snippet (500 chars):');
+        console.log($.html().substring(0, 1000));
+      }
       
       return assignments;
     } catch (error) {
+      console.error('Error in getAssignments:', error);
       throw new Error(`Failed to get assignments: ${error.message}`);
     }
   }
 }
 
-module.exports = GradescopeService; 
+module.exports = GradescopeService;

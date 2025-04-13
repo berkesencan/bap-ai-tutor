@@ -179,44 +179,59 @@ class CourseController {
       const importedCourses = [];
       for (const course of courses) {
         const newCourse = {
-          name: course.name,
-          code: course.code,
-          description: `Imported from Gradescope: ${course.name}`,
+          name: course.name || 'Unnamed Course',
+          code: course.code || 'No Code',
+          professor: 'Imported from Gradescope', // Default professor value to avoid undefined
+          description: `Imported from Gradescope: ${course.name || 'Unnamed Course'}`,
+          schedule: null, // Provide null instead of undefined
+          platform: 'Gradescope',
           userId,
           externalId: course.id,
           source: 'gradescope'
         };
 
+        console.log('Creating course with data:', JSON.stringify(newCourse));
+
         // Add course to database
-        const createdCourse = await Course.create(newCourse);
+        const createdCourse = await Course.create(newCourse, userId);
         importedCourses.push(createdCourse);
 
         // Process assignments for this course
         if (assignments[course.id] && assignments[course.id].length > 0) {
           for (const assignment of assignments[course.id]) {
+            // Set default values for all fields to avoid undefined errors
             const newAssignment = {
-              title: assignment.name,
+              title: assignment.name || 'Unnamed Assignment',
               description: `Imported from Gradescope`,
               dueDate: new Date().setDate(new Date().getDate() + 7), // Default to 1 week from now
-              courseId: createdCourse.id,
-              userId,
+              priority: 'medium',
+              status: 'active',
+              platform: 'Gradescope',
+              url: null,
+              notes: 'Imported from Gradescope',
               externalId: assignment.id,
-              source: 'gradescope'
+              source: 'gradescope',
+              type: 'assignment',
+              files: []
             };
 
-            // Add assignment to database
-            await Assignment.create(newAssignment);
+            console.log('Creating assignment with data:', JSON.stringify(newAssignment));
+
+            // Add assignment to database with all required parameters
+            await Assignment.create(newAssignment, createdCourse.id, userId);
           }
         }
       }
 
       res.status(200).json({
+        success: true,
         message: 'Successfully imported courses and assignments from Gradescope',
         courses: importedCourses
       });
     } catch (error) {
       console.error('Error importing from Gradescope:', error);
       res.status(500).json({
+        success: false,
         error: 'Failed to import from Gradescope',
         details: error.message
       });
