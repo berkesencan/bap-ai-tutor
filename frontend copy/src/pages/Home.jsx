@@ -5,7 +5,7 @@ function Home() {
   return (
     <div className="home">
       <div className="hero-section">
-        <h1>Welcome to BAP AI Tutor</h1>
+        <h1>Welcome to StudyPlan</h1>
         <h2>Your All-in-One Academic Planner</h2>
         <p>
           Track assignments, prepare for exams, and get personalized AI tutoring

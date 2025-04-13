@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { Navbar } from '../components/Navbar';
+import Navbar from '../components/Navbar';
 
 function MainLayout() {
   return (
@@ -10,7 +10,7 @@ function MainLayout() {
         <Outlet />
       </main>
       <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} BAP AI Tutor. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} StudyPlan. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -1,34 +1,24 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Link, useLocation } from 'react-router-dom';
 
-export const Navbar = () => {
-  const { currentUser, logout } = useAuth();
-  const navigate = useNavigate();
+function Navbar() {
   const location = useLocation();
   
+  // Simulating authentication state - will replace with actual auth later
+  const isAuthenticated = true;
+
   // Check if the current route is active
   const isActive = (path) => {
     return location.pathname === path ? 'active' : '';
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('Failed to log out:', error);
-    }
   };
 
   // Public navigation (not logged in)
   const publicNav = (
     <nav className="navbar">
       <div className="navbar-brand">
-        <Link to="/">BAP AI Tutor</Link>
+        <Link to="/">StudyPlan</Link>
       </div>
       <div className="navbar-links">
-        <Link to="/test-ai" className={`nav-link ${isActive('/test-ai')}`}>Test AI</Link>
         <Link to="/login" className="btn btn-primary">Log In</Link>
         <Link to="/signup" className="btn btn-secondary">Sign Up</Link>
       </div>
@@ -39,7 +29,7 @@ export const Navbar = () => {
   const privateNav = (
     <nav className="navbar">
       <div className="navbar-brand">
-        <Link to="/dashboard">BAP AI Tutor</Link>
+        <Link to="/dashboard">StudyPlan</Link>
       </div>
       <div className="navbar-links">
         <Link to="/" className={`nav-link ${isActive('/')}`}>Home</Link>
@@ -47,14 +37,13 @@ export const Navbar = () => {
         <Link to="/courses" className={`nav-link ${isActive('/courses')}`}>Courses</Link>
         <Link to="/assignments" className={`nav-link ${isActive('/assignments')}`}>Assignments</Link>
         <Link to="/ai-tutor" className={`nav-link ${isActive('/ai-tutor')}`}>AI Tutor</Link>
-        <Link to="/test-ai" className={`nav-link ${isActive('/test-ai')}`}>Test AI</Link>
         <Link to="/settings" className={`nav-link ${isActive('/settings')}`}>Settings</Link>
-        <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
+        <button className="btn btn-secondary">Logout</button>
       </div>
     </nav>
   );
 
-  return currentUser ? privateNav : publicNav;
-};
+  return isAuthenticated ? privateNav : publicNav;
+}
 
 export default Navbar; 
