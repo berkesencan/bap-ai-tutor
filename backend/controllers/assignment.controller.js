@@ -136,6 +136,30 @@ class AssignmentController {
   }
   
   /**
+   * Get past assignments for the current user
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getPast(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      const { limit } = req.query;
+      
+      const assignments = await Assignment.getPast(userId, limit ? parseInt(limit) : 10);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          assignments,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  /**
    * Get an assignment by ID
    * @param {Request} req - Express request object
    * @param {Response} res - Express response object

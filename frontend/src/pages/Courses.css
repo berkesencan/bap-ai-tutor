@@ -1,0 +1,102 @@
+/* Courses.css */
+.courses {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.courses h1 {
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+/* Course Card */
+.course-card {
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.course-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Source Badge */
+.source-badge {
+  background-color: #d1fae5;
+  color: #065f46;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+/* Term Badge */
+.term-badge {
+  background-color: #e0f2fe;
+  color: #0c4a6e;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+/* Action Buttons */
+.action-link {
+  color: #16a34a;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.action-link:hover {
+  color: #059669;
+  text-decoration: underline;
+}
+
+/* Import Button */
+.import-button {
+  background-color: #16a34a;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  display: inline-block;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.import-button:hover {
+  background-color: #059669;
+}
+
+/* Loading Spinner */
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #16a34a;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+  background-color: #f9fafb;
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.empty-state p {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+} 

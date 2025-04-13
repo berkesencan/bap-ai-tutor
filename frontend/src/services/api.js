@@ -159,6 +159,24 @@ export const getAllAssignments = async () => {
   }
 };
 
+export const getUpcomingAssignments = async (limit = 5) => {
+  try {
+    const response = await apiClient.get(`/assignments/upcoming?limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getPastAssignments = async (limit = 5) => {
+  try {
+    const response = await apiClient.get(`/assignments/past?limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 export const createAssignment = async (courseId, assignmentData) => {
   try {
     // Note: Route based on backend/routes/assignment.routes.js

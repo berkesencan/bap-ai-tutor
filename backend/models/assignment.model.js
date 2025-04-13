@@ -191,6 +191,36 @@ class Assignment {
       throw error;
     }
   }
+  
+  /**
+   * Get past assignments for a user
+   * @param {string} userId - User ID
+   * @param {number} limit - Maximum number of assignments to return
+   * @returns {Promise<Array>} - Array of past assignment data
+   */
+  static async getPast(userId, limit = 10) {
+    try {
+      const now = new Date();
+      
+      const assignmentsRef = db.collection('assignments')
+        .where('userId', '==', userId)
+        .where('dueDate', '<', now)
+        .orderBy('dueDate', 'desc') // Most recent first
+        .limit(limit);
+      
+      const assignmentsSnapshot = await assignmentsRef.get();
+      
+      const assignments = [];
+      assignmentsSnapshot.forEach(doc => {
+        assignments.push(doc.data());
+      });
+      
+      return assignments;
+    } catch (error) {
+      console.error('Error getting past assignments:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Assignment; 

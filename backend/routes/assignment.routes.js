@@ -46,6 +46,13 @@ router.get('/', AssignmentController.getAll);
 router.get('/upcoming', AssignmentController.getUpcoming);
 
 /**
+ * @route GET /api/assignments/past
+ * @desc Get past assignments for the current user
+ * @access Private
+ */
+router.get('/past', AssignmentController.getPast);
+
+/**
  * @route GET /api/assignments/:assignmentId
  * @desc Get an assignment by ID
  * @access Private

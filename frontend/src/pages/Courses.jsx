@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getCourses } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import './Courses.css';
 
 function Courses() {
   const [courses, setCourses] = useState([]);
@@ -39,7 +40,7 @@ function Courses() {
       <div className="courses p-6">
         <h1 className="text-2xl font-bold mb-6">My Courses</h1>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="spinner"></div>
         </div>
       </div>
     );
@@ -54,7 +55,7 @@ function Courses() {
         </div>
         <Link 
           to="/connect" 
-          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded inline-block"
+          className="import-button"
         >
           Import Courses from Gradescope
         </Link>
@@ -67,11 +68,11 @@ function Courses() {
       <h1 className="text-2xl font-bold mb-6">My Courses</h1>
       
       {courses.length === 0 ? (
-        <div className="bg-gray-100 rounded-lg p-6 text-center">
+        <div className="empty-state">
           <p className="text-gray-600 mb-4">You don't have any courses yet.</p>
           <Link 
             to="/connect" 
-            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded inline-block"
+            className="import-button"
           >
             Import Courses from Gradescope
           </Link>
@@ -81,7 +82,7 @@ function Courses() {
           {courses.map(course => (
             <div 
               key={course.id} 
-              className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
+              className="course-card"
             >
               <div className="p-6">
                 <div className="flex justify-between items-start">
@@ -91,10 +92,10 @@ function Courses() {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     {course.source === 'gradescope' && (
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Gradescope</span>
+                      <span className="source-badge">Gradescope</span>
                     )}
                     {course.term && (
-                      <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">{course.term}</span>
+                      <span className="term-badge">{course.term}</span>
                     )}
                   </div>
                 </div>
@@ -113,21 +114,21 @@ function Courses() {
                       href={`https://www.gradescope.com/courses/${course.externalId}`}
                       target="_blank"
                       rel="noopener noreferrer" 
-                      className="text-blue-500 hover:text-blue-700"
+                      className="action-link"
                     >
                       View on Gradescope
                     </a>
                   ) : (
                     <Link 
                       to={`/courses/${course.id}`} 
-                      className="text-blue-500 hover:text-blue-700"
+                      className="action-link"
                     >
                       View Details
                     </Link>
                   )}
                   <Link 
                     to={`/assignments?courseId=${course.id}`} 
-                    className="text-blue-500 hover:text-blue-700"
+                    className="action-link"
                   >
                     View Assignments
                   </Link>

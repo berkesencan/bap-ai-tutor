@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { getAssignmentsForCourse, getCourses, getAllAssignments } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import './Assignments.css';
 
 function Assignments() {
   const [assignments, setAssignments] = useState([]);
@@ -117,7 +118,7 @@ function Assignments() {
       <div className="assignments p-6">
         <h1 className="text-2xl font-bold mb-6">Assignments</h1>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="spinner"></div>
         </div>
       </div>
     );
@@ -132,7 +133,7 @@ function Assignments() {
         </div>
         <Link 
           to="/connect" 
-          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded inline-block"
+          className="import-button"
         >
           Import from Gradescope
         </Link>
@@ -146,14 +147,14 @@ function Assignments() {
       
       {/* Course filter */}
       <div className="mb-6">
-        <label htmlFor="course-filter" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="course-filter" className="filter-label">
           Filter by Course:
         </label>
         <select
           id="course-filter"
           value={selectedCourseId || ''}
           onChange={(e) => setSelectedCourseId(e.target.value || null)}
-          className="block w-full max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="filter-select"
         >
           <option value="">All Courses</option>
           {courses.map(course => (
@@ -166,11 +167,11 @@ function Assignments() {
 
       {/* No courses message */}
       {courses.length === 0 && (
-        <div className="bg-gray-100 rounded-lg p-6 text-center">
-          <p className="text-gray-600 mb-4">You don't have any courses yet.</p>
+        <div className="empty-state">
+          <p>You don't have any courses yet.</p>
           <Link 
             to="/connect" 
-            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded inline-block"
+            className="import-button"
           >
             Import from Gradescope
           </Link>
@@ -179,15 +180,15 @@ function Assignments() {
 
       {/* No assignments message */}
       {courses.length > 0 && assignments.length === 0 && !loading && (
-        <div className="bg-gray-100 rounded-lg p-6">
-          <p className="text-gray-600">No assignments found.</p>
+        <div className="empty-state">
+          <p>No assignments found.</p>
         </div>
       )}
 
       {/* Loading assignments indicator */}
       {loading && courses.length > 0 && (
         <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="spinner"></div>
         </div>
       )}
 
@@ -197,25 +198,25 @@ function Assignments() {
           {assignments.map(assignment => (
             <div 
               key={assignment.id} 
-              className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 p-4"
+              className="assignment-card"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-800">{assignment.title}</h2>
-                  <p className="text-sm text-gray-500">
+                  <h2 className="assignment-title">{assignment.title}</h2>
+                  <p className="assignment-course">
                     {getCourseName(assignment.courseId)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className={`inline-block px-2 py-1 text-xs rounded ${
+                  <span className={`status-badge ${
                     assignment.status === 'completed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
+                      ? 'completed' 
+                      : 'pending'
                   }`}>
                     {assignment.status === 'completed' ? 'Completed' : 'Pending'}
                   </span>
                   {assignment.source === 'gradescope' && (
-                    <span className="block mt-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                    <span className="source-badge">
                       Gradescope
                     </span>
                   )}
@@ -223,30 +224,30 @@ function Assignments() {
               </div>
               
               <div className="mt-3">
-                <p className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Due:</span> {formatDueDate(assignment.dueDate)}
+                <p className="assignment-due">
+                  <span className="assignment-due-label">Due:</span> {formatDueDate(assignment.dueDate)}
                 </p>
                 {assignment.description && (
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="assignment-description">
                     {assignment.description}
                   </p>
                 )}
               </div>
               
-              <div className="mt-4 flex justify-end space-x-2">
+              <div className="mt-4 flex justify-end space-x-4">
                 {assignment.source === 'gradescope' && assignment.externalId && getCourseExternalId(assignment.courseId) ? (
                   <a 
                     href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-700 text-sm"
+                    className="action-link"
                   >
                     View on Gradescope
                   </a>
                 ) : (
                   <Link 
                     to={`/assignments/${assignment.id}`}
-                    className="text-blue-500 hover:text-blue-700 text-sm"
+                    className="action-link"
                   >
                     Details
                   </Link>
