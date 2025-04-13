@@ -15,11 +15,7 @@ import Courses from './pages/Courses';
 import Assignments from './pages/Assignments';
 import AiTutorPage from './pages/AiTutorPage';
 import Settings from './pages/Settings';
-<<<<<<< HEAD
-=======
-import TestAI from './pages/TestAI';
 import Connect from './pages/Connect';
->>>>>>> b3161023240efbce3728666ace25849b88ba18d1
 
 function App() {
   return (
