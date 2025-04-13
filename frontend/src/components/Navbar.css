@@ -159,4 +159,9 @@
   .hamburger {
     display: block;
   }
+}
+
+/* Log In button with white text */
+.login-button {
+  color: white !important;
 } 

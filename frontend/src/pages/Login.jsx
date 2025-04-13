@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import './Login.css';
 
 export const Login = () => {
   const [error, setError] = useState('');
@@ -29,13 +30,13 @@ export const Login = () => {
         
         {error && <p className="error-message">{error}</p>}
         
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-          className="btn btn-primary"
+        <button
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className="google-signin-button"
         >
           {loading ? 'Signing in...' : 'Sign in with Google'}
-            </button>
+        </button>
         
         <p className="auth-redirect">
           Don't have an account? <Link to="/signup">Sign Up</Link>

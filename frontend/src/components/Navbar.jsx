@@ -123,7 +123,7 @@ export const Navbar = () => {
         <div></div>
       </div>
       <div className={`navbar-links ${isMenuOpen ? 'open' : ''}`}>
-        <Link to="/login" className="btn btn-primary">Log In</Link>
+        <Link to="/login" className="btn btn-primary login-button">Log In</Link>
         <Link to="/signup" className="btn btn-secondary">Sign Up</Link>
       </div>
     </nav>
@@ -150,7 +150,6 @@ export const Navbar = () => {
         <Link to="/assignments" className={`nav-link ${isActive('/assignments')}`}>Assignments</Link>
         <Link to="/ai-tutor" className={`nav-link ${isActive('/ai-tutor')}`}>AI Tutor</Link>
         <Link to="/connect" className={`nav-link ${isActive('/connect')}`}>Connect</Link>
-        <Link to="/settings" className={`nav-link ${isActive('/settings')}`}>Settings</Link>
         <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
       </div>
     </nav>

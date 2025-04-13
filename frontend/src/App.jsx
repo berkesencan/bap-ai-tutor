@@ -14,7 +14,6 @@ import { Dashboard } from './pages/Dashboard';
 import Courses from './pages/Courses';
 import Assignments from './pages/Assignments';
 import AiTutorPage from './pages/AiTutorPage';
-import Settings from './pages/Settings';
 import Connect from './pages/Connect';
 
 function App() {
@@ -52,11 +51,6 @@ function App() {
             <Route path="connect" element={
               <ProtectedRoute>
                 <Connect />
-              </ProtectedRoute>
-            } />
-            <Route path="settings" element={
-              <ProtectedRoute>
-                <Settings />
               </ProtectedRoute>
             } />
             
