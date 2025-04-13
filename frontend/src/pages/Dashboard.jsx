@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -18,9 +17,6 @@ export const Dashboard = () => {
           <div className="welcome-card">
             <h2>Welcome, {firstName}!</h2>
             <p>Ready to enhance your learning experience today?</p>
-            <div className="quick-actions">
-              <Link to="/ai-tutor" className="btn btn-primary">Go to AI Tutor</Link>
-            </div>
           </div>
         )}
       </div>
