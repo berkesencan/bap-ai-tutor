@@ -71,7 +71,7 @@ class AIController {
   }
 
   /**
-   * Handle a chat message using Gemini (maintains history)
+   * Handle a chat message using Gemini (maintains history via prompt)
    * @route POST /api/ai/chat
    */
   static async handleChatMessage(req, res) {
@@ -84,20 +84,36 @@ class AIController {
          return res.status(400).json({ success: false, message: 'Invalid history format: must be an array' });
       }
 
-      const responseText = await GeminiService.generateChatResponse(
-        history || [],
-        message
-      );
+      // *** Reconstruct the prompt similar to frontend logic (ensure consistency) ***
+      const MAX_HISTORY_TURNS = 5;
+      const historyToFormat = history || [];
+      const historyToSend = historyToFormat.slice(-MAX_HISTORY_TURNS * 2);
+      const formattedHistory = historyToSend.map(msg => {
+        const prefix = msg.role === 'user' ? 'User:' : 'AI:'; // Use role directly if it's user/model
+        return `${prefix} ${msg.parts || msg.content}`; // Backend might receive parts or content
+      }).join('\n');
       
-      res.json({ success: true, data: { response: responseText } });
+      // Add the new message to the history string for the prompt
+      const promptForApi = `${formattedHistory}\nUser: ${message}`.trim();
+
+      // Use the service function that returns usage data
+      const { text, usageMetadata } = await GeminiService.generateChatResponseFromPrompt(promptForApi);
+      
+      res.json({ 
+        success: true, 
+        data: { 
+          response: text, 
+          usageMetadata: usageMetadata // Include usage metadata
+        } 
+      });
     } catch (error) {
       handleError(error, res);
     }
   }
 
   /**
-   * Test Gemini 1.5 Flash API
-   * @route POST /api/test-ai/test-gemini
+   * Test Gemini 1.5 Flash API - Now returns usage metadata
+   * @route POST /api/ai/test-gemini
    */
   static async testGemini(req, res) {
     try {
@@ -111,14 +127,16 @@ class AIController {
       }
 
       console.log("Test Gemini API called with prompt:", prompt);
-      const response = await GeminiService.testGeminiFlash(prompt);
-      console.log("Response received from Gemini:", response.substring(0, 100) + "...");
+      // Service function now returns { text, usageMetadata }
+      const { text, usageMetadata } = await GeminiService.testGeminiFlash(prompt); 
+      console.log("Response received from Gemini:", text.substring(0, 100) + "...");
       
       res.json({ 
         success: true, 
         data: { 
-          response: response,
-          model: 'gemini-1.5-flash'
+          response: text,
+          model: 'gemini-1.5-flash',
+          usageMetadata: usageMetadata // Include usage metadata
         } 
       });
     } catch (error) {

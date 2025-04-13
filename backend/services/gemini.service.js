@@ -8,74 +8,61 @@ const genAI = new GoogleGenerativeAI(config.geminiApiKey);
  */
 class GeminiService {
   /**
-   * Generate content using the Gemini model
+   * Generate content using the Gemini model (Base method, potentially returning more info)
    * @param {string} prompt - The prompt to send to the model
-   * @returns {Promise<string>} - The generated text
+   * @param {string} modelName - e.g., 'gemini-pro', 'gemini-1.5-flash'
+   * @returns {Promise<object>} - An object containing { text: string, usageMetadata: object | null }
+   */
+  static async _generateWithUsage(prompt, modelName) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      const usageMetadata = response.usageMetadata || null; // Get usage metadata if available
+      
+      console.log(`Gemini Response (${modelName}) Usage:`, usageMetadata); // Log it on the backend
+      
+      return { text, usageMetadata }; // Return both
+    } catch (error) {
+      console.error(`Error generating content with Gemini (${modelName}):`, error);
+      throw new Error(`Failed to generate content with Gemini (${modelName})`);
+    }
+  }
+
+  // --- Public Methods Using _generateWithUsage --- //
+
+  /**
+   * Generate simple content (backward compatible)
+   * @param {string} prompt
+   * @returns {Promise<string>} - The generated text only
    */
   static async generateContent(prompt) {
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' }); // Or specify another model like 'gemini-1.5-flash'
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      return text;
-    } catch (error) {
-      console.error('Error generating content with Gemini:', error);
-      throw new Error('Failed to generate content with Gemini');
-    }
+    const { text } = await this._generateWithUsage(prompt, 'gemini-pro');
+    return text;
   }
   
   /**
-   * Generate content as a chat conversation
-   * @param {Array<object>} history - The chat history (e.g., [{role: 'user', parts: 'Hello'}, {role: 'model', parts: 'Hi there!'}])
-   * @param {string} message - The latest user message
-   * @returns {Promise<string>} - The generated response text
+   * Generate chat response (history handled by caller sending full prompt)
+   * This now calls the function that returns usage metadata
+   * @param {string} fullPrompt - The combined history and new message
+   * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
    */
-  static async generateChatResponse(history, message) {
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-      const chat = model.startChat({
-        history: history,
-      });
-      const result = await chat.sendMessage(message);
-      const response = await result.response;
-      const text = response.text();
-      return text;
-    } catch (error) {
-      console.error('Error generating chat response with Gemini:', error);
-      throw new Error('Failed to generate chat response with Gemini');
-    }
+  static async generateChatResponseFromPrompt(fullPrompt) {
+     // We are using the testGeminiFlash model as decided earlier
+    return this._generateWithUsage(fullPrompt, 'gemini-1.5-flash'); 
   }
-  
+
   /**
    * Test Gemini 1.5 Flash model with a prompt
-   * @param {string} prompt - The prompt to send to the model
-   * @returns {Promise<string>} - The generated text
+   * Returns text and usage metadata
+   * @param {string} prompt 
+   * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
    */
   static async testGeminiFlash(prompt) {
-    try {
-      console.log('Testing Gemini 1.5 Flash with prompt:', prompt);
-      
-      const model = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 2048,
-        }
-      });
-      
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      console.log('Gemini 1.5 Flash response received');
-      return text;
-    } catch (error) {
-      console.error('Error testing Gemini 1.5 Flash:', error);
-      throw new Error(`Failed to test Gemini 1.5 Flash: ${error.message}`);
-    }
+    console.log('Testing Gemini 1.5 Flash with prompt:', prompt);
+    // Use the internal method that returns metadata
+    return this._generateWithUsage(prompt, 'gemini-1.5-flash'); 
   }
   
   // Add more methods as needed, e.g., for specific tutoring tasks like explaining concepts, generating questions, etc.

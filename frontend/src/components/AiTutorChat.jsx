@@ -26,36 +26,66 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
     inputRef.current?.focus();
   }, []);
 
-  // Handle sending a new message
+  // Handle sending a new message (with history in prompt)
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!message || !message.trim()) return;
+    if (!message || !message.trim()) return; 
 
     const userMessage = { role: 'user', content: message.trim() };
-    setChatHistory((prev) => [...prev, userMessage]);
+    // Optimistically update history before sending
+    const currentChatHistory = [...chatHistory, userMessage]; 
+    setChatHistory(currentChatHistory); // Update parent state
+    
     setIsLoading(true);
     setError(null);
-    setLastApiResponse(null);
-    setMessage('');
+    setLastApiResponse(null); 
+    setMessage(''); // Clear input
 
     try {
-      // Mimic TestAI: Call testGemini
-      const response = await testGemini(userMessage.content);
+      // *** MODIFICATION START: Build prompt with history (Simplified) ***
+      const MAX_HISTORY_TURNS = 5; // Send last 5 pairs (10 messages total)
+      // Get the last N messages, including the one we just added
+      const historyToSend = currentChatHistory.slice(-MAX_HISTORY_TURNS * 2);
+      
+      // Format history simply
+      const formattedHistory = historyToSend.map(msg => {
+        const prefix = msg.role === 'user' ? 'User:' : 'AI:';
+        return `${prefix} ${msg.content}`;
+      }).join('\n');
+      
+      // Construct the prompt: just the formatted history
+      // The latest user message is already included at the end of formattedHistory
+      const promptForApi = formattedHistory;
+
+      console.log("Sending simplified prompt with history to testGemini:", promptForApi);
+
+      // Call the simple testGemini function with the combined prompt
+      const response = await testGemini(promptForApi);
+      // *** MODIFICATION END ***
+
       console.log("API Response received in AiTutorChat:", response);
 
       if (response.success) {
-        // Mimic TestAI: Set a state variable immediately with the response data
-        setLastApiResponse(response.data.response);
-        
-        // Now update the chat history for display
-        setChatHistory((prev) => [...prev, { role: 'ai', content: response.data.response }]);
+        const responseText = response.data.response;
+        const usageMetadata = response.data.usageMetadata;
+
+        // Log the usage metadata
+        if (usageMetadata) {
+          console.log("Token Usage:", usageMetadata);
+        } else {
+          console.log("Token usage metadata not available in response.");
+        }
+
+        setLastApiResponse(responseText);
+        // Add AI response to history (managed by parent now)
+        setChatHistory((prev) => [...prev, { role: 'ai', content: responseText }]); 
       } else {
         setError(response.message || 'Failed to get response from AI tutor.');
-        console.error('AI chat error (using test endpoint):', response);
+        console.error('AI chat error (simplified history prompt):', response);
       }
     } catch (error) {
       setError('Failed to connect to the AI service. Please try again.');
-      console.error('AI chat error (using test endpoint):', error);
+      console.error('AI chat error (simplified history prompt):', error);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
