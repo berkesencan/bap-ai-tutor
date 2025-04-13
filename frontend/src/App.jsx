@@ -1,6 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
 import './App.css';
 
 // Layouts
@@ -16,55 +17,71 @@ import Assignments from './pages/Assignments';
 import AiTutorPage from './pages/AiTutorPage';
 import Settings from './pages/Settings';
 import TestAI from './pages/TestAI';
+import Connect from './pages/Connect';
+
+function AppRoutes() {
+  const { currentUser } = useAuth();
+  
+  return (
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        {/* Index route - show Home for guests, redirect to Dashboard for authenticated users */}
+        <Route index element={currentUser ? <Navigate to="/dashboard" replace /> : <Home />} />
+        
+        {/* Public routes */}
+        <Route path="login" element={<Login />} />
+        <Route path="signup" element={<Signup />} />
+        <Route path="test-ai" element={<TestAI />} />
+        
+        {/* Protected routes */}
+        <Route path="dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="courses" element={
+          <ProtectedRoute>
+            <Courses />
+          </ProtectedRoute>
+        } />
+        <Route path="assignments" element={
+          <ProtectedRoute>
+            <Assignments />
+          </ProtectedRoute>
+        } />
+        <Route path="ai-tutor" element={
+          <ProtectedRoute>
+            <AiTutorPage />
+          </ProtectedRoute>
+        } />
+        <Route path="connect" element={
+          <ProtectedRoute>
+            <Connect />
+          </ProtectedRoute>
+        } />
+        <Route path="settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+        
+        {/* Fallback route */}
+        <Route path="*" element={
+          <div className="container mx-auto p-8 text-center">
+            <h1 className="text-3xl font-bold mb-4">404 - Page Not Found</h1>
+            <p>Sorry, the page you are looking for does not exist.</p>
+          </div>
+        } />
+      </Route>
+    </Routes>
+  );
+}
 
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            {/* Public routes */}
-            <Route index element={<Home />} />
-            <Route path="login" element={<Login />} />
-            <Route path="signup" element={<Signup />} />
-            <Route path="test-ai" element={<TestAI />} />
-            
-            {/* Protected routes */}
-            <Route path="dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="courses" element={
-              <ProtectedRoute>
-                <Courses />
-              </ProtectedRoute>
-            } />
-            <Route path="assignments" element={
-              <ProtectedRoute>
-                <Assignments />
-              </ProtectedRoute>
-            } />
-            <Route path="ai-tutor" element={
-              <ProtectedRoute>
-                <AiTutorPage />
-              </ProtectedRoute>
-            } />
-            <Route path="settings" element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } />
-            
-            {/* Fallback route */}
-            <Route path="*" element={
-              <div className="container mx-auto p-8 text-center">
-                <h1 className="text-3xl font-bold mb-4">404 - Page Not Found</h1>
-                <p>Sorry, the page you are looking for does not exist.</p>
-              </div>
-            } />
-          </Route>
-        </Routes>
+        <AppRoutes />
       </AuthProvider>
     </Router>
   );
