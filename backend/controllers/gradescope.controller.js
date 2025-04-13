@@ -5,7 +5,12 @@ const gradescopeService = new GradescopeService();
 // Login to Gradescope
 exports.login = async (req, res) => {
   try {
-    console.log('Backend received login request:', req.body);
+    console.log('============================================');
+    console.log('Backend received login request at:', new Date().toISOString());
+    console.log('Request body:', req.body);
+    console.log('Auth user:', req.user ? `${req.user.uid} (${req.user.email})` : 'Not authenticated');
+    console.log('============================================');
+    
     const { email, password } = req.body;
     
     if (!email || !password) {
@@ -13,6 +18,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
     
+    // First just try to send a success response without actually connecting to Gradescope
+    // This helps isolate if the issue is with auth/routes or with the Gradescope service
+    // Comment this out once debugging is complete
+    return res.status(200).json({ message: 'Debug mode: Auth worked, not connecting to Gradescope yet' });
+    
+    // Regular flow below will run after removing the debug return above
     await gradescopeService.login(email, password);
     console.log('Login successful, sending response to client');
     res.status(200).json({ message: 'Successfully logged in to Gradescope' });

@@ -29,13 +29,13 @@ export const Login = () => {
         
         {error && <p className="error-message">{error}</p>}
         
-        <button 
-          onClick={handleGoogleSignIn}
-          disabled={loading}
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
           className="btn btn-primary"
         >
           {loading ? 'Signing in...' : 'Sign in with Google'}
-        </button>
+            </button>
         
         <p className="auth-redirect">
           Don't have an account? <Link to="/signup">Sign Up</Link>

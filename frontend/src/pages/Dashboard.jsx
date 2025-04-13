@@ -16,12 +16,12 @@ export const Dashboard = () => {
         <div className="dashboard-section">
           <h2>Upcoming Assignments</h2>
           <p>No assignments due soon.</p>
-        </div>
+          </div>
         
         <div className="dashboard-section">
           <h2>Your Courses</h2>
           <p>No courses added yet.</p>
-        </div>
+                  </div>
         
         <div className="dashboard-section">
           <h2>Recent Activity</h2>

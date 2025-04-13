@@ -25,8 +25,24 @@ const Connect = () => {
       console.log('Attempting to connect to Gradescope with email:', gradescopeEmail);
       
       // Get the Firebase auth token
-      const idToken = await currentUser.getIdToken();
-      console.log('Retrieved Firebase ID token');
+      const idToken = await currentUser.getIdToken(true); // Force token refresh
+      console.log('Retrieved Firebase ID token (first 10 chars):', idToken.substring(0, 10) + '...');
+      
+      // Test authentication first
+      console.log('Testing authentication with /api/auth-test endpoint...');
+      try {
+        const authTestResponse = await axios.get('/api/auth-test', {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+        console.log('Auth test successful:', authTestResponse.data);
+      } catch (authError) {
+        console.error('Auth test failed:', authError);
+        throw new Error(`Authentication test failed: ${authError.message}`);
+      }
+      
+      console.log('Proceeding to Gradescope login...');
       
       // Login to Gradescope
       const loginResponse = await axios.post('/api/gradescope/login', {
