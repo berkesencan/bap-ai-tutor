@@ -19,7 +19,7 @@ const { verifyToken: authMiddleware } = require('./middleware/auth.middleware');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -30,6 +30,9 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Apply routes - unprotected routes
 app.use('/api/auth', authRoutes);
+
+// Create a test route for Gemini API without authentication
+app.use('/api/test-ai', require('./routes/ai.routes'));
 
 // Protected routes with auth middleware
 app.use('/api/assignments', authMiddleware, assignmentRoutes);

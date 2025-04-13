@@ -94,6 +94,38 @@ class AIController {
       handleError(error, res);
     }
   }
+
+  /**
+   * Test Gemini 1.5 Flash API
+   * @route POST /api/test-ai/test-gemini
+   */
+  static async testGemini(req, res) {
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Missing required field: prompt' 
+        });
+      }
+
+      console.log("Test Gemini API called with prompt:", prompt);
+      const response = await GeminiService.testGeminiFlash(prompt);
+      console.log("Response received from Gemini:", response.substring(0, 100) + "...");
+      
+      res.json({ 
+        success: true, 
+        data: { 
+          response: response,
+          model: 'gemini-1.5-flash'
+        } 
+      });
+    } catch (error) {
+      console.error('Test Gemini Error:', error);
+      handleError(error, res);
+    }
+  }
 }
 
 module.exports = AIController; 

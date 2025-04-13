@@ -47,6 +47,37 @@ class GeminiService {
     }
   }
   
+  /**
+   * Test Gemini 1.5 Flash model with a prompt
+   * @param {string} prompt - The prompt to send to the model
+   * @returns {Promise<string>} - The generated text
+   */
+  static async testGeminiFlash(prompt) {
+    try {
+      console.log('Testing Gemini 1.5 Flash with prompt:', prompt);
+      
+      const model = genAI.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 2048,
+        }
+      });
+      
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      console.log('Gemini 1.5 Flash response received');
+      return text;
+    } catch (error) {
+      console.error('Error testing Gemini 1.5 Flash:', error);
+      throw new Error(`Failed to test Gemini 1.5 Flash: ${error.message}`);
+    }
+  }
+  
   // Add more methods as needed, e.g., for specific tutoring tasks like explaining concepts, generating questions, etc.
   
   /**

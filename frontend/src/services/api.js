@@ -2,9 +2,17 @@ import axios from 'axios';
 import { auth } from '../config/firebase'; // Fixed import path
 
 // Use the backend URL from environment variables or default
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Create a separate client for unauthenticated test requests
+const testApiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -53,6 +61,20 @@ const handleApiError = (error) => {
     // Something happened in setting up the request
     console.error('Error Message:', error.message);
     return { success: false, message: error.message };
+  }
+};
+
+// Test Gemini 1.5 Flash API (no authentication required)
+export const testGemini = async (prompt) => {
+  try {
+    console.log('Calling test-gemini API with prompt:', prompt);
+    console.log('API URL:', `${API_BASE_URL}/test-ai/test-gemini`);
+    const response = await testApiClient.post('/test-ai/test-gemini', { prompt });
+    console.log('Test API response:', response.data);
+    return response.data; // { success: true, data: { response: '...', model: '...' } }
+  } catch (error) {
+    console.error('Test API error details:', error);
+    return handleApiError(error);
   }
 };
 

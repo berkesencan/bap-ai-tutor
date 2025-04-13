@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Logo from '../assets/Logo';
-import { FaBars, FaTimes, FaUserCircle, FaSignOutAlt, FaHome, FaBookReader, FaCalendarAlt, FaRobot, FaCog } from 'react-icons/fa';
+import { FaBars, FaTimes, FaUserCircle, FaSignOutAlt, FaHome, FaBookReader, FaCalendarAlt, FaRobot, FaCog, FaFlask } from 'react-icons/fa';
 
 export const Navbar = () => {
   const { currentUser, logout } = useAuth();
@@ -44,30 +44,38 @@ export const Navbar = () => {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center">
-            {currentUser && (
-              <div className="flex space-x-6 mr-8">
-                <Link to="/dashboard" 
-                  className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
-                    ${isActive('/dashboard') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
-                  <FaHome className="mr-1" /> Dashboard
-                </Link>
-                <Link to="/courses" 
-                  className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
-                    ${isActive('/courses') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
-                  <FaBookReader className="mr-1" /> Courses
-                </Link>
-                <Link to="/assignments" 
-                  className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
-                    ${isActive('/assignments') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
-                  <FaCalendarAlt className="mr-1" /> Assignments
-                </Link>
-                <Link to="/ai-tutor" 
-                  className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
-                    ${isActive('/ai-tutor') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
-                  <FaRobot className="mr-1" /> AI Tutor
-                </Link>
-              </div>
-            )}
+            <div className="flex space-x-6 mr-8">
+              {currentUser && (
+                <>
+                  <Link to="/dashboard" 
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
+                      ${isActive('/dashboard') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
+                    <FaHome className="mr-1" /> Dashboard
+                  </Link>
+                  <Link to="/courses" 
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
+                      ${isActive('/courses') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
+                    <FaBookReader className="mr-1" /> Courses
+                  </Link>
+                  <Link to="/assignments" 
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
+                      ${isActive('/assignments') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
+                    <FaCalendarAlt className="mr-1" /> Assignments
+                  </Link>
+                  <Link to="/ai-tutor" 
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
+                      ${isActive('/ai-tutor') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
+                    <FaRobot className="mr-1" /> AI Tutor
+                  </Link>
+                </>
+              )}
+              {/* Always visible link for the test page */}
+              <Link to="/test-ai" 
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 
+                  ${isActive('/test-ai') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}>
+                <FaFlask className="mr-1" /> Test AI
+              </Link>
+            </div>
             
             {currentUser ? (
               <div className="flex items-center space-x-2">
@@ -161,6 +169,14 @@ export const Navbar = () => {
               </button>
             </>
           )}
+          {/* Always show Test AI link in mobile menu too */}
+          <Link
+            to="/test-ai"
+            className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${isActive('/test-ai') ? 'bg-white text-blue-600' : 'text-white hover:bg-blue-700'}`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            <FaFlask className="mr-2" /> Test AI
+          </Link>
           {!currentUser && (
             <>
               <Link
