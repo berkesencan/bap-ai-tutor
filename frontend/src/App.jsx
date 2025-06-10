@@ -15,6 +15,7 @@ import Courses from './pages/Courses';
 import Assignments from './pages/Assignments';
 import AiTutorPage from './pages/AiTutorPage';
 import Connect from './pages/Connect';
+import AssignmentPDFViewer from './pages/AssignmentPDFViewer';
 
 function App() {
   return (
@@ -41,6 +42,11 @@ function App() {
             <Route path="assignments" element={
               <ProtectedRoute>
                 <Assignments />
+              </ProtectedRoute>
+            } />
+            <Route path="assignments/pdf/:courseId/:assignmentId" element={
+              <ProtectedRoute>
+                <AssignmentPDFViewer />
               </ProtectedRoute>
             } />
             <Route path="ai-tutor" element={

@@ -110,3 +110,29 @@ exports.getAssignments = async (req, res) => {
     });
   }
 };
+
+// Get assignment PDF
+exports.getAssignmentPDF = async (req, res) => {
+  try {
+    const userId = req.user.uid;
+    const gradescopeService = getServiceForUser(userId);
+    if (!gradescopeService.isLoggedIn) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not logged in to Gradescope. Please log in first.'
+      });
+    }
+    const { courseId, assignmentId } = req.params;
+    const pdfBuffer = await gradescopeService.getAssignmentPDF(courseId, assignmentId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="assignment.pdf"');
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error getting Gradescope assignment PDF:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: `Failed to fetch assignment PDF for course ${req.params.courseId}, assignment ${req.params.assignmentId} from Gradescope.`
+    });
+  }
+};

@@ -546,6 +546,74 @@ async getCourses() {
       throw new Error(`Failed to get assignments: ${error.message}`);
     }
   }
+
+  /**
+   * Fetches the assignment PDF from Gradescope for a given course and assignment ID.
+   * @param {string} courseId - The Gradescope course ID
+   * @param {string} assignmentId - The Gradescope assignment ID
+   * @returns {Promise<Buffer>} - The PDF file as a Buffer
+   */
+  async getAssignmentPDF(courseId, assignmentId) {
+    console.log('DEBUG: Entered getAssignmentPDF', courseId, assignmentId);
+    if (!this.isLoggedIn) {
+      throw new Error('Not logged in');
+    }
+    try {
+      // 1. Go to the assignment or submission page
+      let assignmentUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}`;
+      let response = await this.session.get(assignmentUrl);
+      let $ = cheerio.load(response.data);
+
+      // DEBUG: Log assignment page HTML
+      const pageTitle = $('title').text();
+      console.log('ASSIGNMENT PAGE HTML:', $.html().substring(0, 1000));
+      console.log('PAGE TITLE:', pageTitle);
+
+      // Extract submissionId
+      const submissionIdRegex = /\/submissions\/(\d+)/;
+      let submissionId = null;
+
+      // Try to find a link to the submission page
+      $('a').each((i, elem) => {
+        const href = $(elem).attr('href');
+        if (href && href.includes('/submissions/')) {
+          const match = href.match(submissionIdRegex);
+          if (match) {
+            submissionId = match[1];
+          }
+        }
+      });
+
+      // Fallback: Try to extract from window.gon.page_context in a <script>
+      if (!submissionId) {
+        const scriptTags = $('script').toArray();
+        for (const script of scriptTags) {
+          const html = $(script).html();
+          if (html && html.includes('window.gon')) {
+            const match = html.match(/"id":"(\d+)"/);
+            if (match) {
+              submissionId = match[1];
+              break;
+            }
+          }
+        }
+      }
+
+      if (!submissionId) {
+        throw new Error('Could not find submission ID');
+      }
+
+      // Construct the graded copy PDF URL
+      const gradedCopyUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}.pdf`;
+
+      // Download the PDF
+      const fileResponse = await this.session.get(gradedCopyUrl, { responseType: 'arraybuffer' });
+      return fileResponse.data;
+    } catch (error) {
+      console.error('Error getting assignment PDF/ZIP:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = GradescopeService;

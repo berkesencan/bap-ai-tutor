@@ -226,4 +226,16 @@ export const importGradescopeData = async (data) => {
   }
 };
 
+// Fetch Gradescope Assignment PDF
+export const getGradescopeAssignmentPDF = async (courseId, assignmentId) => {
+  try {
+    const response = await apiClient.get(`/gradescope/assignments/${courseId}/${assignmentId}/pdf`, {
+      responseType: 'blob', // Important for PDF
+    });
+    return response.data; // Blob
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 export default apiClient; 

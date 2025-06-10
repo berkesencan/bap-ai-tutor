@@ -236,14 +236,22 @@ function Assignments() {
               
               <div className="mt-4 flex justify-end space-x-4">
                 {assignment.source === 'gradescope' && assignment.externalId && getCourseExternalId(assignment.courseId) ? (
-                  <a 
-                    href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="action-link"
-                  >
-                    View on Gradescope
-                  </a>
+                  <>
+                    <a 
+                      href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="action-link"
+                    >
+                      View on Gradescope
+                    </a>
+                    <Link
+                      to={`/assignments/pdf/${getCourseExternalId(assignment.courseId)}/${assignment.externalId}`}
+                      className="action-link"
+                    >
+                      View PDF
+                    </Link>
+                  </>
                 ) : (
                   <Link 
                     to={`/assignments/${assignment.id}`}

@@ -11,4 +11,7 @@ router.get('/courses', gradescopeController.getCourses);
 // Get assignments for a course
 router.get('/courses/:courseId/assignments', gradescopeController.getAssignments);
 
+// Get assignment PDF
+router.get('/assignments/:courseId/:assignmentId/pdf', gradescopeController.getAssignmentPDF);
+
 module.exports = router;
