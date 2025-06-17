@@ -8,15 +8,15 @@ function Home() {
         <h1>Welcome to BAP AI Tutor</h1>
         <h2>Your All-in-One Academic Planner</h2>
         <p>
-          Track assignments, prepare for exams, and get personalized AI tutoring
-          all in one platform. Never miss a deadline again!
-        </p>
+                Track assignments, prepare for exams, and get personalized AI tutoring
+                all in one platform. Never miss a deadline again!
+              </p>
         <div className="cta-buttons">
           <Link to="/login" className="btn btn-primary">Log In</Link>
           <Link to="/signup" className="btn btn-secondary">Sign Up</Link>
         </div>
-      </div>
-
+            </div>
+            
       <div className="features-section">
         <div className="feature">
           <h3>Assignment Tracking</h3>
@@ -30,7 +30,7 @@ function Home() {
           <h3>Platform Integration</h3>
           <p>Seamlessly connect with Brightspace, Gradescope, and more.</p>
         </div>
-      </div>
+        </div>
     </div>
   );
 }

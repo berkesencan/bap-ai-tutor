@@ -92,7 +92,7 @@ export const Navbar = () => {
     console.log("Toggling menu, current state:", isMenuOpen);
     setIsMenuOpen(!isMenuOpen);
   };
-
+  
   // Check if the current route is active
   const isActive = (path) => {
     return location.pathname === path ? 'active' : '';
@@ -138,12 +138,12 @@ export const Navbar = () => {
           {soundPlayed && <span className="navbar-sound-wave"></span>}
         </div>
         <Link to="/dashboard">BAP AI Tutor</Link>
-      </div>
+              </div>
       <div className="hamburger" onClick={toggleMenu}>
         <div></div>
         <div></div>
         <div></div>
-      </div>
+              </div>
       <div className={`navbar-links ${isMenuOpen ? 'open' : ''}`}>
         <Link to="/dashboard" className={`nav-link ${isActive('/dashboard')}`}>Dashboard</Link>
         <Link to="/courses" className={`nav-link ${isActive('/courses')}`}>Courses</Link>
@@ -156,6 +156,6 @@ export const Navbar = () => {
   );
 
   return currentUser ? privateNav : publicNav;
-};
+}; 
 
 export default Navbar; 

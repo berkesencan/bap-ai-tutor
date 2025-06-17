@@ -238,4 +238,21 @@ export const getGradescopeAssignmentPDF = async (courseId, assignmentId) => {
   }
 };
 
+// Upload and process a PDF file
+export const processPDF = async (file, prompt = 'Please analyze this PDF and provide a summary of its contents.') => {
+  try {
+    const formData = new FormData();
+    formData.append('pdf', file);
+    formData.append('prompt', prompt);
+    const response = await apiClient.post('/ai/process-pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 export default apiClient; 

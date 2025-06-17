@@ -29,7 +29,7 @@ class GeminiService {
       throw new Error(`Failed to generate content with Gemini (${modelName})`);
     }
   }
-
+  
   // --- Public Methods Using _generateWithUsage --- //
 
   /**
@@ -39,7 +39,7 @@ class GeminiService {
    */
   static async generateContent(prompt) {
     const { text } = await this._generateWithUsage(prompt, 'gemini-pro');
-    return text;
+      return text;
   }
   
   /**
@@ -117,6 +117,77 @@ Provide a day-by-day breakdown with specific tasks, estimated times, and suggest
   static async generatePracticeQuestions(topic, count = 5, difficulty = 'medium') {
     const prompt = `Generate ${count} practice questions about "${topic}" at a ${difficulty} difficulty level. Include a mix of question types if possible (e.g., multiple choice, short answer).`;
     return this.generateContent(prompt);
+  }
+
+  /**
+   * Process a PDF file with Gemini 1.5 Flash
+   * @param {string} pdfPath - Path to the PDF file
+   * @param {string} prompt - The prompt to send along with the PDF
+   * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
+   */
+  static async processPDF(pdfPath, prompt) {
+    const fs = require('fs').promises;
+    try {
+      // Read the PDF file
+      const pdfData = await fs.readFile(pdfPath);
+      // Get the model
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      // Create the content parts
+      const contentParts = [
+        {
+          inlineData: {
+            mimeType: 'application/pdf',
+            data: pdfData.toString('base64')
+          }
+        },
+        { text: prompt }
+      ];
+      // Generate content
+      const result = await model.generateContent(contentParts);
+      const response = await result.response;
+      const text = response.text();
+      const usageMetadata = response.usageMetadata || null;
+      console.log(`Gemini PDF Processing Usage:`, usageMetadata);
+      return { text, usageMetadata };
+    } catch (error) {
+      console.error('Error processing PDF with Gemini:', error);
+      throw new Error(`Failed to process PDF: ${error.message}`);
+    }
+  }
+
+  /**
+   * Process a PDF file and generate a study plan based on its content
+   * @param {string} pdfPath - Path to the PDF file
+   * @param {object} options - Options for generating the plan
+   * @param {number} options.durationDays - How many days the plan should cover
+   * @param {number} options.hoursPerDay - Average hours per day to study
+   * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
+   */
+  static async generateStudyPlanFromPDF(pdfPath, { durationDays, hoursPerDay }) {
+    const prompt = `Based on the content of this PDF, create a detailed study plan that covers ${durationDays} days, with ${hoursPerDay} hours of study per day. \nFirst, analyze the main topics and concepts in the PDF.\nThen, create a day-by-day breakdown with specific tasks, estimated times, and suggested resources.\nMake the plan realistic and actionable.`;
+    return this.processPDF(pdfPath, prompt);
+  }
+
+  /**
+   * Process a PDF file and generate practice questions based on its content
+   * @param {string} pdfPath - Path to the PDF file
+   * @param {number} count - Number of questions to generate
+   * @param {string} difficulty - Difficulty level (easy, medium, hard)
+   * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
+   */
+  static async generateQuestionsFromPDF(pdfPath, count = 5, difficulty = 'medium') {
+    const prompt = `Based on the content of this PDF, generate ${count} practice questions at a ${difficulty} difficulty level. \nInclude a mix of question types (multiple choice, short answer, etc.).\nMake sure the questions are relevant to the material in the PDF.`;
+    return this.processPDF(pdfPath, prompt);
+  }
+
+  /**
+   * Process a PDF file and get a summary of its content
+   * @param {string} pdfPath - Path to the PDF file
+   * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
+   */
+  static async summarizePDF(pdfPath) {
+    const prompt = `Please provide a comprehensive summary of this PDF. Include:\n1. Main topics and concepts\n2. Key points and important details\n3. Any notable examples or case studies\n4. Important formulas or equations (if any)\nFormat the summary in a clear, organized way.`;
+    return this.processPDF(pdfPath, prompt);
   }
 }
 

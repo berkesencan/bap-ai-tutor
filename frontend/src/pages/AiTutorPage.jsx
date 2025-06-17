@@ -253,7 +253,7 @@ Generate ${questionsForm.count} high-quality practice questions now:`;
           setError(`Warning: Questions ${shortQuestions.join(', ')} appear to be too short or incomplete. You may want to regenerate.`);
         }
         
-        setActionResult({ 
+        setActionResult({
           type: 'questions',
           content: generatedText
         });
@@ -646,11 +646,11 @@ YOUR RESPONSE:`;
           {actionResult && actionResult.type !== 'questions' && (
              <div className="results-container">
                <h3 className="results-title">
-                 {actionResult.type === 'studyPlan' && 'Your Study Plan'}
-                 {actionResult.type === 'explanation' && 'Concept Explanation'}
-               </h3>
+                {actionResult.type === 'studyPlan' && 'Your Study Plan'}
+                {actionResult.type === 'explanation' && 'Concept Explanation'}
+              </h3>
                <div className="results-content">
-                 {actionResult.content}
+                {actionResult.content}
                </div>
                <button 
                  onClick={() => handleDiscussInChat(actionResult.content)}
@@ -730,4 +730,4 @@ YOUR RESPONSE:`;
   );
 };
 
-export default AiTutorPage;
+export default AiTutorPage; 

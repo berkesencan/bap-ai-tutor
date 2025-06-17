@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { postChatMessage, testGemini } from '../services/api';
+import { postChatMessage, testGemini, processPDF } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './AiTutorChat.css'; // Import the CSS file
 
@@ -20,6 +20,8 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   // Track audio loading state
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Initialize audio and try multiple sources
   useEffect(() => {
@@ -157,7 +159,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
         const prefix = msg.role === 'user' ? 'User:' : 'AI:';
         return `${prefix} ${msg.content}`;
       }).join('\n');
-      
+
       // Construct the prompt: just the formatted history
       // The latest user message is already included at the end of formattedHistory
       const promptForApi = formattedHistory;
@@ -225,6 +227,33 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
       }
       return part; // Render plain text
     });
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a PDF file');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      alert('File size must be less than 20MB');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const response = await processPDF(file);
+      const userMessage = { role: 'user', content: 'I uploaded a PDF for analysis.' };
+      const aiMessage = { role: 'ai', content: response.text };
+      setChatHistory(prev => [...prev, userMessage, aiMessage]);
+    } catch (error) {
+      console.error('Error uploading PDF:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to process PDF. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -359,12 +388,12 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
                   <div className="message-header">
                      <div className="message-avatar-wrapper ai-icon">
                        <FaRobot />
-                     </div>
+                    </div>
                      <span className="message-sender">AI Tutor</span>
-                   </div>
+                  </div>
                   <div className="loading-dots">
                      <span></span><span></span><span></span>
-                   </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -382,18 +411,33 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
       <form onSubmit={handleSendMessage} className="chat-input-form">
         <div className="chat-input-wrapper">
           <input
-            ref={inputRef}
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".pdf"
+            style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            className="upload-button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            {isUploading ? <FaSpinner className="spinner" /> : <FaPaperclip />}
+          </button>
+          <input
             type="text"
+            ref={inputRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your message here..."
             className="chat-input"
-            disabled={isLoading}
+            disabled={isLoading || isUploading}
           />
           <button
             type="submit"
             className="chat-send-button"
-            disabled={!message || !message.trim() || isLoading}
+            disabled={!message || !message.trim() || isLoading || isUploading}
           >
             {isLoading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
           </button>
