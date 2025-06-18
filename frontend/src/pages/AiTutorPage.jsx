@@ -404,47 +404,87 @@ YOUR RESPONSE:`;
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="page-title">AI Tutor</h1>
+    <div className="ai-tutor-page">
+      <div className="ai-tutor-header">
+        <h1 className="ai-tutor-title">🤖 AI Tutor</h1>
+        <p className="ai-tutor-subtitle">
+          Your intelligent study companion powered by advanced AI
+        </p>
+      </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="p-4 bg-green-600 text-white font-bold">
-              AI Tools
+      <div className="ai-tutor-layout">
+        {/* Enhanced Sidebar */}
+        <div className="ai-tutor-sidebar">
+          <div className="sidebar-card">
+            <div className="sidebar-header">
+              <div className="sidebar-header-icon">🧠</div>
+              <h3 className="sidebar-header-title">AI Tools</h3>
+              <p className="sidebar-header-subtitle">Choose your learning path</p>
             </div>
-            <div className="sidebar-button-container">
+            
+            <div className="sidebar-navigation">
               <button 
                 onClick={() => handleTabChange('chat')}
-                className={`sidebar-button ${activeTab === 'chat' ? 'active' : ''}`}
+                className={`nav-button ${activeTab === 'chat' ? 'active' : ''}`}
               >
-                <FaLightbulb className="button-icon" /> AI Chat
+                <div className="nav-button-icon">💬</div>
+                <div className="nav-button-content">
+                  <span className="nav-button-title">AI Chat</span>
+                  <span className="nav-button-desc">Interactive conversation</span>
+                </div>
+                {activeTab === 'chat' && <div className="nav-button-indicator"></div>}
               </button>
+              
               <button 
                 onClick={() => handleTabChange('studyPlan')}
-                className={`sidebar-button ${activeTab === 'studyPlan' ? 'active' : ''}`}
+                className={`nav-button ${activeTab === 'studyPlan' ? 'active' : ''}`}
               >
-                <FaBookOpen className="button-icon" /> Study Plan
+                <div className="nav-button-icon">📅</div>
+                <div className="nav-button-content">
+                  <span className="nav-button-title">Study Plan</span>
+                  <span className="nav-button-desc">Personalized schedule</span>
+                </div>
+                {activeTab === 'studyPlan' && <div className="nav-button-indicator"></div>}
               </button>
+              
               <button 
                 onClick={() => handleTabChange('concept')}
-                className={`sidebar-button ${activeTab === 'concept' ? 'active' : ''}`}
+                className={`nav-button ${activeTab === 'concept' ? 'active' : ''}`}
               >
-                <FaQuestion className="button-icon" /> Explain Concept
+                <div className="nav-button-icon">💡</div>
+                <div className="nav-button-content">
+                  <span className="nav-button-title">Explain Concept</span>
+                  <span className="nav-button-desc">Clear explanations</span>
+                </div>
+                {activeTab === 'concept' && <div className="nav-button-indicator"></div>}
               </button>
+              
               <button 
                 onClick={() => handleTabChange('practice')}
-                className={`sidebar-button ${activeTab === 'practice' ? 'active' : ''}`}
+                className={`nav-button ${activeTab === 'practice' ? 'active' : ''}`}
               >
-                <FaClipboardList className="button-icon" /> Practice Questions
+                <div className="nav-button-icon">📝</div>
+                <div className="nav-button-content">
+                  <span className="nav-button-title">Practice Questions</span>
+                  <span className="nav-button-desc">Test your knowledge</span>
+                </div>
+                {activeTab === 'practice' && <div className="nav-button-indicator"></div>}
               </button>
+            </div>
+            
+            <div className="sidebar-footer">
+              <div className="ai-stats">
+                <div className="ai-stat">
+                  <span className="ai-stat-icon">⚡</span>
+                  <span className="ai-stat-text">Powered by Gemini AI</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         
-        {/* Main Content */}
-        <div className="lg:col-span-3 main-content-area">
+        {/* Enhanced Main Content */}
+        <div className="ai-tutor-main">
           {activeTab === 'chat' && 
             <AiTutorChat 
               message={chatMessage} 
@@ -454,76 +494,100 @@ YOUR RESPONSE:`;
             />}
           
           {activeTab === 'studyPlan' && (
-            <div className="form-container">
-              <h2 className="form-title">
-                <FaBookOpen className="form-title-icon" /> Generate Study Plan
-              </h2>
-              
-              <form onSubmit={handleStudyPlanSubmit}>
-                <div className="form-input-group">
-                  <label className="form-label">Topic or Course*</label>
-                  <input 
-                    type="text" 
-                    value={studyPlanForm.topic}
-                    onChange={(e) => setStudyPlanForm({...studyPlanForm, topic: e.target.value})}
-                    className="form-input"
-                    required
-                    placeholder="e.g., Data Structures, Machine Learning, Biology 101"
-                  />
+            <div className="tool-card">
+              <div className="tool-header">
+                <div className="tool-header-icon">📅</div>
+                <div className="tool-header-content">
+                  <h2 className="tool-title">Generate Study Plan</h2>
+                  <p className="tool-subtitle">Create a personalized learning schedule tailored to your goals</p>
                 </div>
-                
-                <div className="form-input-grid">
-                  <div className="form-input-group">
-                    <label className="form-label">Duration (days)*</label>
+              </div>
+              
+              <form onSubmit={handleStudyPlanSubmit} className="tool-form">
+                <div className="form-section">
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span className="label-icon">📚</span>
+                      Topic or Course
+                      <span className="label-required">*</span>
+                    </label>
                     <input 
-                      type="number" 
-                      min="1"
-                      max="30"
-                      value={studyPlanForm.durationDays}
-                      onChange={(e) => setStudyPlanForm({...studyPlanForm, durationDays: parseInt(e.target.value)})}
+                      type="text" 
+                      value={studyPlanForm.topic}
+                      onChange={(e) => setStudyPlanForm({...studyPlanForm, topic: e.target.value})}
                       className="form-input"
                       required
+                      placeholder="e.g., Data Structures, Machine Learning, Biology 101"
                     />
                   </div>
                   
-                  <div className="form-input-group">
-                    <label className="form-label">Hours per day*</label>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        <span className="label-icon">📆</span>
+                        Duration (days)
+                        <span className="label-required">*</span>
+                      </label>
+                      <input 
+                        type="number" 
+                        min="1"
+                        max="30"
+                        value={studyPlanForm.durationDays}
+                        onChange={(e) => setStudyPlanForm({...studyPlanForm, durationDays: parseInt(e.target.value)})}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">
+                        <span className="label-icon">⏰</span>
+                        Hours per day
+                        <span className="label-required">*</span>
+                      </label>
+                      <input 
+                        type="number" 
+                        min="0.5"
+                        max="12"
+                        step="0.5"
+                        value={studyPlanForm.hoursPerDay}
+                        onChange={(e) => setStudyPlanForm({...studyPlanForm, hoursPerDay: parseFloat(e.target.value)})}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span className="label-icon">🎯</span>
+                      Goal (optional)
+                    </label>
                     <input 
-                      type="number" 
-                      min="0.5"
-                      max="12"
-                      step="0.5"
-                      value={studyPlanForm.hoursPerDay}
-                      onChange={(e) => setStudyPlanForm({...studyPlanForm, hoursPerDay: parseFloat(e.target.value)})}
+                      type="text" 
+                      value={studyPlanForm.goal}
+                      onChange={(e) => setStudyPlanForm({...studyPlanForm, goal: e.target.value})}
                       className="form-input"
-                      required
+                      placeholder="e.g., Pass the final exam, Master algorithms, Understand key concepts"
                     />
                   </div>
-                </div>
-                
-                <div className="form-input-group">
-                  <label className="form-label">Goal (optional)</label>
-                  <input 
-                    type="text" 
-                    value={studyPlanForm.goal}
-                    onChange={(e) => setStudyPlanForm({...studyPlanForm, goal: e.target.value})}
-                    className="form-input"
-                    placeholder="e.g., Pass the final exam, Master algorithms, Understand key concepts"
-                  />
                 </div>
                 
                 <button 
                   type="submit"
                   disabled={isLoading || !studyPlanForm.topic}
-                  className="form-submit-button"
+                  className="form-submit-btn"
                 >
                   {isLoading ? (
                     <>
-                      <FaSpinner className="spinner-icon" />
-                      Generating...
+                      <div className="btn-spinner"></div>
+                      Generating your plan...
                     </>
                   ) : (
-                    'Generate Study Plan'
+                    <>
+                      <span className="btn-icon">✨</span>
+                      Generate Study Plan
+                    </>
                   )}
                 </button>
               </form>
@@ -531,47 +595,63 @@ YOUR RESPONSE:`;
           )}
           
           {activeTab === 'concept' && (
-            <div className="form-container">
-              <h2 className="form-title">
-                <FaQuestion className="form-title-icon" /> Explain a Concept
-              </h2>
-              
-              <form onSubmit={handleConceptSubmit}>
-                <div className="form-input-group">
-                  <label className="form-label">Concept*</label>
-                  <input 
-                    type="text" 
-                    value={conceptForm.concept}
-                    onChange={(e) => setConceptForm({...conceptForm, concept: e.target.value})}
-                    className="form-input"
-                    required
-                    placeholder="e.g., Recursion, Photosynthesis, String Theory"
-                  />
+            <div className="tool-card">
+              <div className="tool-header">
+                <div className="tool-header-icon">💡</div>
+                <div className="tool-header-content">
+                  <h2 className="tool-title">Explain a Concept</h2>
+                  <p className="tool-subtitle">Get clear, detailed explanations for any topic or concept</p>
                 </div>
-                
-                <div className="form-input-group">
-                  <label className="form-label">Context (optional)</label>
-                  <input 
-                    type="text" 
-                    value={conceptForm.context}
-                    onChange={(e) => setConceptForm({...conceptForm, context: e.target.value})}
-                    className="form-input"
-                    placeholder="e.g., Computer Science, Biology, Physics"
-                  />
+              </div>
+              
+              <form onSubmit={handleConceptSubmit} className="tool-form">
+                <div className="form-section">
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span className="label-icon">🔍</span>
+                      Concept
+                      <span className="label-required">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      value={conceptForm.concept}
+                      onChange={(e) => setConceptForm({...conceptForm, concept: e.target.value})}
+                      className="form-input"
+                      required
+                      placeholder="e.g., Recursion, Photosynthesis, String Theory"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span className="label-icon">📖</span>
+                      Context (optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={conceptForm.context}
+                      onChange={(e) => setConceptForm({...conceptForm, context: e.target.value})}
+                      className="form-input"
+                      placeholder="e.g., Computer Science, Biology, Physics"
+                    />
+                  </div>
                 </div>
                 
                 <button 
                   type="submit"
                   disabled={isLoading || !conceptForm.concept}
-                  className="form-submit-button"
+                  className="form-submit-btn"
                 >
                   {isLoading ? (
                     <>
-                      <FaSpinner className="spinner-icon" />
-                      Generating...
+                      <div className="btn-spinner"></div>
+                      Explaining concept...
                     </>
                   ) : (
-                    'Explain Concept'
+                    <>
+                      <span className="btn-icon">🧠</span>
+                      Explain Concept
+                    </>
                   )}
                 </button>
               </form>
@@ -579,137 +659,207 @@ YOUR RESPONSE:`;
           )}
           
           {activeTab === 'practice' && (
-            <div className="form-container">
-              <h2 className="form-title">
-                <FaClipboardList className="form-title-icon" /> Generate Practice Questions
-              </h2>
-              
-              <form onSubmit={handleQuestionsSubmit}>
-                <div className="form-input-group">
-                  <label className="form-label">Topic*</label>
-                  <input 
-                    type="text" 
-                    value={questionsForm.topic}
-                    onChange={(e) => setQuestionsForm({...questionsForm, topic: e.target.value})}
-                    className="form-input"
-                    required
-                    placeholder="e.g., Binary Trees, Cell Biology, Linear Algebra"
-                  />
+            <div className="tool-card">
+              <div className="tool-header">
+                <div className="tool-header-icon">📝</div>
+                <div className="tool-header-content">
+                  <h2 className="tool-title">Generate Practice Questions</h2>
+                  <p className="tool-subtitle">Create custom practice questions to test your understanding</p>
                 </div>
-                
-                <div className="form-input-grid">
-                  <div className="form-input-group">
-                    <label className="form-label">Number of Questions</label>
+              </div>
+              
+              <form onSubmit={handleQuestionsSubmit} className="tool-form">
+                <div className="form-section">
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span className="label-icon">📚</span>
+                      Topic
+                      <span className="label-required">*</span>
+                    </label>
                     <input 
-                      type="number" 
-                      min="1"
-                      max="10"
-                      value={questionsForm.count}
-                      onChange={(e) => setQuestionsForm({...questionsForm, count: parseInt(e.target.value)})}
+                      type="text" 
+                      value={questionsForm.topic}
+                      onChange={(e) => setQuestionsForm({...questionsForm, topic: e.target.value})}
                       className="form-input"
+                      required
+                      placeholder="e.g., Binary Trees, Cell Biology, Linear Algebra"
                     />
                   </div>
                   
-                  <div className="form-input-group">
-                    <label className="form-label">Difficulty</label>
-                    <select 
-                      value={questionsForm.difficulty}
-                      onChange={(e) => setQuestionsForm({...questionsForm, difficulty: e.target.value})}
-                      className="form-select"
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        <span className="label-icon">🔢</span>
+                        Number of Questions
+                      </label>
+                      <select 
+                        value={questionsForm.count}
+                        onChange={(e) => setQuestionsForm({...questionsForm, count: parseInt(e.target.value)})}
+                        className="form-select"
+                      >
+                        <option value={3}>3 Questions</option>
+                        <option value={5}>5 Questions</option>
+                        <option value={7}>7 Questions</option>
+                        <option value={10}>10 Questions</option>
+                      </select>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">
+                        <span className="label-icon">📊</span>
+                        Difficulty Level
+                      </label>
+                      <select 
+                        value={questionsForm.difficulty}
+                        onChange={(e) => setQuestionsForm({...questionsForm, difficulty: e.target.value})}
+                        className="form-select"
+                      >
+                        <option value="easy">🟢 Easy</option>
+                        <option value="medium">🟡 Medium</option>
+                        <option value="hard">🔴 Hard</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
                 
                 <button 
                   type="submit"
                   disabled={isLoading || !questionsForm.topic}
-                  className="form-submit-button"
+                  className="form-submit-btn"
                 >
                   {isLoading ? (
                     <>
-                      <FaSpinner className="spinner-icon" />
-                      Generating...
+                      <div className="btn-spinner"></div>
+                      Generating questions...
                     </>
                   ) : (
-                    'Generate Questions'
+                    <>
+                      <span className="btn-icon">🎯</span>
+                      Generate Questions
+                    </>
                   )}
                 </button>
               </form>
             </div>
           )}
           
-          {/* Render Questions and Answers OR Results display */}
+          {/* Enhanced Results Display */}
           {actionResult && actionResult.type !== 'questions' && (
-             <div className="results-container">
-               <h3 className="results-title">
-                {actionResult.type === 'studyPlan' && 'Your Study Plan'}
-                {actionResult.type === 'explanation' && 'Concept Explanation'}
-              </h3>
-               <div className="results-content">
-                {actionResult.content}
+             <div className="results-card">
+               <div className="results-header">
+                 <div className="results-header-icon">
+                   {actionResult.type === 'studyPlan' && '📅'}
+                   {actionResult.type === 'explanation' && '💡'}
+                 </div>
+                 <div className="results-header-content">
+                   <h3 className="results-title">
+                     {actionResult.type === 'studyPlan' && 'Your Personalized Study Plan'}
+                     {actionResult.type === 'explanation' && 'Concept Explanation'}
+                   </h3>
+                   <p className="results-subtitle">AI-generated content ready for you</p>
+                 </div>
                </div>
-               <button 
-                 onClick={() => handleDiscussInChat(actionResult.content)}
-                 className="form-submit-button mt-4 bg-blue-600 hover:bg-blue-700"
-               >
-                 <FaComments className="mr-2" /> Discuss in Chat
-               </button>
+               
+               <div className="results-content">
+                 <div className="results-text">
+                   {actionResult.content}
+                 </div>
+               </div>
+               
+               <div className="results-actions">
+                 <button 
+                   onClick={() => handleDiscussInChat(actionResult.content)}
+                   className="results-action-btn primary"
+                 >
+                   <span className="btn-icon">💬</span>
+                   Discuss in Chat
+                 </button>
+               </div>
              </div>
           )}
 
-          {/* Interactive Questions Display */}
+          {/* Enhanced Interactive Questions Display */}
           {actionResult && actionResult.type === 'questions' && (
-            <div className="results-container mt-6">
-              <h3 className="results-title">Practice Questions</h3>
-              <div className="space-y-6"> 
+            <div className="questions-card">
+              <div className="questions-header">
+                <div className="questions-header-icon">📝</div>
+                <div className="questions-header-content">
+                  <h3 className="questions-title">Practice Questions</h3>
+                  <p className="questions-subtitle">Test your knowledge and get instant feedback</p>
+                </div>
+              </div>
+              
+              <div className="questions-list">
                 {parseNumberedQuestions(actionResult.content).map((question, index) => (
-                  <div key={index} className="form-input-group p-4 border rounded-md">
-                    <p className="form-label font-semibold">Question {index + 1}:</p>
-                    <p className="mb-2">{question}</p>
-                    <textarea
-                      value={userAnswers[index]?.answer || ''} 
-                      onChange={(e) => handleAnswerChange(index, e.target.value)}
-                      rows="3"
-                      className="form-input" 
-                      placeholder="Type your answer here..."
-                      disabled={userAnswers[index]?.isGrading}
-                    />
-                    <button 
-                      onClick={() => handleGradeSingleAnswer(index)}
-                      className="form-submit-button mt-2 text-sm px-3 py-1"
-                      disabled={!userAnswers[index]?.answer || userAnswers[index]?.isGrading}
-                    >
-                      {userAnswers[index]?.isGrading ? (
-                        <><FaSpinner className="spinner-icon mr-1" /> Grading...</> 
-                      ) : (
-                        'Grade this Answer'
-                      )}
-                    </button>
+                  <div key={index} className="question-item">
+                    <div className="question-header">
+                      <div className="question-number">
+                        <span>Q{index + 1}</span>
+                      </div>
+                      <div className="question-text">
+                        <p>{question}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="question-answer">
+                      <label className="answer-label">
+                        <span className="label-icon">✍️</span>
+                        Your Answer:
+                      </label>
+                      <textarea
+                        value={userAnswers[index]?.answer || ''} 
+                        onChange={(e) => handleAnswerChange(index, e.target.value)}
+                        className="answer-textarea"
+                        placeholder="Type your answer here..."
+                        disabled={userAnswers[index]?.isGrading}
+                        rows="4"
+                      />
+                      
+                      <button 
+                        onClick={() => handleGradeSingleAnswer(index)}
+                        className="grade-btn"
+                        disabled={!userAnswers[index]?.answer || userAnswers[index]?.isGrading}
+                      >
+                        {userAnswers[index]?.isGrading ? (
+                          <>
+                            <div className="btn-spinner small"></div>
+                            Grading...
+                          </>
+                        ) : (
+                          <>
+                            <span className="btn-icon">✅</span>
+                            Grade Answer
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    
                     {userAnswers[index]?.feedback && !userAnswers[index]?.isGrading && (
-                      <div className={`mt-4 p-3 results-content ${isCorrectAnswer(userAnswers[index].feedback)
-                        ? 'answer-feedback-correct' 
-                        : 'answer-feedback-incorrect'}`}>
+                      <div className={`feedback-card ${isCorrectAnswer(userAnswers[index].feedback)
+                        ? 'correct' 
+                        : 'incorrect'}`}>
                          <div className="feedback-header">
-                           {isCorrectAnswer(userAnswers[index].feedback)
-                             ? <FaCheckCircle className="feedback-icon-correct" />
-                             : <FaTimesCircle className="feedback-icon-incorrect" />
-                           }
-                           <h5 className={isCorrectAnswer(userAnswers[index].feedback)
-                             ? 'feedback-text-correct'
-                             : 'feedback-text-incorrect'}>Feedback:</h5>
+                           <div className="feedback-icon">
+                             {isCorrectAnswer(userAnswers[index].feedback) ? '✅' : '❌'}
+                           </div>
+                           <h5 className="feedback-title">
+                             {isCorrectAnswer(userAnswers[index].feedback) ? 'Correct!' : 'Needs Improvement'}
+                           </h5>
                          </div>
-                         <pre className="whitespace-pre-wrap text-sm">{userAnswers[index].feedback}</pre>
                          
-                         <button 
-                           onClick={() => handleDiscussInChat(null, index)}
-                           className="form-submit-button mt-2 text-sm px-3 py-1 bg-blue-600 hover:bg-blue-700"
-                         >
-                           <FaComments className="mr-1 inline" /> Discuss in Chat
-                         </button>
+                         <div className="feedback-content">
+                           <pre className="feedback-text">{userAnswers[index].feedback}</pre>
+                         </div>
+                         
+                         <div className="feedback-actions">
+                           <button 
+                             onClick={() => handleDiscussInChat(null, index)}
+                             className="feedback-action-btn"
+                           >
+                             <span className="btn-icon">💬</span>
+                             Discuss in Chat
+                           </button>
+                         </div>
                        </div>
                     )}
                   </div>
@@ -719,9 +869,12 @@ YOUR RESPONSE:`;
           )}
           
           {error && (
-            <div className="error-container">
-              <p className="error-title">Error:</p>
-              <p>{error}</p>
+            <div className="error-card">
+              <div className="error-icon">⚠️</div>
+              <div className="error-content">
+                <h3 className="error-title">Something went wrong</h3>
+                <p className="error-message">{error}</p>
+              </div>
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css';
@@ -6,8 +6,20 @@ import './Login.css';
 function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // If user is already authenticated, redirect to dashboard
+    if (currentUser) {
+      navigate('/dashboard');
+    }
+  }, [currentUser, navigate]);
+
+  // If user is authenticated, don't render anything (they'll be redirected)
+  if (currentUser) {
+    return null;
+  }
 
   const handleGoogleSignUp = async () => {
     try {

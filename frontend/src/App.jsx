@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { GradescopeProvider } from './contexts/GradescopeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { NotFound } from './components/NotFound';
 import './App.css';
 
 // Layouts
@@ -21,54 +23,51 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            {/* Public routes */}
-            <Route index element={<Home />} />
-            <Route path="login" element={<Login />} />
-            <Route path="signup" element={<Signup />} />
-            
-            {/* Protected routes */}
-            <Route path="dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="courses" element={
-              <ProtectedRoute>
-                <Courses />
-              </ProtectedRoute>
-            } />
-            <Route path="assignments" element={
-              <ProtectedRoute>
-                <Assignments />
-              </ProtectedRoute>
-            } />
-            <Route path="assignments/pdf/:courseId/:assignmentId" element={
-              <ProtectedRoute>
-                <AssignmentPDFViewer />
-              </ProtectedRoute>
-            } />
-            <Route path="ai-tutor" element={
-              <ProtectedRoute>
-                <AiTutorPage />
-              </ProtectedRoute>
-            } />
-            <Route path="connect" element={
-              <ProtectedRoute>
-                <Connect />
-              </ProtectedRoute>
-            } />
-            
-            {/* Fallback route */}
-            <Route path="*" element={
-              <div className="container mx-auto p-8 text-center">
-                <h1 className="text-3xl font-bold mb-4">404 - Page Not Found</h1>
-                <p>Sorry, the page you are looking for does not exist.</p>
-              </div>
-            } />
-          </Route>
-        </Routes>
+        <GradescopeProvider>
+          <Routes>
+            <Route path="/" element={<MainLayout />}>
+              {/* Public routes */}
+              <Route index element={<Home />} />
+              <Route path="login" element={<Login />} />
+              <Route path="signup" element={<Signup />} />
+              
+              {/* Protected routes */}
+              <Route path="dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="courses" element={
+                <ProtectedRoute>
+                  <Courses />
+                </ProtectedRoute>
+              } />
+              <Route path="assignments" element={
+                <ProtectedRoute>
+                  <Assignments />
+                </ProtectedRoute>
+              } />
+              <Route path="assignments/pdf/:courseId/:assignmentId" element={
+                <ProtectedRoute>
+                  <AssignmentPDFViewer />
+                </ProtectedRoute>
+              } />
+              <Route path="ai-tutor" element={
+                <ProtectedRoute>
+                  <AiTutorPage />
+                </ProtectedRoute>
+              } />
+              <Route path="connect" element={
+                <ProtectedRoute>
+                  <Connect />
+                </ProtectedRoute>
+              } />
+              
+              {/* Fallback route with authentication check */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </GradescopeProvider>
       </AuthProvider>
     </Router>
   );

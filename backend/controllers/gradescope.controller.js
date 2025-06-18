@@ -1,17 +1,69 @@
 const GradescopeService = require('../services/gradescope.service');
+const GradescopeAuth = require('../models/gradescope-auth.model');
 
 // Create a service instance map to store instances by user ID
 const serviceInstances = new Map();
 
 // Helper to get a service instance for a user
-const getServiceForUser = (userId) => {
+const getServiceForUser = async (userId) => {
   if (!serviceInstances.has(userId)) {
     console.log(`Creating new Gradescope service instance for user ${userId}`);
-    serviceInstances.set(userId, new GradescopeService());
+    const service = new GradescopeService(userId);
+    serviceInstances.set(userId, service);
+    
+    // Try to initialize the service
+    const initialized = await service.initialize();
+    if (!initialized) {
+      console.log(`Failed to initialize Gradescope service for user ${userId}`);
+    }
   } else {
     console.log(`Using existing Gradescope service instance for user ${userId}`);
   }
   return serviceInstances.get(userId);
+};
+
+// Check Gradescope authentication status
+exports.checkAuthStatus = async (req, res) => {
+  try {
+    const userId = req.user.uid;
+    
+    // Check if user needs re-authentication
+    const needsReauth = await GradescopeAuth.needsReauth(userId);
+    
+    if (needsReauth) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          isAuthenticated: false,
+          needsReauth: true,
+          message: 'Gradescope authentication required'
+        }
+      });
+    }
+
+    // Try to initialize the service to validate session
+    const gradescopeService = await getServiceForUser(userId);
+    const isInitialized = await gradescopeService.initialize();
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        isAuthenticated: isInitialized,
+        needsReauth: !isInitialized,
+        message: isInitialized ? 'Gradescope authentication valid' : 'Gradescope authentication required'
+      }
+    });
+  } catch (error) {
+    console.error('Error checking Gradescope auth status:', error);
+    res.status(200).json({
+      success: true,
+      data: {
+        isAuthenticated: false,
+        needsReauth: true,
+        message: 'Unable to verify Gradescope authentication'
+      }
+    });
+  }
 };
 
 // Login to Gradescope
@@ -35,7 +87,7 @@ exports.login = async (req, res) => {
     }
     
     // Get user-specific service instance
-    const gradescopeService = getServiceForUser(userId);
+    const gradescopeService = await getServiceForUser(userId);
     
     // Regular flow
     await gradescopeService.login(email, password);
@@ -58,14 +110,7 @@ exports.login = async (req, res) => {
 exports.getCourses = async (req, res) => {
   try {
     const userId = req.user.uid;
-    const gradescopeService = getServiceForUser(userId);
-    
-    if (!gradescopeService.isLoggedIn) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not logged in to Gradescope. Please log in first.'
-      });
-    }
+    const gradescopeService = await getServiceForUser(userId);
     
     const courses = await gradescopeService.getCourses();
     res.status(200).json({
@@ -74,6 +119,19 @@ exports.getCourses = async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting Gradescope courses:', error);
+    
+    // Check if it's an authentication error
+    if (error.message.includes('Not logged in')) {
+      // Mark as needing re-authentication
+      await GradescopeAuth.updateAuthStatus(req.user.uid, false, 'Session expired');
+      
+      return res.status(401).json({
+        success: false,
+        error: 'Gradescope session expired. Please reconnect your account.',
+        needsReauth: true
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
       error: error.message,
@@ -86,14 +144,7 @@ exports.getCourses = async (req, res) => {
 exports.getAssignments = async (req, res) => {
   try {
     const userId = req.user.uid;
-    const gradescopeService = getServiceForUser(userId);
-    
-    if (!gradescopeService.isLoggedIn) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not logged in to Gradescope. Please log in first.'
-      });
-    }
+    const gradescopeService = await getServiceForUser(userId);
     
     const { courseId } = req.params;
     const assignments = await gradescopeService.getAssignments(courseId);
@@ -103,6 +154,19 @@ exports.getAssignments = async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting Gradescope assignments:', error);
+    
+    // Check if it's an authentication error
+    if (error.message.includes('Not logged in')) {
+      // Mark as needing re-authentication
+      await GradescopeAuth.updateAuthStatus(req.user.uid, false, 'Session expired');
+      
+      return res.status(401).json({
+        success: false,
+        error: 'Gradescope session expired. Please reconnect your account.',
+        needsReauth: true
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
       error: error.message,
@@ -115,13 +179,8 @@ exports.getAssignments = async (req, res) => {
 exports.getAssignmentPDF = async (req, res) => {
   try {
     const userId = req.user.uid;
-    const gradescopeService = getServiceForUser(userId);
-    if (!gradescopeService.isLoggedIn) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not logged in to Gradescope. Please log in first.'
-      });
-    }
+    const gradescopeService = await getServiceForUser(userId);
+    
     const { courseId, assignmentId } = req.params;
     const pdfBuffer = await gradescopeService.getAssignmentPDF(courseId, assignmentId);
     res.setHeader('Content-Type', 'application/pdf');
@@ -129,6 +188,19 @@ exports.getAssignmentPDF = async (req, res) => {
     res.send(pdfBuffer);
   } catch (error) {
     console.error('Error getting Gradescope assignment PDF:', error);
+    
+    // Check if it's an authentication error
+    if (error.message.includes('Not logged in')) {
+      // Mark as needing re-authentication
+      await GradescopeAuth.updateAuthStatus(req.user.uid, false, 'Session expired');
+      
+      return res.status(401).json({
+        success: false,
+        error: 'Gradescope session expired. Please reconnect your account.',
+        needsReauth: true
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: error.message,

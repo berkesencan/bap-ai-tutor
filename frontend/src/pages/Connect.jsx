@@ -1,67 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useGradescope } from '../contexts/GradescopeContext';
 import { 
   gradescopeLogin, 
   getGradescopeCourses, 
   getGradescopeAssignments,
-  importGradescopeData
+  importGradescopeData,
+  manageGradescopeImports,
+  getCourses
 } from '../services/api';
+import './Connect.css';
 
 const Connect = () => {
   const { currentUser } = useAuth();
+  const { isAuthenticated, needsReauth, loading: authLoading, markAuthenticated, checkAuthStatus } = useGradescope();
   const [gradescopeEmail, setGradescopeEmail] = useState('');
   const [gradescopePassword, setGradescopePassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState('');
   const [courses, setCourses] = useState([]);
   const [selectedCourses, setSelectedCourses] = useState({});
   const [assignments, setAssignments] = useState({});
   const [importing, setImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [importedCourses, setImportedCourses] = useState([]);
+  const [isManaging, setIsManaging] = useState(false);
 
-  // Connect to Gradescope
-  const handleConnect = async (e) => {
-    e.preventDefault();
+  // Check if we should show the connect form vs manage mode
+  const shouldShowConnectForm = !currentUser || needsReauth || !isAuthenticated;
+  const isManageMode = isAuthenticated && !needsReauth && currentUser;
+
+  // Load courses and imported courses if already authenticated
+  useEffect(() => {
+    const loadData = async () => {
+      if (isManageMode && courses.length === 0) {
+        try {
+          // Load Gradescope courses
+          const coursesResponse = await getGradescopeCourses();
+          
+          if (coursesResponse.success) {
+            const courseList = Array.isArray(coursesResponse.data) ? coursesResponse.data : Object.values(coursesResponse.data);
+            setCourses(courseList);
+            
+            // Load currently imported courses
+            const importedResponse = await getCourses();
+            if (importedResponse.success) {
+              const imported = importedResponse.data.courses.filter(course => course.source === 'gradescope');
+              setImportedCourses(imported);
+              
+              // Set initial selection state based on imported courses
+              const initialSelectedCourses = {};
+              courseList.forEach(course => {
+                const isImported = imported.some(importedCourse => importedCourse.externalId === course.id);
+                initialSelectedCourses[course.id] = isImported;
+              });
+              setSelectedCourses(initialSelectedCourses);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading data:', error);
+          setError('Failed to load course data');
+        }
+      }
+    };
+
+    loadData();
+  }, [isManageMode, courses.length]);
+
+  const handleConnect = async () => {
+    if (!gradescopeEmail || !gradescopePassword) {
+      setError('Please enter both email and password');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
-    
+
     try {
-      console.log('Attempting to connect to Gradescope with email:', gradescopeEmail);
+      console.log('Attempting to connect to Gradescope...');
       
-      // Login to Gradescope
-      console.log('Proceeding to Gradescope login...');
-      const loginResponse = await gradescopeLogin({
+      const response = await gradescopeLogin({
         email: gradescopeEmail,
         password: gradescopePassword
       });
-      
-      console.log('Login response:', loginResponse);
-      
-      if (!loginResponse.success) {
-        throw new Error(loginResponse.error || loginResponse.message || 'Failed to connect to Gradescope');
+
+      console.log('Login response:', response);
+
+      if (response.success) {
+        console.log('Successfully connected to Gradescope');
+        markAuthenticated();
+        
+        // Load courses after successful login
+        const coursesResponse = await getGradescopeCourses();
+        
+        if (coursesResponse.success) {
+          const courseList = Array.isArray(coursesResponse.data) ? coursesResponse.data : Object.values(coursesResponse.data);
+          setCourses(courseList);
+          
+          // Initialize selected courses state
+          const initialSelectedCourses = {};
+          courseList.forEach(course => {
+            initialSelectedCourses[course.id] = false;
+          });
+          setSelectedCourses(initialSelectedCourses);
+        }
+      } else {
+        setError(response.error || 'Failed to connect to Gradescope');
       }
-      
-      // Fetch courses
-      const coursesResponse = await getGradescopeCourses();
-      
-      console.log('Courses response:', coursesResponse);
-      
-      if (!coursesResponse.success) {
-        throw new Error(coursesResponse.error || 'Failed to fetch courses');
-      }
-      
-      setCourses(Array.isArray(coursesResponse.data) ? coursesResponse.data : Object.values(coursesResponse.data));
-      setIsConnected(true);
-      
-      // Initialize selected courses state
-      const initialSelectedCourses = {};
-      const courseList = Array.isArray(coursesResponse.data) ? coursesResponse.data : Object.values(coursesResponse.data);
-      
-      courseList.forEach(course => {
-        initialSelectedCourses[course.id] = false;
-      });
-      setSelectedCourses(initialSelectedCourses);
     } catch (error) {
       console.error('Error connecting to Gradescope:', error);
       
@@ -111,7 +156,7 @@ const Connect = () => {
     }
   };
 
-  // Import selected courses and assignments
+  // Import selected courses and assignments (for initial import)
   const handleImport = async () => {
     setImporting(true);
     setError('');
@@ -154,149 +199,386 @@ const Connect = () => {
     }
   };
 
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Connect to Gradescope</h1>
+  // Save changes in manage mode
+  const handleSaveChanges = async () => {
+    setIsManaging(true);
+    setError('');
+    
+    try {
+      // Get selected course IDs
+      const selectedCourseIds = Object.keys(selectedCourses).filter(courseId => selectedCourses[courseId]);
       
-      {!currentUser ? (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
-          <p>Please log in to connect your Gradescope account.</p>
+      // Get assignments for selected courses
+      const assignmentsToImport = {};
+      for (const courseId of selectedCourseIds) {
+        if (!assignments[courseId]) {
+          // Fetch assignments if not already loaded
+          try {
+            const response = await getGradescopeAssignments(courseId);
+            if (response.success) {
+              assignmentsToImport[courseId] = response.data;
+            }
+          } catch (error) {
+            console.error(`Failed to fetch assignments for course ${courseId}:`, error);
+          }
+        } else {
+          assignmentsToImport[courseId] = assignments[courseId];
+        }
+      }
+      
+      // Manage imports
+      const manageResponse = await manageGradescopeImports({
+        selectedCourseIds,
+        gradescopeCourses: courses,
+        assignments: assignmentsToImport
+      });
+      
+      console.log('Manage response:', manageResponse);
+      
+      if (manageResponse.success) {
+        setImportSuccess(true);
+        
+        // Refresh imported courses
+        const importedResponse = await getCourses();
+        if (importedResponse.success) {
+          const imported = importedResponse.data.courses.filter(course => course.source === 'gradescope');
+          setImportedCourses(imported);
+        }
+      } else {
+        throw new Error(manageResponse.error || 'Failed to save changes');
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      
+      if (error.response?.data) {
+        setError(error.response.data.error || error.response.data.message || 'Failed to save changes');
+      } else {
+        setError(error.message || 'Failed to save changes');
+      }
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="container mx-auto p-4">
+        <h1 className="text-3xl font-bold mb-6">Connect to Gradescope</h1>
+        <div className="flex justify-center items-center h-32">
+          <div className="spinner"></div>
         </div>
-      ) : !isConnected ? (
-        <div className="bg-white shadow-md rounded p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Connect Your Gradescope Account</h2>
-          
-          {error && (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+      </div>
+    );
+  }
+
+  return (
+    <div className="connect-page">
+      <div className="connect-container">
+        <div className="connect-header">
+          <h1 className="connect-title">
+            {isManageMode ? (
+              <>
+                <span className="title-icon">⚙️</span>
+                Manage Gradescope Courses
+              </>
+            ) : (
+              <>
+                <span className="title-icon">🔗</span>
+                Connect to Gradescope
+              </>
+            )}
+          </h1>
+          <p className="connect-subtitle">
+            {isManageMode 
+              ? 'Manage your imported courses and assignments with ease'
+              : 'Connect your Gradescope account to import courses and assignments'
+            }
+          </p>
+        </div>
+        
+        {error && (
+          <div className="alert alert-error">
+            <div className="alert-icon">⚠️</div>
+            <div className="alert-content">
+              <strong>Error</strong>
               <p>{error}</p>
             </div>
-          )}
-          
-          <form onSubmit={handleConnect}>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+          </div>
+        )}
+
+        {importSuccess && (
+          <div className="alert alert-success">
+            <div className="alert-icon">✅</div>
+            <div className="alert-content">
+              <strong>Success!</strong>
+              <p>{isManageMode ? 'Changes saved successfully!' : 'Courses and assignments imported successfully!'}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Connect Form (when not authenticated) */}
+        {shouldShowConnectForm && (
+          <div className="connect-form-card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <span className="card-icon">🎓</span>
+                {needsReauth ? 'Reconnect Your Account' : 'Connect Your Account'}
+              </h2>
+              <p className="card-subtitle">
+                {needsReauth 
+                  ? 'Your session has expired. Please reconnect to continue.'
+                  : 'Enter your Gradescope credentials to get started.'
+                }
+              </p>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label" htmlFor="email">
+                <span className="label-icon">📧</span>
                 Gradescope Email
               </label>
               <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="form-input"
                 id="email"
                 type="email"
-                placeholder="Email"
+                placeholder="Enter your Gradescope email"
                 value={gradescopeEmail}
                 onChange={(e) => setGradescopeEmail(e.target.value)}
-                required
+                disabled={isLoading}
               />
             </div>
             
-            <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+            <div className="form-group">
+              <label className="form-label" htmlFor="password">
+                <span className="label-icon">🔒</span>
                 Gradescope Password
               </label>
               <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="form-input"
                 id="password"
                 type="password"
-                placeholder="Password"
+                placeholder="Enter your Gradescope password"
                 value={gradescopePassword}
                 onChange={(e) => setGradescopePassword(e.target.value)}
-                required
+                disabled={isLoading}
               />
             </div>
             
-            <div className="flex items-center justify-between">
-              <button
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Connecting...' : 'Connect'}
-              </button>
-            </div>
-          </form>
-        </div>
-      ) : (
-        <div>
-          {importSuccess ? (
-            <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-              <p>Successfully imported your Gradescope data!</p>
-              <button
-                className="mt-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                onClick={() => window.location.href = '/courses'}
-              >
-                View My Courses
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-                <p>Successfully connected to Gradescope! Select the courses you want to import.</p>
-              </div>
-              
-              {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
-                  <p>{error}</p>
-                </div>
+            <button
+              className={`btn-primary ${isLoading ? 'loading' : ''}`}
+              onClick={handleConnect}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <span className="btn-icon">🚀</span>
+                  Connect to Gradescope
+                </>
               )}
-              
-              <div className="bg-white shadow-md rounded p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4">Select Courses to Import</h2>
+            </button>
+          </div>
+        )}
+
+        {/* Course Management (when authenticated) */}
+        {isManageMode && courses.length > 0 && (
+          <div className="manage-courses-card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <span className="card-icon">📚</span>
+                Course Management
+              </h2>
+              <p className="card-subtitle">
+                Select courses to import or remove. Changes are applied when you save.
+              </p>
+            </div>
+            
+            <div className="courses-grid">
+              {courses.map(course => {
+                const isImported = importedCourses.some(imported => imported.externalId === course.id);
+                const isSelected = selectedCourses[course.id] || false;
                 
-                {courses.length === 0 ? (
-                  <p>No courses found in your Gradescope account.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {courses.map(course => (
-                      <div key={course.id} className="border-b pb-4">
-                        <div className="flex items-center mb-2">
-                          <input
-                            type="checkbox"
-                            id={`course-${course.id}`}
-                            checked={selectedCourses[course.id] || false}
-                            onChange={() => toggleCourseSelection(course.id)}
-                            className="mr-2"
-                          />
-                          <label htmlFor={`course-${course.id}`} className="font-medium">
-                            {course.code}: {course.name}
-                          </label>
+                return (
+                  <div 
+                    key={course.id} 
+                    className={`course-card ${isSelected ? 'selected' : ''} ${isImported ? 'imported' : ''}`}
+                  >
+                    <div className="course-card-header">
+                      <input
+                        type="checkbox"
+                        id={`course-${course.id}`}
+                        checked={isSelected}
+                        onChange={() => toggleCourseSelection(course.id)}
+                        className="course-checkbox"
+                        disabled={isManaging}
+                      />
+                      <label htmlFor={`course-${course.id}`} className="course-checkbox-label">
+                        <div className="course-info">
+                          <h3 className="course-title">{course.code}</h3>
+                          <p className="course-name">{course.name}</p>
                         </div>
-                        
-                        {selectedCourses[course.id] && (
-                          <div className="ml-6">
-                            <h3 className="font-medium text-sm text-gray-600 mb-2">Assignments:</h3>
-                            {assignments[course.id] ? (
-                              assignments[course.id].length > 0 ? (
-                                <ul className="list-disc ml-5">
-                                  {assignments[course.id].map(assignment => (
-                                    <li key={assignment.id}>{assignment.name}</li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-sm text-gray-500">No assignments found for this course.</p>
-                              )
-                            ) : (
-                              <p className="text-sm text-gray-500">Loading assignments...</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      </label>
+                    </div>
                     
-                    <div className="mt-6">
-                      <button
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        onClick={handleImport}
-                        disabled={importing || Object.values(selectedCourses).every(selected => !selected)}
-                      >
-                        {importing ? 'Importing...' : 'Import Selected Courses'}
-                      </button>
+                    <div className="course-card-body">
+                      <div className="course-meta">
+                        <span className="course-term">
+                          <span className="meta-icon">📅</span>
+                          {course.term}
+                        </span>
+                        <span className="course-assignments">
+                          <span className="meta-icon">📋</span>
+                          {course.assignmentCount} assignment{course.assignmentCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      
+                      {isImported && (
+                        <div className="import-status">
+                          <span className="status-badge imported">
+                            <span className="status-icon">✓</span>
+                            Currently Imported
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
+                );
+              })}
+            </div>
+
+            <div className="manage-actions">
+              <div className="selection-summary">
+                <span className="summary-icon">📊</span>
+                <span className="summary-text">
+                  {Object.values(selectedCourses).filter(Boolean).length} course{Object.values(selectedCourses).filter(Boolean).length !== 1 ? 's' : ''} selected
+                </span>
               </div>
-            </>
-          )}
-        </div>
-      )}
+              
+              <button
+                className={`btn-save ${isManaging ? 'loading' : ''}`}
+                onClick={handleSaveChanges}
+                disabled={isManaging}
+              >
+                {isManaging ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Saving Changes...
+                  </>
+                ) : (
+                  <>
+                    <span className="btn-icon">💾</span>
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Course Selection (for initial import) */}
+        {!shouldShowConnectForm && !isManageMode && courses.length > 0 && (
+          <div className="import-courses-card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <span className="card-icon">📥</span>
+                Import Courses
+              </h2>
+              <p className="card-subtitle">
+                Select the courses you want to import from your Gradescope account.
+              </p>
+            </div>
+            
+            <div className="courses-grid">
+              {courses.map(course => (
+                <div 
+                  key={course.id} 
+                  className={`course-card ${selectedCourses[course.id] ? 'selected' : ''}`}
+                >
+                  <div className="course-card-header">
+                    <input
+                      type="checkbox"
+                      id={`course-${course.id}`}
+                      checked={selectedCourses[course.id] || false}
+                      onChange={() => toggleCourseSelection(course.id)}
+                      className="course-checkbox"
+                      disabled={importing}
+                    />
+                    <label htmlFor={`course-${course.id}`} className="course-checkbox-label">
+                      <div className="course-info">
+                        <h3 className="course-title">{course.code}</h3>
+                        <p className="course-name">{course.name}</p>
+                      </div>
+                    </label>
+                  </div>
+                  
+                  <div className="course-card-body">
+                    <div className="course-meta">
+                      <span className="course-term">
+                        <span className="meta-icon">📅</span>
+                        {course.term}
+                      </span>
+                      <span className="course-assignments">
+                        <span className="meta-icon">📋</span>
+                        {course.assignmentCount} assignment{course.assignmentCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="import-actions">
+              <div className="selection-summary">
+                <span className="summary-icon">📊</span>
+                <span className="summary-text">
+                  {Object.values(selectedCourses).filter(Boolean).length} course{Object.values(selectedCourses).filter(Boolean).length !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              
+              <button
+                className={`btn-import ${importing ? 'loading' : ''}`}
+                onClick={handleImport}
+                disabled={importing || Object.values(selectedCourses).filter(Boolean).length === 0}
+              >
+                {importing ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <span className="btn-icon">📥</span>
+                    Import Selected Courses
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* No courses message */}
+        {isManageMode && courses.length === 0 && (
+          <div className="empty-state-card">
+            <div className="empty-state-icon">📚</div>
+            <h3 className="empty-state-title">No Courses Found</h3>
+            <p className="empty-state-message">
+              No courses were found in your Gradescope account. Make sure you're enrolled in courses and try refreshing.
+            </p>
+            <button
+              className="btn-secondary"
+              onClick={() => window.location.reload()}
+            >
+              <span className="btn-icon">🔄</span>
+              Refresh
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

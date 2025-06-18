@@ -89,8 +89,8 @@ class AIController {
       const historyToFormat = history || [];
       const historyToSend = historyToFormat.slice(-MAX_HISTORY_TURNS * 2);
       const formattedHistory = historyToSend.map(msg => {
-        const prefix = msg.role === 'user' ? 'User:' : 'AI:'; // Use role directly if it's user/model
-        return `${prefix} ${msg.parts || msg.content}`; // Backend might receive parts or content
+        const prefix = (msg.role === 'user' || msg.sender === 'user') ? 'User:' : 'AI:';
+        return `${prefix} ${msg.content || msg.text || msg.parts || ''}`;
       }).join('\n');
       
       // Add the new message to the history string for the prompt

@@ -64,4 +64,7 @@ router.delete('/:courseId', CourseController.delete);
 // Route to import courses and assignments from Gradescope
 router.post('/import', CourseController.importFromGradescope);
 
+// Route to manage Gradescope course imports (add/remove courses)
+router.post('/manage-gradescope', CourseController.manageGradescopeImports);
+
 module.exports = router; 

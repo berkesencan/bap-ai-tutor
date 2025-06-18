@@ -2,6 +2,9 @@ const express = require('express');
 const gradescopeController = require('../controllers/gradescope.controller');
 const router = express.Router();
 
+// Check authentication status
+router.get('/auth/status', gradescopeController.checkAuthStatus);
+
 // Login route
 router.post('/login', gradescopeController.login);
 

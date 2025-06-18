@@ -3,9 +3,13 @@ const qs = require('querystring');
 const cheerio = require('cheerio');
 const tough = require('tough-cookie');
 const { wrapper } = require('axios-cookiejar-support');
+const GradescopeAuth = require('../models/gradescope-auth.model');
 
 class GradescopeService {
-  constructor() {
+  constructor(userId) {
+    // Store user ID for persistence
+    this.userId = userId;
+    
     // Create a cookie jar
     this.cookieJar = new tough.CookieJar();
     
@@ -18,14 +22,140 @@ class GradescopeService {
     
     this.isLoggedIn = false;
     this.account = null;
+    this.lastValidation = null;
   }
 
-  async login(email, password) {
+  /**
+   * Initialize service with stored credentials and session
+   */
+  async initialize() {
     try {
-      console.log(`Attempting to login to Gradescope with email: ${email}`);
+      console.log(`Initializing Gradescope service for user ${this.userId}`);
       
-      // Get CSRF token
-      console.log('Fetching CSRF token...');
+      // Check if we need to re-authenticate
+      const needsReauth = await GradescopeAuth.needsReauth(this.userId);
+      
+      if (needsReauth) {
+        console.log(`User ${this.userId} needs re-authentication`);
+        return false;
+      }
+
+      // Try to restore session from stored data
+      const sessionData = await GradescopeAuth.getSessionData(this.userId);
+      if (sessionData && sessionData.cookies) {
+        console.log(`Found stored session data for user ${this.userId}, restoring cookies...`);
+        // Restore cookies
+        for (const cookie of sessionData.cookies) {
+          await this.cookieJar.setCookie(cookie, 'https://www.gradescope.com');
+        }
+      }
+
+      // Validate current session
+      const isValid = await this.validateSession();
+      if (isValid) {
+        this.isLoggedIn = true;
+        await GradescopeAuth.updateAuthStatus(this.userId, true);
+        console.log(`User ${this.userId} session restored successfully`);
+        return true;
+      } else {
+        console.log(`Restored session for user ${this.userId} is invalid, will attempt re-auth`);
+      }
+
+      // If session is invalid, try to re-authenticate with stored credentials
+      const credentials = await GradescopeAuth.getCredentials(this.userId);
+      if (credentials && credentials.email && credentials.password) {
+        console.log(`Attempting automatic re-authentication for user ${this.userId}`);
+        return await this.login(credentials.email, credentials.password, false); // Don't store again
+      }
+
+      console.log(`No stored credentials found for user ${this.userId}, manual login required`);
+      return false;
+    } catch (error) {
+      console.error(`Error initializing Gradescope service for user ${this.userId}:`, error);
+      await GradescopeAuth.updateAuthStatus(this.userId, false, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Validate current session by making a test request
+   */
+  async validateSession() {
+    try {
+      const response = await this.session.get('https://www.gradescope.com/account');
+      
+      // If we get redirected to login, session is invalid
+      if (response.request.res.responseUrl.includes('login')) {
+        return false;
+      }
+
+      // Check if we can find user info on the page (means we're logged in)
+      const $ = cheerio.load(response.data);
+      const userName = $('.courseList--userName').text().trim();
+      
+      // Also check for the page title to confirm we're on the account page
+      const pageTitle = $('title').text();
+      
+      if (userName || pageTitle.includes('Your Courses')) {
+        this.lastValidation = new Date();
+        console.log(`Session validation successful for user ${this.userId}: ${userName || 'Found courses page'}`);
+        return true;
+      }
+
+      console.log(`Session validation failed for user ${this.userId}: No user info found`);
+      return false;
+    } catch (error) {
+      console.error('Session validation failed:', error);
+      return false;
+    }
+  }
+
+  async login(email, password, storeCredentials = true) {
+    try {
+      console.log(`Attempting to login to Gradescope with email: ${email} for user: ${this.userId}`);
+      
+      // First check if we're already logged in by trying the account page
+      console.log('Checking if already logged in...');
+      const accountCheckResponse = await this.session.get('https://www.gradescope.com/account');
+      
+      // If we're not redirected to login and can find user info, we're already logged in
+      if (!accountCheckResponse.request.res.responseUrl.includes('login')) {
+        const $ = cheerio.load(accountCheckResponse.data);
+        const userName = $('.courseList--userName').text().trim();
+        const pageTitle = $('title').text();
+        
+        if (userName || pageTitle.includes('Your Courses')) {
+          console.log(`Already logged in to Gradescope as: ${userName || 'user'} for user: ${this.userId}`);
+          
+          this.isLoggedIn = true;
+          this.lastValidation = new Date();
+          
+          // Store session data if requested
+          if (storeCredentials) {
+            await GradescopeAuth.storeCredentials(this.userId, email, password);
+            
+            // Store session cookies
+            const cookies = await this.cookieJar.getCookies('https://www.gradescope.com');
+            const sessionData = {
+              cookies: cookies.map(cookie => cookie.toString()),
+              lastLogin: new Date()
+            };
+            await GradescopeAuth.storeSessionData(this.userId, sessionData);
+          }
+          
+          // Update auth status
+          await GradescopeAuth.updateAuthStatus(this.userId, true);
+          
+          console.log('Login successful (already authenticated)!');
+          return true;
+        }
+      }
+      
+      // If we reach here, we need to actually log in
+      console.log('Not logged in, proceeding with login flow...');
+      
+      // Get CSRF token from login page
+      console.log('Fetching CSRF token from login page...');
       const response = await this.session.get('https://www.gradescope.com/login');
       const $ = cheerio.load(response.data);
       const csrfToken = $('meta[name="csrf-token"]').attr('content');
@@ -34,6 +164,9 @@ class GradescopeService {
       // Check for login form
       if (!$('form[action="/login"]').length) {
         console.error('Login form not found on page');
+        console.log('Page title:', $('title').text());
+        console.log('Login page HTML snippet:', $.html().substring(0, 500));
+        console.log('All forms found:', $('form').map((i, el) => $(el).attr('action')).get());
         throw new Error('Could not find login form');
       }
       
@@ -69,6 +202,10 @@ class GradescopeService {
         const errorMsg = $error('.alert-error').text().trim() || 'Invalid email or password';
         console.error('Login failed - redirected back to login page');
         console.error('Error message from page:', errorMsg);
+        
+        // Update auth status in database
+        await GradescopeAuth.updateAuthStatus(this.userId, false, errorMsg);
+        
         throw new Error(`Login failed: ${errorMsg}`);
       }
       
@@ -78,6 +215,7 @@ class GradescopeService {
       
       if (accountResponse.request.res.responseUrl.includes('login')) {
         console.error('Account page verification failed, redirected to login');
+        await GradescopeAuth.updateAuthStatus(this.userId, false, 'Login session was not established properly');
         throw new Error('Login session was not established properly');
       }
       
@@ -87,10 +225,30 @@ class GradescopeService {
       console.log('Successfully logged in as:', userName);
       
       this.isLoggedIn = true;
+      this.lastValidation = new Date();
+      
+      // Store credentials and session data if requested
+      if (storeCredentials) {
+        await GradescopeAuth.storeCredentials(this.userId, email, password);
+        
+        // Store session cookies
+        const cookies = await this.cookieJar.getCookies('https://www.gradescope.com');
+        const sessionData = {
+          cookies: cookies.map(cookie => cookie.toString()),
+          lastLogin: new Date()
+        };
+        await GradescopeAuth.storeSessionData(this.userId, sessionData);
+      }
+      
+      // Update auth status
+      await GradescopeAuth.updateAuthStatus(this.userId, true);
+      
       console.log('Login successful!');
       return true;
     } catch (error) {
       console.error('Error during Gradescope login:', error.message);
+      await GradescopeAuth.updateAuthStatus(this.userId, false, error.message);
+      
       if (error.response) {
         console.error('Response status:', error.response.status);
         console.error('Response headers:', error.response.headers);
@@ -108,12 +266,37 @@ class GradescopeService {
     }
   }
 
+  /**
+   * Ensure we're authenticated, attempting re-auth if needed
+   */
+  async ensureAuthenticated() {
+    // Check if we're currently logged in and recently validated
+    if (this.isLoggedIn && this.lastValidation) {
+      const timeSinceValidation = Date.now() - this.lastValidation.getTime();
+      
+      // If validated within last 10 minutes, assume we're good
+      if (timeSinceValidation < 10 * 60 * 1000) {
+        return true;
+      }
+    }
+
+    // Try to validate current session
+    if (await this.validateSession()) {
+      this.isLoggedIn = true;
+      await GradescopeAuth.updateAuthStatus(this.userId, true);
+      return true;
+    }
+
+    // Try to initialize (restore session or re-auth)
+    return await this.initialize();
+  }
+
 /** 
    * Retrieves course details (id, name, code, term, assignmentCount) as per the screenshot.
    * Taken from the first code, which matches the desired output.
    */
 async getCourses() {
-  if (!this.isLoggedIn) {
+  if (!(await this.ensureAuthenticated())) {
     throw new Error('Not logged in');
   }
   
@@ -181,7 +364,7 @@ async getCourses() {
 }
 
   async getAssignments(courseId) {
-    if (!this.isLoggedIn) {
+    if (!(await this.ensureAuthenticated())) {
       throw new Error('Not logged in');
     }
     
@@ -555,7 +738,7 @@ async getCourses() {
    */
   async getAssignmentPDF(courseId, assignmentId) {
     console.log('DEBUG: Entered getAssignmentPDF', courseId, assignmentId);
-    if (!this.isLoggedIn) {
+    if (!(await this.ensureAuthenticated())) {
       throw new Error('Not logged in');
     }
     try {

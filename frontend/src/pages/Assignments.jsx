@@ -115,10 +115,11 @@ function Assignments() {
 
   if (loading && courses.length === 0) {
     return (
-      <div className="assignments p-6">
-        <h1 className="text-2xl font-bold mb-6">Assignments</h1>
-        <div className="flex justify-center items-center h-64">
+      <div className="assignments">
+        <h1>📚 Assignments</h1>
+        <div className="loading-container">
           <div className="spinner"></div>
+          <p className="loading-text">Loading assignments...</p>
         </div>
       </div>
     );
@@ -126,53 +127,87 @@ function Assignments() {
 
   if (error) {
     return (
-      <div className="assignments p-6">
-        <h1 className="text-2xl font-bold mb-6">Assignments</h1>
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
-          <p>{error}</p>
+      <div className="assignments">
+        <h1>📚 Assignments</h1>
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3 className="error-title">Error Loading Assignments</h3>
+          <p className="error-message">{error}</p>
+          <Link 
+            to="/connect" 
+            className="import-button"
+          >
+            <span className="action-icon">📥</span>
+            Import from Gradescope
+          </Link>
         </div>
-        <Link 
-          to="/connect" 
-          className="import-button"
-        >
-          Import from Gradescope
-        </Link>
       </div>
     );
   }
 
   return (
-    <div className="assignments p-6">
-      <h1 className="text-2xl font-bold mb-6">Assignments</h1>
+    <div className="assignments">
+      <h1>📚 Assignments</h1>
       
       {/* Course filter */}
-      <div className="mb-6">
-        <label htmlFor="course-filter" className="filter-label">
-          Filter by Course:
-        </label>
-        <select
-          id="course-filter"
-          value={selectedCourseId || ''}
-          onChange={(e) => setSelectedCourseId(e.target.value || null)}
-          className="filter-select"
-        >
-          <option value="">All Courses</option>
-          {courses.map(course => (
-            <option key={course.id} value={course.id}>
-              {course.code}: {course.name}
-            </option>
-          ))}
-        </select>
+      <div className="filter-card">
+        <div className="filter-header">
+          <h3 className="filter-title">
+            <span className="filter-icon">🎯</span>
+            Filter Assignments
+          </h3>
+          <p className="filter-subtitle">Choose a course to view specific assignments</p>
+        </div>
+        <div className="filter-content">
+          <div className="filter-group">
+            <label htmlFor="course-filter" className="filter-label">
+              <span className="label-icon">📚</span>
+              Select Course:
+            </label>
+            <div className="custom-select-wrapper">
+              <select
+                id="course-filter"
+                value={selectedCourseId || ''}
+                onChange={(e) => setSelectedCourseId(e.target.value || null)}
+                className="custom-select"
+              >
+                <option value="">🌟 All Courses ({assignments.length} assignments)</option>
+                {courses.map(course => {
+                  const courseAssignments = assignments.filter(a => a.courseId === course.id);
+                  return (
+                    <option key={course.id} value={course.id}>
+                      📚 {course.code}: {course.name} ({courseAssignments.length} assignments)
+                    </option>
+                  );
+                })}
+              </select>
+              <div className="select-arrow">
+                <span>▼</span>
+              </div>
+            </div>
+          </div>
+          {selectedCourseId && (
+            <div className="filter-summary">
+              <span className="summary-badge">
+                <span className="summary-icon">📊</span>
+                Showing {assignments.filter(a => a.courseId === selectedCourseId).length} assignments
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* No courses message */}
       {courses.length === 0 && (
         <div className="empty-state">
-          <p>You don't have any courses yet.</p>
+          <div className="empty-state-icon">📚</div>
+          <h3 className="empty-state-title">No Courses Found</h3>
+          <p>You don't have any courses yet. Import some courses from Gradescope to get started.</p>
           <Link 
             to="/connect" 
             className="import-button"
           >
+            <span className="action-icon">📥</span>
             Import from Gradescope
           </Link>
         </div>
@@ -181,83 +216,105 @@ function Assignments() {
       {/* No assignments message */}
       {courses.length > 0 && assignments.length === 0 && !loading && (
         <div className="empty-state">
-          <p>No assignments found.</p>
+          <div className="empty-state-icon">📝</div>
+          <h3 className="empty-state-title">No Assignments Found</h3>
+          <p>No assignments found for the selected course filter.</p>
         </div>
       )}
 
       {/* Loading assignments indicator */}
       {loading && courses.length > 0 && (
-        <div className="flex justify-center items-center h-32">
+        <div className="loading-container">
           <div className="spinner"></div>
+          <p className="loading-text">Loading assignments...</p>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3 className="error-title">Error Loading Assignments</h3>
+          <p className="error-message">{error}</p>
+          <Link 
+            to="/connect" 
+            className="import-button"
+          >
+            <span className="action-icon">📥</span>
+            Import from Gradescope
+          </Link>
         </div>
       )}
 
       {/* Assignments list */}
       {!loading && assignments.length > 0 && (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="assignments-grid">
           {assignments.map(assignment => (
             <div 
               key={assignment.id} 
               className="assignment-card"
             >
-              <div className="flex justify-between items-start">
-                <div>
+              <div className="assignment-card-header">
+                <div className="assignment-info">
                   <h2 className="assignment-title">{assignment.title}</h2>
                   <p className="assignment-course">
-                    {getCourseName(assignment.courseId)}
+                    📚 {getCourseName(assignment.courseId)}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="assignment-badges">
                   <span className={`status-badge ${
                     assignment.status === 'completed' 
                       ? 'completed' 
                       : 'pending'
                   }`}>
-                    {assignment.status === 'completed' ? 'Completed' : 'Pending'}
+                    {assignment.status === 'completed' ? '✅ Completed' : '⏳ Pending'}
                   </span>
                   {assignment.source === 'gradescope' && (
                     <span className="source-badge">
-                      Gradescope
+                      🎓 Gradescope
                     </span>
                   )}
                 </div>
               </div>
               
-              <div className="mt-3">
-                <p className="assignment-due">
-                  <span className="assignment-due-label">Due:</span> {formatDueDate(assignment.dueDate)}
-                </p>
-                {assignment.description && (
-                  <p className="assignment-description">
-                    {assignment.description}
-                  </p>
-                )}
+              <div className="assignment-due">
+                <span className="assignment-due-label">📅 Due:</span> 
+                {formatDueDate(assignment.dueDate)}
               </div>
               
-              <div className="mt-4 flex justify-end space-x-4">
+              {assignment.description && (
+                <div className="assignment-description">
+                  📝 {assignment.description}
+                </div>
+              )}
+              
+              <div className="assignment-actions">
                 {assignment.source === 'gradescope' && assignment.externalId && getCourseExternalId(assignment.courseId) ? (
                   <>
                     <a 
                       href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="action-link"
+                      className="action-button primary"
                     >
+                      <span className="action-icon">🔗</span>
                       View on Gradescope
                     </a>
                     <Link
                       to={`/assignments/pdf/${getCourseExternalId(assignment.courseId)}/${assignment.externalId}`}
-                      className="action-link"
+                      className="action-button tertiary"
                     >
+                      <span className="action-icon">📄</span>
                       View PDF
                     </Link>
                   </>
                 ) : (
                   <Link 
                     to={`/assignments/${assignment.id}`}
-                    className="action-link"
+                    className="action-button secondary"
                   >
-                    Details
+                    <span className="action-icon">👁️</span>
+                    View Details
                   </Link>
                 )}
               </div>

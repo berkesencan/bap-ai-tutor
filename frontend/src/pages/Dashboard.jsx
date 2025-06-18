@@ -80,42 +80,73 @@ export const Dashboard = () => {
   return (
     <div className="dashboard">
       <div className="dashboard-header">
-        <h1>Dashboard</h1>
+        <h1 className="dashboard-title">🏠 Dashboard</h1>
         
         {currentUser && (
           <div className="welcome-card">
-            <h2>Welcome, {firstName}!</h2>
-            <p>Ready to enhance your learning experience today?</p>
+            <div className="welcome-content">
+              <h2 className="welcome-title">Welcome back, {firstName}! 👋</h2>
+              <p className="welcome-subtitle">Ready to enhance your learning experience today?</p>
+            </div>
+            <div className="welcome-stats">
+              <div className="quick-stat">
+                <span className="quick-stat-number">{upcomingAssignments.length}</span>
+                <span className="quick-stat-label">Upcoming</span>
+              </div>
+              <div className="quick-stat">
+                <span className="quick-stat-number">{courses.length}</span>
+                <span className="quick-stat-label">Courses</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
       
       {loading ? (
-        <div className="loading-spinner">
+        <div className="loading-container">
           <div className="spinner"></div>
-          <p>Loading your dashboard...</p>
+          <p className="loading-text">Loading your dashboard...</p>
         </div>
       ) : error ? (
-        <div className="error-message">
-          <p>{error}</p>
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3 className="error-title">Error Loading Dashboard</h3>
+          <p className="error-message">{error}</p>
           <button onClick={() => window.location.reload()} className="retry-button">
+            <span className="button-icon">🔄</span>
             Retry
           </button>
         </div>
       ) : (
         <div className="dashboard-content">
           <div className="dashboard-section">
-            <h2>Upcoming Assignments</h2>
+            <div className="section-header">
+              <h2 className="section-title">
+                <span className="section-icon">⏰</span>
+                Upcoming Assignments
+              </h2>
+              <span className="section-count">{upcomingAssignments.length} items</span>
+            </div>
+            
             {upcomingAssignments.length === 0 ? (
-              <p className="empty-state">No assignments due soon.</p>
+              <div className="empty-state">
+                <div className="empty-icon">📝</div>
+                <p className="empty-message">No assignments due soon. You're all caught up!</p>
+              </div>
             ) : (
-              <ul className="assignment-list">
+              <div className="assignment-list">
                 {upcomingAssignments.map(assignment => (
-                  <li key={assignment.id} className="assignment-item">
-                    <div className="assignment-details">
-                      <h3>{assignment.title}</h3>
-                      <p className="course-name">{getCourseName(assignment.courseId)}</p>
-                      <p className="due-date">Due: {formatDate(assignment.dueDate)}</p>
+                  <div key={assignment.id} className="assignment-card">
+                    <div className="assignment-info">
+                      <h3 className="assignment-title">{assignment.title}</h3>
+                      <p className="assignment-course">
+                        <span className="course-icon">📚</span>
+                        {getCourseName(assignment.courseId)}
+                      </p>
+                      <p className="assignment-due">
+                        <span className="due-icon">📅</span>
+                        Due: {formatDate(assignment.dueDate)}
+                      </p>
                     </div>
                     <div className="assignment-actions">
                       {assignment.source === 'gradescope' ? (
@@ -123,68 +154,127 @@ export const Dashboard = () => {
                           href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="view-assignment"
+                          className="action-button primary"
                         >
+                          <span className="action-icon">🔗</span>
                           View on Gradescope
                         </a>
                       ) : (
-                        <Link to={`/assignments/${assignment.id}`} className="view-assignment">
+                        <Link to={`/assignments/${assignment.id}`} className="action-button secondary">
+                          <span className="action-icon">👁️</span>
                           View Details
                         </Link>
                       )}
                     </div>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            <Link to="/assignments" className="dashboard-link">View All Assignments</Link>
+            
+            <div className="section-footer">
+              <Link to="/assignments" className="section-link">
+                <span className="link-icon">📋</span>
+                View All Assignments
+              </Link>
+            </div>
           </div>
           
           <div className="dashboard-section">
-            <h2>Your Courses</h2>
+            <div className="section-header">
+              <h2 className="section-title">
+                <span className="section-icon">📚</span>
+                Your Courses
+              </h2>
+              <span className="section-count">{courses.length} courses</span>
+            </div>
+            
             {courses.length === 0 ? (
-              <p className="empty-state">No courses added yet.</p>
+              <div className="empty-state">
+                <div className="empty-icon">🎓</div>
+                <p className="empty-message">No courses added yet. Import some from Gradescope!</p>
+                <Link to="/connect" className="empty-action">
+                  <span className="action-icon">📥</span>
+                  Import Courses
+                </Link>
+              </div>
             ) : (
-              <ul className="course-list">
+              <div className="course-list">
                 {courses.slice(0, 5).map(course => (
-                  <li key={course.id} className="course-item">
-                    <h3>{course.name}</h3>
-                    <p className="course-code">{course.code}</p>
-                    {course.source === 'gradescope' && course.externalId ? (
-                      <a 
-                        href={`https://www.gradescope.com/courses/${course.externalId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="view-course"
-                      >
-                        View on Gradescope
-                      </a>
-                    ) : (
-                      <Link to={`/courses/${course.id}`} className="view-course">
-                        View Details
-                      </Link>
-                    )}
-                  </li>
+                  <div key={course.id} className="course-card">
+                    <div className="course-info">
+                      <h3 className="course-name">{course.name}</h3>
+                      <p className="course-code">
+                        <span className="code-icon">🏷️</span>
+                        {course.code}
+                      </p>
+                      {course.source === 'gradescope' && (
+                        <span className="course-badge">
+                          <span className="badge-icon">🎓</span>
+                          Gradescope
+                        </span>
+                      )}
+                    </div>
+                    <div className="course-actions">
+                      {course.source === 'gradescope' && course.externalId ? (
+                        <a 
+                          href={`https://www.gradescope.com/courses/${course.externalId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="action-button primary"
+                        >
+                          <span className="action-icon">🔗</span>
+                          View
+                        </a>
+                      ) : (
+                        <Link to={`/courses/${course.id}`} className="action-button secondary">
+                          <span className="action-icon">👁️</span>
+                          View
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            <Link to="/courses" className="dashboard-link">View All Courses</Link>
+            
+            <div className="section-footer">
+              <Link to="/courses" className="section-link">
+                <span className="link-icon">📚</span>
+                View All Courses
+              </Link>
+            </div>
           </div>
           
           <div className="dashboard-section">
-            <h2>Recent Activity</h2>
+            <div className="section-header">
+              <h2 className="section-title">
+                <span className="section-icon">📈</span>
+                Recent Activity
+              </h2>
+              <span className="section-count">{pastAssignments.length} items</span>
+            </div>
+            
             {pastAssignments.length === 0 ? (
-              <p className="empty-state">No recent activity.</p>
+              <div className="empty-state">
+                <div className="empty-icon">📊</div>
+                <p className="empty-message">No recent activity to show.</p>
+              </div>
             ) : (
-              <ul className="assignment-list">
+              <div className="assignment-list">
                 {pastAssignments.map(assignment => (
-                  <li key={assignment.id} className="assignment-item">
-                    <div className="assignment-details">
-                      <h3>{assignment.title}</h3>
-                      <p className="course-name">{getCourseName(assignment.courseId)}</p>
-                      <p className="due-date">Due: {formatDate(assignment.dueDate)}</p>
+                  <div key={assignment.id} className="assignment-card">
+                    <div className="assignment-info">
+                      <h3 className="assignment-title">{assignment.title}</h3>
+                      <p className="assignment-course">
+                        <span className="course-icon">📚</span>
+                        {getCourseName(assignment.courseId)}
+                      </p>
+                      <p className="assignment-due">
+                        <span className="due-icon">📅</span>
+                        Due: {formatDate(assignment.dueDate)}
+                      </p>
                       <span className={`status-badge ${assignment.status === 'completed' ? 'completed' : 'overdue'}`}>
-                        {assignment.status === 'completed' ? 'Completed' : 'Overdue'}
+                        {assignment.status === 'completed' ? '✅ Completed' : '⏰ Overdue'}
                       </span>
                     </div>
                     <div className="assignment-actions">
@@ -193,21 +283,29 @@ export const Dashboard = () => {
                           href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="view-assignment"
+                          className="action-button primary"
                         >
+                          <span className="action-icon">🔗</span>
                           View on Gradescope
                         </a>
                       ) : (
-                        <Link to={`/assignments/${assignment.id}`} className="view-assignment">
+                        <Link to={`/assignments/${assignment.id}`} className="action-button secondary">
+                          <span className="action-icon">👁️</span>
                           View Details
                         </Link>
                       )}
                     </div>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            <Link to="/assignments" className="dashboard-link">View All Assignments</Link>
+            
+            <div className="section-footer">
+              <Link to="/assignments" className="section-link">
+                <span className="link-icon">📋</span>
+                View All Assignments
+              </Link>
+            </div>
           </div>
         </div>
       )}

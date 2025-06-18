@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { postChatMessage, testGemini, processPDF } from '../services/api';
+import { postChatMessage, testGemini, processPDF, processPDFWithMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip, FaUpload, FaFileAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './AiTutorChat.css'; // Import the CSS file
 
@@ -21,7 +21,17 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [recentPDFs, setRecentPDFs] = useState([]); // Store recent PDF info for memory
+  const [showPDFDropdown, setShowPDFDropdown] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Enhanced drag and drop states
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [dragDepth, setDragDepth] = useState(0);
+  const chatContainerRef = useRef(null);
 
   // Initialize audio and try multiple sources
   useEffect(() => {
@@ -92,6 +102,57 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
     };
   }, []);
 
+  // Enhanced drag and drop event handlers
+  useEffect(() => {
+    const handleDragEnter = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragDepth(prev => prev + 1);
+      if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+        setIsDragOver(true);
+      }
+    };
+
+    const handleDragLeave = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragDepth(prev => {
+        const newDepth = prev - 1;
+        if (newDepth === 0) {
+          setIsDragOver(false);
+        }
+        return newDepth;
+      });
+    };
+
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+      e.preventDefault();
+      handleFileDrop(e);
+    };
+
+    const chatContainer = chatContainerRef.current;
+    if (chatContainer) {
+      chatContainer.addEventListener('dragenter', handleDragEnter);
+      chatContainer.addEventListener('dragleave', handleDragLeave);
+      chatContainer.addEventListener('dragover', handleDragOver);
+      chatContainer.addEventListener('drop', handleDrop);
+    }
+
+    return () => {
+      if (chatContainer) {
+        chatContainer.removeEventListener('dragenter', handleDragEnter);
+        chatContainer.removeEventListener('dragleave', handleDragLeave);
+        chatContainer.removeEventListener('dragover', handleDragOver);
+        chatContainer.removeEventListener('drop', handleDrop);
+      }
+    };
+  }, []);
+
   // Play robot sound function
   const playRobotSound = () => {
     console.log("Robot clicked! Attempting to play sound...");
@@ -136,66 +197,160 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   // Handle sending a new message (with history in prompt)
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!message || !message.trim()) return; 
-
-    const userMessage = { role: 'user', content: message.trim() };
-    // Optimistically update history before sending
-    const currentChatHistory = [...chatHistory, userMessage]; 
-    setChatHistory(currentChatHistory); // Update parent state
     
+    // Check if we have either a message or an attached file
+    if ((!message || !message.trim()) && !attachedFile) {
+      return;
+    }
+
+    const messageToSend = message ? message.trim() : '';
+    const fileToSend = attachedFile;
+    
+    // Clear input and attachment
+    setMessage('');
+    setAttachedFile(null);
     setIsLoading(true);
-    setError(null);
-    setLastApiResponse(null); 
-    setMessage(''); // Clear input
 
     try {
-      // *** MODIFICATION START: Build prompt with history (Simplified) ***
-      const MAX_HISTORY_TURNS = 5; // Send last 5 pairs (10 messages total)
-      // Get the last N messages, including the one we just added
-      const historyToSend = currentChatHistory.slice(-MAX_HISTORY_TURNS * 2);
+      let response;
       
-      // Format history simply
-      const formattedHistory = historyToSend.map(msg => {
-        const prefix = msg.role === 'user' ? 'User:' : 'AI:';
-        return `${prefix} ${msg.content}`;
-      }).join('\n');
+      if (fileToSend) {
+        // Handle PDF with message
+        setIsUploading(true);
+        setUploadProgress(0);
+        setUploadMessage('Starting...');
 
-      // Construct the prompt: just the formatted history
-      // The latest user message is already included at the end of formattedHistory
-      const promptForApi = formattedHistory;
+        // Add user message with attachment to chat
+        const userMessage = {
+          text: messageToSend || 'Uploaded a PDF file for analysis',
+          sender: 'user',
+          timestamp: new Date().toISOString(),
+          attachment: {
+            name: fileToSend.name,
+            type: 'pdf'
+          }
+        };
+        setChatHistory(prev => [...prev, userMessage]);
 
-      console.log("Sending simplified prompt with history to testGemini:", promptForApi);
-
-      // Call the simple testGemini function with the combined prompt
-      const response = await testGemini(promptForApi);
-      // *** MODIFICATION END ***
-
-      console.log("API Response received in AiTutorChat:", response);
-
-      if (response.success) {
-        const responseText = response.data.response;
-        const usageMetadata = response.data.usageMetadata;
-
-        // Log the usage metadata
-        if (usageMetadata) {
-          console.log("Token Usage:", usageMetadata);
-        } else {
-          console.log("Token usage metadata not available in response.");
+        // Create prompt with chat history and PDF context (no assumptions)
+        let fullPrompt = messageToSend || `Please analyze this PDF file "${fileToSend.name}" and provide a comprehensive summary of its contents.`;
+        
+        // Add recent chat history for context
+        if (chatHistory.length > 0) {
+          const recentHistory = chatHistory.slice(-6); // Last 6 messages for context
+          const historyContext = recentHistory.map(msg => {
+            const role = (msg.sender === 'user' || msg.role === 'user') ? 'User' : 'AI';
+            return `${role}: ${msg.text || msg.content}`;
+          }).join('\n');
+          fullPrompt = `Recent conversation:\n${historyContext}\n\nUser's current message: "${fullPrompt}"`;
         }
 
-        setLastApiResponse(responseText);
-        // Add AI response to history (managed by parent now)
-        setChatHistory((prev) => [...prev, { role: 'ai', content: responseText }]); 
+        // Add PDF context if available (just for reference, no assumptions)
+        if (recentPDFs.length > 0) {
+          const pdfContext = recentPDFs.map((pdf, index) => 
+            `Previous PDF ${index + 1}: "${pdf.name}" (uploaded ${pdf.timestamp})`
+          ).join('\n');
+          fullPrompt += `\n\nFor reference, recent PDFs in this conversation:\n${pdfContext}\n\nCurrent PDF: "${fileToSend.name}"`;
+        }
+
+        // Process PDF with message and real progress tracking
+        response = await processPDFWithMessage(
+          fileToSend, 
+          fullPrompt,
+          (progress, message) => {
+            setUploadProgress(Math.min(progress, 100)); // Cap at 100%
+            setUploadMessage(message);
+          }
+        );
+
+        setIsUploading(false);
+
+        if (response.success) {
+          // Add PDF to recent PDFs memory (keep last 3 PDFs)
+          const newPDF = {
+            name: fileToSend.name,
+            timestamp: new Date().toLocaleString(),
+            content: response.data.text?.substring(0, 500) + '...' // Store summary
+          };
+          setRecentPDFs(prev => [...prev.slice(-2), newPDF]); // Keep last 3 PDFs
+
+          // Add AI response to chat history
+          const aiMessage = {
+            text: response.data.text,
+            sender: 'ai',
+            timestamp: new Date().toISOString(),
+            usageMetadata: response.data.usageMetadata
+          };
+          setChatHistory(prev => [...prev, aiMessage]);
+        } else {
+          throw new Error(response.error || 'Failed to process PDF with message');
+        }
       } else {
-        setError(response.message || 'Failed to get response from AI tutor.');
-        console.error('AI chat error (simplified history prompt):', response);
+        // Handle regular text message with full chat history
+        const userMessage = {
+          text: messageToSend,
+          sender: 'user',
+          timestamp: new Date().toISOString()
+        };
+        setChatHistory(prev => [...prev, userMessage]);
+
+        // Create comprehensive chat history for API
+        const fullChatHistory = [...chatHistory, userMessage];
+        
+        // Add PDF context only if user's message might reference documents
+        let enhancedMessage = messageToSend;
+        if (recentPDFs.length > 0) {
+          const messageWords = messageToSend.toLowerCase();
+          const documentKeywords = ['pdf', 'document', 'file', 'paper', 'previous', 'earlier', 'last', 'that', 'this', 'it', 'compare', 'difference', 'similar'];
+          const mightReferenceDocs = documentKeywords.some(keyword => messageWords.includes(keyword));
+          
+          if (mightReferenceDocs) {
+            const pdfContext = recentPDFs.map((pdf, index) => 
+              `PDF ${index + 1}: "${pdf.name}" (uploaded ${pdf.timestamp})`
+            ).join('\n');
+            enhancedMessage += `\n\n[Context: Recent PDFs in this conversation: ${pdfContext}]`;
+          }
+        }
+
+        // Send to chat API with proper history
+        const chatData = {
+          history: fullChatHistory.slice(0, -1).map(msg => ({
+            role: (msg.sender === 'user' || msg.role === 'user') ? 'user' : 'ai',
+            content: msg.text || msg.content
+          })), // All history except the current message, properly formatted
+          message: enhancedMessage
+        };
+
+        response = await postChatMessage(chatData);
+
+        if (response.success) {
+          const aiMessage = {
+            text: response.data.response,
+            sender: 'ai',
+            timestamp: new Date().toISOString(),
+            usageMetadata: response.data.usageMetadata
+          };
+          setChatHistory(prev => [...prev, aiMessage]);
+        } else {
+          throw new Error(response.error || 'Failed to send message');
+        }
       }
     } catch (error) {
-      setError('Failed to connect to the AI service. Please try again.');
-      console.error('AI chat error (simplified history prompt):', error);
+      console.error('Error sending message:', error);
+      setError(error.message || 'Failed to send message. Please try again.');
+      
+      // Add error message to chat
+      const errorMessage = {
+        text: `Error: ${error.message || 'Failed to process your request'}`,
+        sender: 'error',
+        timestamp: new Date().toISOString()
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      inputRef.current?.focus();
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadMessage('');
     }
   };
 
@@ -231,176 +386,396 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    if (file.type !== 'application/pdf') {
-      alert('Please upload a PDF file');
+    if (!file || file.type !== 'application/pdf') {
+      setError('Please select a PDF file.');
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      alert('File size must be less than 20MB');
-      return;
-    }
+
     setIsUploading(true);
+    setUploadProgress(0);
+    setError(null);
+
     try {
+      // Simulate progress updates for user feedback
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          const increment = Math.random() * 15 + 5; // Random increment between 5-20
+          const newProgress = prev + increment;
+          
+          // Cap progress at 95% until we get the actual response
+          if (newProgress >= 95) {
+            clearInterval(progressInterval);
+            return 95;
+          }
+          return newProgress;
+        });
+      }, 300);
+
       const response = await processPDF(file);
-      const userMessage = { role: 'user', content: 'I uploaded a PDF for analysis.' };
-      const aiMessage = { role: 'ai', content: response.text };
-      setChatHistory(prev => [...prev, userMessage, aiMessage]);
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (response.success || response.text) {
+        const aiMessage = {
+          role: 'ai',
+          content: response.text || response.data?.text || 'PDF processed successfully!'
+        };
+        setChatHistory(prev => [...prev, aiMessage]);
+        
+        // Show success briefly then reset
+        setTimeout(() => {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }, 1000);
+      } else {
+        throw new Error(response.error || 'Failed to process PDF');
+      }
     } catch (error) {
-      console.error('Error uploading PDF:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to process PDF. Please try again.';
-      alert(errorMessage);
-    } finally {
+      console.error('Error processing PDF:', error);
+      setError(error.message || 'Failed to process PDF. Please try again.');
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setUploadProgress(0);
     }
   };
 
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    setDragDepth(0);
+
+    const files = Array.from(e.dataTransfer.files);
+    const pdfFile = files.find(file => file.type === 'application/pdf');
+
+    if (pdfFile) {
+      setAttachedFile(pdfFile);
+    } else {
+      setError('Please drop a PDF file.');
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'application/pdf') {
+      setAttachedFile(file);
+    } else {
+      setError('Please select a PDF file.');
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const clearPDFMemory = () => {
+    setRecentPDFs([]);
+    setShowPDFDropdown(false);
+  };
+
+  const removePDFFromMemory = (indexToRemove) => {
+    setRecentPDFs(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const togglePDFDropdown = () => {
+    setShowPDFDropdown(prev => !prev);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showPDFDropdown && !event.target.closest('.pdf-memory-container')) {
+        setShowPDFDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPDFDropdown]);
+
   return (
-    <div className="chat-container">
-      {/* Remove the embedded audio element since we're creating it in JavaScript */}
-      
-      <div className="chat-header">
-        <h2>
-          <div className={`robot-logo-clickable ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} onClick={playRobotSound}>
-            <FaRobot className="chat-header-icon" />
-            {soundPlayed && <span className="sound-wave"></span>}
-            {!audioLoaded && <span className="sound-status-indicator"></span>}
+    <div 
+      ref={chatContainerRef}
+      className={`enhanced-chat-container ${isDragOver ? 'drag-over' : ''}`}
+    >
+      {/* Enhanced Drag Overlay */}
+      {isDragOver && (
+        <div className="drag-overlay">
+          <div className="drag-overlay-content">
+            <div className="drag-icon-wrapper">
+              <FaUpload className="drag-icon" />
+              <div className="drag-pulse"></div>
+            </div>
+            <h3 className="drag-title">Drop your PDF here</h3>
+            <p className="drag-subtitle">Release to upload and analyze your document</p>
+            <div className="drag-supported-formats">
+              <span className="format-badge">
+                <FaFileAlt />
+                PDF Files Only
+              </span>
+            </div>
           </div>
-          AI Tutor Chat
-        </h2>
-        <p>Ask me anything about your courses or assignments!</p>
+        </div>
+      )}
+
+      {/* Upload Progress Overlay */}
+      {isUploading && uploadProgress > 0 && (
+        <div className="upload-progress-overlay">
+          <div className="upload-progress-content">
+            <div className="upload-icon-wrapper">
+              <FaSpinner className="upload-spinner" />
+            </div>
+            <h3 className="upload-title">{uploadMessage || 'Processing your PDF...'}</h3>
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <p className="upload-percentage">{Math.min(Math.round(uploadProgress), 100)}% complete</p>
+          </div>
+        </div>
+      )}
+      
+      <div className="enhanced-chat-header">
+        <div className="chat-header-content">
+          <h2 className="chat-title">
+            <div className={`enhanced-robot-logo ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} onClick={playRobotSound}>
+              <FaRobot className="chat-header-icon" />
+              {soundPlayed && <span className="sound-wave"></span>}
+              {!audioLoaded && <span className="sound-status-indicator"></span>}
+            </div>
+            AI Tutor Chat
+          </h2>
+          <p className="chat-description">
+            Ask me anything about your courses or assignments!
+            {recentPDFs.length > 0 && (
+              <div className="pdf-memory-container">
+                <span 
+                  className="pdf-memory-indicator"
+                  onClick={togglePDFDropdown}
+                  onMouseEnter={() => setShowPDFDropdown(true)}
+                >
+                  📄 {recentPDFs.length} recent PDF{recentPDFs.length > 1 ? 's' : ''} in memory
+                </span>
+                {showPDFDropdown && (
+                  <div 
+                    className="pdf-memory-dropdown"
+                    onMouseLeave={() => setShowPDFDropdown(false)}
+                  >
+                    <div className="pdf-dropdown-header">
+                      <span>Recent PDFs</span>
+                      <button 
+                        className="clear-all-btn"
+                        onClick={clearPDFMemory}
+                        title="Clear all PDFs"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    <div className="pdf-dropdown-list">
+                      {recentPDFs.map((pdf, index) => (
+                        <div key={index} className="pdf-dropdown-item">
+                          <div className="pdf-item-info">
+                            <div className="pdf-item-name">📄 {pdf.name}</div>
+                            <div className="pdf-item-time">{pdf.timestamp}</div>
+                          </div>
+                          <button
+                            className="remove-pdf-btn"
+                            onClick={() => removePDFFromMemory(index)}
+                            title="Remove this PDF"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </p>
+        </div>
+        <div className="chat-header-actions">
+          {recentPDFs.length > 0 && (
+            <button 
+              className="clear-memory-btn"
+              onClick={clearPDFMemory}
+              title="Clear PDF memory"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="messages-area">
+      <div className="enhanced-messages-area">
         {chatHistory.length === 0 ? (
-          <div className="initial-prompt-container">
+          <div className="enhanced-initial-prompt">
             <div 
-              className={`initial-prompt-icon-wrapper ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} 
+              className={`enhanced-prompt-icon-wrapper ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} 
               onClick={playRobotSound}
             >
               <FaRobot />
               {soundPlayed && <span className="big-sound-wave"></span>}
               {!audioLoaded && <span className="big-sound-status-indicator"></span>}
             </div>
-            <h3>How can I help you today?</h3>
-            <p>
+            <h3 className="prompt-welcome-title">How can I help you today?</h3>
+            <p className="prompt-welcome-subtitle">
               I'm your AI tutor assistant. I can help explain concepts, create study plans, 
               generate practice questions, or assist with homework problems.
             </p>
             
-            <div className="prompt-buttons-grid">
+            <div className="enhanced-prompt-grid">
               <button 
-                className="prompt-button"
+                className="enhanced-prompt-button"
                 onClick={() => handleNavigateToPage('/ai-tutor?tab=concept')}
               >
                 <div className="prompt-button-icon-wrapper">
                   <FaLightbulb />
                 </div>
-                <div className="prompt-button-text">
-                  <strong>Explain a concept</strong>
-                  <span>Get clear explanations on any subject</span>
+                <div className="prompt-button-content">
+                  <strong className="prompt-button-title">Explain a concept</strong>
+                  <span className="prompt-button-desc">Get clear explanations on any subject</span>
                 </div>
+                <div className="prompt-button-arrow">→</div>
               </button>
               
               <button 
-                className="prompt-button"
+                className="enhanced-prompt-button"
                 onClick={() => handleNavigateToPage('/ai-tutor?tab=studyPlan')}
               >
                 <div className="prompt-button-icon-wrapper">
                   <FaBookOpen />
                 </div>
-                <div className="prompt-button-text">
-                  <strong>Make a study plan</strong>
-                  <span>Get organized with a personalized schedule</span>
+                <div className="prompt-button-content">
+                  <strong className="prompt-button-title">Make a study plan</strong>
+                  <span className="prompt-button-desc">Get organized with a personalized schedule</span>
                 </div>
+                <div className="prompt-button-arrow">→</div>
               </button>
               
               <button 
-                className="prompt-button"
+                className="enhanced-prompt-button"
                 onClick={() => handleNavigateToPage('/ai-tutor?tab=practice')}
               >
                 <div className="prompt-button-icon-wrapper">
                   <FaGraduationCap />
                 </div>
-                <div className="prompt-button-text">
-                  <strong>Practice questions</strong>
-                  <span>Test your knowledge with tailored questions</span>
+                <div className="prompt-button-content">
+                  <strong className="prompt-button-title">Practice questions</strong>
+                  <span className="prompt-button-desc">Test your knowledge with tailored questions</span>
                 </div>
+                <div className="prompt-button-arrow">→</div>
               </button>
               
               <button 
-                className="prompt-button"
+                className="enhanced-prompt-button"
                 onClick={() => handleQuickPrompt("Help me solve this algorithm problem: Find the maximum subarray sum in an array of integers.")}
               >
                 <div className="prompt-button-icon-wrapper">
                   <FaQuestionCircle />
                 </div>
-                <div className="prompt-button-text">
-                  <strong>Homework help</strong>
-                  <span>Get guidance on solving problems</span>
+                <div className="prompt-button-content">
+                  <strong className="prompt-button-title">Homework help</strong>
+                  <span className="prompt-button-desc">Get guidance on solving problems</span>
                 </div>
+                <div className="prompt-button-arrow">→</div>
               </button>
+            </div>
+            
+            <div className="upload-suggestion">
+              <div className="upload-suggestion-content">
+                <FaUpload className="upload-suggestion-icon" />
+                <span>Drag & drop PDF files anywhere to analyze them instantly</span>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="enhanced-messages-list">
             {chatHistory.map((msg, index) => (
               <div 
                 key={index} 
-                className={`message-bubble-container ${msg.role === 'user' ? 'user' : 'ai'}`}
+                className={`enhanced-message-container ${(msg.sender === 'user' || msg.role === 'user') ? 'user' : msg.sender === 'error' ? 'error' : 'ai'}`}
               >
                 <div 
-                  className={`message-bubble ${msg.role === 'user' ? 'user' : 'ai'}`}
+                  className={`enhanced-message-bubble ${(msg.sender === 'user' || msg.role === 'user') ? 'user' : msg.sender === 'error' ? 'error' : 'ai'}`}
                 >
-                  <div className="message-header">
-                    {msg.role === 'user' ? (
-                      <div className="message-avatar-wrapper">
-                        <span className="message-sender">You</span>
+                  <div className="enhanced-message-header">
+                    {(msg.sender === 'user' || msg.role === 'user') ? (
+                      <div className="enhanced-message-avatar-wrapper">
+                        <span className="enhanced-message-sender">You</span>
                         {currentUser?.photoURL ? (
-                          <img src={currentUser.photoURL} alt="User" />
+                          <img src={currentUser.photoURL} alt="User" className="user-avatar" />
                         ) : (
-                          <FaUser />
+                          <div className="avatar-icon user">
+                            <FaUser />
+                          </div>
                         )}
                       </div>
+                    ) : msg.sender === 'error' ? (
+                      <div className="enhanced-message-avatar-wrapper">
+                        <div className="avatar-icon error">
+                          ⚠️
+                        </div>
+                        <span className="enhanced-message-sender">Error</span>
+                      </div>
                     ) : (
-                      <div className="message-avatar-wrapper">
-                        <div className="message-avatar-wrapper ai-icon">
+                      <div className="enhanced-message-avatar-wrapper">
+                        <div className="avatar-icon ai">
                           <FaRobot />
                         </div>
-                        <span className="message-sender">AI Tutor</span>
+                        <span className="enhanced-message-sender">AI Tutor</span>
                       </div>
                     )}
-                    <span className="message-timestamp">
-                      {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    <span className="enhanced-message-timestamp">
+                      {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
                   </div>
-                  <div className="message-content">
+                  <div className="enhanced-message-content">
+                    {/* Show attachment if present */}
+                    {msg.attachment && (
+                      <div className="message-attachment">
+                        <div className="attachment-icon">
+                          <FaFileAlt />
+                        </div>
+                        <span className="attachment-name">{msg.attachment.name}</span>
+                      </div>
+                    )}
                     {/* Use the helper function for AI messages */} 
-                    {msg.role === 'ai' ? renderFormattedContent(msg.content) : msg.content}
+                    {(msg.sender === 'ai' || msg.role === 'ai') ? renderFormattedContent(msg.text || msg.content) : (msg.text || msg.content)}
                   </div>
                 </div>
               </div>
             ))}
             {isLoading && (
-              <div className="message-bubble-container ai loading-indicator">
-                <div className="message-bubble ai">
-                  <div className="message-header">
-                     <div className="message-avatar-wrapper ai-icon">
+              <div className="enhanced-message-container ai loading-indicator">
+                <div className="enhanced-message-bubble ai">
+                  <div className="enhanced-message-header">
+                     <div className="avatar-icon ai">
                        <FaRobot />
                     </div>
-                     <span className="message-sender">AI Tutor</span>
+                     <span className="enhanced-message-sender">AI Tutor</span>
                   </div>
-                  <div className="loading-dots">
+                  <div className="enhanced-loading-dots">
                      <span></span><span></span><span></span>
                   </div>
                 </div>
               </div>
             )}
             {error && (
-              <div className="chat-error-message">
-                <strong>Error</strong>
-                {error}. Please try again.
+              <div className="enhanced-error-message">
+                <div className="error-icon-wrapper">
+                  <span className="error-icon">⚠️</span>
+                </div>
+                <div className="error-content">
+                  <strong className="error-title">Error</strong>
+                  <p className="error-text">{error}. Please try again.</p>
+                </div>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -408,42 +783,72 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
         )}
       </div>
 
-      <form onSubmit={handleSendMessage} className="chat-input-form">
-        <div className="chat-input-wrapper">
+      <form onSubmit={handleSendMessage} className="enhanced-chat-input-form">
+        {/* Attachment Preview */}
+        {attachedFile && (
+          <div className="attachment-preview">
+            <div className="attachment-item">
+              <div className="attachment-icon">
+                <FaFileAlt />
+              </div>
+              <div className="attachment-info">
+                <span className="attachment-name">{attachedFile.name}</span>
+                <span className="attachment-size">
+                  {(attachedFile.size / 1024 / 1024).toFixed(2)} MB
+                </span>
+              </div>
+              <button
+                type="button"
+                className="attachment-remove"
+                onClick={removeAttachment}
+                title="Remove attachment"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+        
+        <div className="enhanced-chat-input-wrapper">
           <input
             type="file"
             ref={fileInputRef}
-            onChange={handleFileUpload}
+            onChange={handleFileSelect}
             accept=".pdf"
             style={{ display: 'none' }}
           />
           <button
             type="button"
-            className="upload-button"
+            className={`enhanced-upload-button ${attachedFile ? 'has-attachment' : ''}`}
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
+            title="Upload PDF file"
           >
             {isUploading ? <FaSpinner className="spinner" /> : <FaPaperclip />}
           </button>
           <input
             type="text"
-            ref={inputRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message here..."
-            className="chat-input"
+            placeholder={attachedFile ? "Add a message with your PDF..." : "Type your message here..."}
+            className="enhanced-chat-input"
             disabled={isLoading || isUploading}
           />
           <button
             type="submit"
-            className="chat-send-button"
-            disabled={!message || !message.trim() || isLoading || isUploading}
+            className="enhanced-chat-send-button"
+            disabled={((!message || !message.trim()) && !attachedFile) || isLoading || isUploading}
           >
             {isLoading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
           </button>
         </div>
-        <div className="chat-input-hint">
-          Press Enter to send message
+        <div className="enhanced-chat-input-hint">
+          <span>
+            {attachedFile 
+              ? `PDF attached: ${attachedFile.name} • Press Enter to send`
+              : "Press Enter to send • Drag & drop PDF files to upload"
+            }
+          </span>
         </div>
       </form>
     </div>

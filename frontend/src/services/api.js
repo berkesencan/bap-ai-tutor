@@ -2,7 +2,7 @@ import axios from 'axios';
 import { auth } from '../config/firebase'; // Fixed import path
 
 // Use the backend URL from environment variables or default
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -39,9 +39,25 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Global callback for handling Gradescope auth errors
+let gradescopeAuthErrorCallback = null;
+
+export const setGradescopeAuthErrorCallback = (callback) => {
+  gradescopeAuthErrorCallback = callback;
+};
+
 // Function to handle API errors more gracefully
 const handleApiError = (error) => {
   console.error('API Error:', error);
+  
+  // Check for Gradescope authentication errors
+  if (error.response?.status === 401 && error.response?.data?.needsReauth) {
+    console.log('Gradescope authentication error detected');
+    if (gradescopeAuthErrorCallback) {
+      gradescopeAuthErrorCallback();
+    }
+  }
+  
   if (error.response) {
     // Request made and server responded
     console.error('Data:', error.response.data);
@@ -50,17 +66,18 @@ const handleApiError = (error) => {
     // Return a user-friendly error message or object
     return { 
       success: false, 
-      message: error.response.data?.message || 'An error occurred on the server.', 
-      status: error.response.status 
+      error: error.response.data?.error || 'Server error occurred', 
+      status: error.response.status,
+      needsReauth: error.response.data?.needsReauth || false
     };
   } else if (error.request) {
     // Request was made but no response was received
     console.error('Request:', error.request);
-    return { success: false, message: 'No response from server. Check network connection.' };
+    return { success: false, error: 'Network error - please check your connection', status: 0 };
   } else {
     // Something happened in setting up the request
     console.error('Error Message:', error.message);
-    return { success: false, message: error.message };
+    return { success: false, error: error.message || 'An unexpected error occurred', status: 0 };
   }
 };
 
@@ -226,6 +243,15 @@ export const importGradescopeData = async (data) => {
   }
 };
 
+export const manageGradescopeImports = async (data) => {
+  try {
+    const response = await apiClient.post('/courses/manage-gradescope', data);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 // Fetch Gradescope Assignment PDF
 export const getGradescopeAssignmentPDF = async (courseId, assignmentId) => {
   try {
@@ -233,6 +259,98 @@ export const getGradescopeAssignmentPDF = async (courseId, assignmentId) => {
       responseType: 'blob', // Important for PDF
     });
     return response.data; // Blob
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Upload and process a PDF file with message and real-time progress
+export const processPDFWithMessage = async (file, message = '', onProgress) => {
+  try {
+    const formData = new FormData();
+    formData.append('pdf', file);
+    formData.append('message', message);
+    
+    // Get the auth token
+    const user = auth.currentUser;
+    let authHeaders = {};
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        authHeaders.Authorization = `Bearer ${token}`;
+      } catch (error) {
+        console.error('Error getting ID token:', error);
+        throw new Error('Authentication failed');
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      // Use fetch with proper auth headers for Server-Sent Events
+      fetch(`${API_BASE_URL}/ai/process-pdf-with-message`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          ...authHeaders
+        }
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        function readStream() {
+          return reader.read().then(({ done, value }) => {
+            if (done) {
+              return;
+            }
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            
+            lines.forEach(line => {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  switch (data.type) {
+                    case 'progress':
+                      if (onProgress) {
+                        onProgress(data.progress, data.message);
+                      }
+                      break;
+                      
+                    case 'complete':
+                      if (onProgress) {
+                        onProgress(data.progress, 'Complete!');
+                      }
+                      resolve({
+                        success: true,
+                        data: data.data,
+                        userMessage: data.userMessage,
+                        fileName: data.fileName
+                      });
+                      return;
+                      
+                    case 'error':
+                      reject(new Error(data.error));
+                      return;
+                  }
+                } catch (error) {
+                  console.warn('Error parsing SSE data:', error);
+                }
+              }
+            });
+            
+            return readStream();
+          });
+        }
+        
+        return readStream();
+      }).catch(reject);
+    });
+    
   } catch (error) {
     return handleApiError(error);
   }
@@ -249,6 +367,16 @@ export const processPDF = async (file, prompt = 'Please analyze this PDF and pro
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Check Gradescope authentication status
+export const checkGradescopeAuthStatus = async () => {
+  try {
+    const response = await apiClient.get('/gradescope/auth/status');
     return response.data;
   } catch (error) {
     return handleApiError(error);
