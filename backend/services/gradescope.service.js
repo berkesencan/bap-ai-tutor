@@ -387,9 +387,84 @@ async getCourses() {
       // Log the page title for debugging
       console.log('Page title:', $('title').text());
       
-      // Method 1: Try traditional assignment table
-      console.log('Trying standard assignment table selectors...');
-      if ($('.assignments').length > 0) {
+      // Method 1: Try the correct assignment table structure (assignments-student-table)
+      console.log('Trying correct assignment table selectors...');
+      if ($('#assignments-student-table').length > 0) {
+        console.log('Found #assignments-student-table, processing rows...');
+        
+        $('#assignments-student-table tbody tr').each((i, row) => {
+          try {
+            const linkElem = $(row).find('.table--primaryLink a');
+            const assignmentUrl = linkElem.attr('href');
+            
+            if (!assignmentUrl) {
+              console.log('Warning: Found assignment row without href');
+              return; // Skip this element
+            }
+            
+            // Extract assignment ID correctly - get the segment after '/assignments/' 
+            const assignmentsMatch = assignmentUrl.match(/\/assignments\/([^/]+)/);
+            if (assignmentsMatch && assignmentsMatch[1]) {
+              const assignmentId = assignmentsMatch[1];
+              const assignmentName = linkElem.text().trim();
+              
+              // Get due date from time element with datetime attribute
+              let dueDate = null;
+              let dueDateParsed = null;
+              
+              // Method 1: Try to get datetime from time element
+              const dueDateTimeElem = $(row).find('time.submissionTimeChart--dueDate');
+              if (dueDateTimeElem.length) {
+                dueDateParsed = dueDateTimeElem.attr('datetime');
+                dueDate = dueDateTimeElem.text().trim();
+                console.log(`Found due date in time element: "${dueDate}" (datetime: ${dueDateParsed})`);
+              }
+              
+              // Method 2: Try to get from hidden column (fallback)
+              if (!dueDateParsed) {
+                const hiddenDateCells = $(row).find('td.hidden-column');
+                if (hiddenDateCells.length >= 2) {
+                  dueDateParsed = hiddenDateCells.eq(1).text().trim(); // Second hidden column is due date
+                  console.log(`Found due date in hidden column: ${dueDateParsed}`);
+                }
+              }
+              
+              // Method 3: Try to get from submissionTimeChart (fallback)
+              if (!dueDateParsed) {
+                const submissionChart = $(row).find('.submissionTimeChart');
+                const dueDateText = submissionChart.find('time').last().text().trim();
+                if (dueDateText) {
+                  dueDate = dueDateText;
+                  console.log(`Found due date in submission chart: "${dueDate}"`);
+                }
+              }
+              
+              // Get status if available
+              const statusElem = $(row).find('.submissionStatus--text');
+              const status = statusElem.length ? statusElem.text().trim() : null;
+              
+              console.log(`Found assignment: ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Status: ${status})`);
+              console.log(`Row HTML: ${$(row).html().substring(0, 300)}`);
+              
+              assignments.push({
+                id: assignmentId,
+                name: assignmentName || 'Unnamed Assignment',
+                dueDate: dueDateParsed || dueDate, // Use parsed datetime if available, otherwise use text
+                status: status,
+                grade: null, // Will be null for now since this is student view
+                maxPoints: null
+              });
+            } else {
+              console.log('Warning: Could not extract assignment ID from URL:', assignmentUrl);
+            }
+          } catch (err) {
+            console.log('Error parsing assignment row:', err.message);
+          }
+        });
+      }
+      
+      // Method 1b: Try legacy assignment table structure
+      else if ($('.assignments').length > 0) {
         console.log('Found .assignments table, processing rows...');
         
         $('.assignments tbody tr').each((i, row) => {
@@ -552,68 +627,84 @@ async getCourses() {
         });
       }
       
-      // Method 3: Try alternative assignment table structure
+      // Method 3: Try alternative assignment table structure (catch-all)
       if (assignments.length === 0) {
         console.log('Trying alternative table selectors...');
         
-        $('.table--assignmentTable tr, table tr').each((i, elem) => {
+        $('table tr').each((i, elem) => {
           try {
             // Skip header row
-            if ($(elem).find('th').length > 0) return;
+            if ($(elem).find('th').length > 0 && !$(elem).find('th a[href*="/assignments/"]').length) return;
             
-            const linkElem = $(elem).find('a').first();
-            const assignmentUrl = linkElem.attr('href');
+            // Look for assignment links in this row
+            const assignmentLinks = $(elem).find('a[href*="/assignments/"]');
+            if (assignmentLinks.length === 0) return;
+            
+            assignmentLinks.each((linkIndex, linkElem) => {
+              const assignmentUrl = $(linkElem).attr('href');
             
             if (!assignmentUrl || !assignmentUrl.includes('/assignments/')) return;
-            
-            // Process assignment URL
-            if (!assignmentUrl) {
-              console.log('Warning: Found alternative table row without assignment URL');
-              return;
-            }
             
             // Extract assignment ID correctly
             const assignmentsMatch = assignmentUrl.match(/\/assignments\/([^/]+)/);
             if (assignmentsMatch && assignmentsMatch[1]) {
               const assignmentId = assignmentsMatch[1];
-              const assignmentName = $(elem).find('a[href*="/assignments/"]').text().trim() || 'Untitled Assignment';
+                const assignmentName = $(linkElem).text().trim() || 'Untitled Assignment';
               
-              // Look for due date
+                // Look for due date in various ways
               let dueDate = null;
-              const dateCell = $(elem).find('td').eq(1); // Assuming date is in the second column
-              if (dateCell.length) {
-                dueDate = dateCell.text().trim();
+                let dueDateParsed = null;
+                
+                // Method 1: Look for time elements with datetime
+                const timeElems = $(elem).find('time');
+                timeElems.each((timeIdx, timeElem) => {
+                  const datetime = $(timeElem).attr('datetime');
+                  const timeText = $(timeElem).text().trim();
+                  if (datetime && (timeText.toLowerCase().includes('due') || $(timeElem).hasClass('submissionTimeChart--dueDate'))) {
+                    dueDateParsed = datetime;
+                    dueDate = timeText;
+              }
+                });
+              
+                // Method 2: Look in hidden columns
+                if (!dueDateParsed) {
+                  const hiddenCells = $(elem).find('td.hidden-column');
+                  if (hiddenCells.length >= 2) {
+                    dueDateParsed = hiddenCells.eq(1).text().trim();
+                  }
               }
               
-              // Look for grade
-              let gradeText = null;
-              const gradeCell = $(elem).find('td').eq(2); // Assuming grade is in the third column
-              if (gradeCell.length) {
-                gradeText = gradeCell.text().trim();
-              }
+                // Method 3: Look in regular table cells
+                if (!dueDateParsed) {
+                  const allCells = $(elem).find('td');
+                  allCells.each((cellIdx, cell) => {
+                    const cellText = $(cell).text().trim();
+                    // Look for date-like patterns
+                    if (cellText.match(/\d{4}-\d{2}-\d{2}/) || cellText.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/)) {
+                      if (!dueDate) dueDate = cellText;
+                    }
+                  });
+                }
+                
+                // Get status if available
+                const statusElem = $(elem).find('.submissionStatus--text');
+                const status = statusElem.length ? statusElem.text().trim() : null;
               
-              // Parse grade information
-              let grade = null;
-              let maxPoints = null;
-              if (gradeText && gradeText.includes('/')) {
-                const parts = gradeText.split('/');
-                grade = parseFloat(parts[0].trim());
-                maxPoints = parseFloat(parts[1].trim());
-              }
-              
-              console.log(`Found assignment (alt table): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Grade: ${grade}/${maxPoints})`);
+                console.log(`Found assignment (alt table): ${assignmentName} (ID: ${assignmentId}, Due: ${dueDate}, Status: ${status})`);
               console.log(`Row HTML: ${$(elem).html().substring(0, 200)}`);
               
               assignments.push({
                 id: assignmentId,
                 name: assignmentName || 'Alternative Table Assignment',
-                dueDate: dueDate,
-                grade: !isNaN(grade) ? grade : null,
-                maxPoints: !isNaN(maxPoints) ? maxPoints : null
+                  dueDate: dueDateParsed || dueDate,
+                  status: status,
+                  grade: null,
+                  maxPoints: null
               });
             } else {
               console.log('Warning: Could not extract assignment ID from URL:', assignmentUrl);
             }
+            });
           } catch (err) {
             console.log('Error parsing alt assignment row:', err.message);
           }
@@ -742,7 +833,7 @@ async getCourses() {
       throw new Error('Not logged in');
     }
     try {
-      // 1. Go to the assignment or submission page
+      // 1. Go to the assignment page
       let assignmentUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}`;
       let response = await this.session.get(assignmentUrl);
       let $ = cheerio.load(response.data);
@@ -752,48 +843,198 @@ async getCourses() {
       console.log('ASSIGNMENT PAGE HTML:', $.html().substring(0, 1000));
       console.log('PAGE TITLE:', pageTitle);
 
-      // Extract submissionId
-      const submissionIdRegex = /\/submissions\/(\d+)/;
-      let submissionId = null;
+      // Check if we're being redirected to a submission page
+      if (pageTitle.includes('View Submission') || assignmentUrl !== response.request.res.responseUrl) {
+        console.log('Detected redirect to submission page, trying to get back to assignment');
+        
+        // Try to go back to the assignment overview page
+        const overviewUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}`;
+        response = await this.session.get(overviewUrl, {
+          headers: {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          }
+        });
+        $ = cheerio.load(response.data);
+        console.log('ASSIGNMENT OVERVIEW PAGE TITLE:', $('title').text());
+      }
 
-      // Try to find a link to the submission page
+      // Try to find the assignment PDF link (problem statement)
+      let pdfUrl = null;
+      
+      // Method 1: Look for "Download PDF" or similar links
       $('a').each((i, elem) => {
         const href = $(elem).attr('href');
-        if (href && href.includes('/submissions/')) {
-          const match = href.match(submissionIdRegex);
-          if (match) {
-            submissionId = match[1];
+        const text = $(elem).text().toLowerCase().trim();
+        
+        if (href && (
+          text.includes('download') || 
+          text.includes('pdf') || 
+          text.includes('problem') ||
+          text.includes('statement') ||
+          text.includes('handout') ||
+          text.includes('outline') ||
+          text.includes('template') ||
+          href.includes('.pdf')
+        )) {
+          // Ensure the URL is properly formatted for PDF download
+          let fullUrl = href.startsWith('http') ? href : `https://www.gradescope.com${href}`;
+          
+          // If the URL doesn't end with .pdf but contains .pdf, it might need formatting
+          if (fullUrl.includes('.pdf') && !fullUrl.endsWith('.pdf')) {
+            // Try adding .pdf to the end
+            const pdfIndex = fullUrl.indexOf('.pdf');
+            fullUrl = fullUrl.substring(0, pdfIndex + 4);
           }
+          
+          pdfUrl = fullUrl;
+          console.log(`Found PDF link: "${text}" -> ${pdfUrl}`);
+          return false; // Break out of each loop
         }
       });
 
-      // Fallback: Try to extract from window.gon.page_context in a <script>
-      if (!submissionId) {
-        const scriptTags = $('script').toArray();
-        for (const script of scriptTags) {
-          const html = $(script).html();
-          if (html && html.includes('window.gon')) {
-            const match = html.match(/"id":"(\d+)"/);
-            if (match) {
-              submissionId = match[1];
-              break;
+      // Method 2: Look for direct PDF links in the assignment content
+      if (!pdfUrl) {
+        $('iframe, embed, object').each((i, elem) => {
+          const src = $(elem).attr('src');
+          if (src && src.includes('.pdf')) {
+            pdfUrl = src.startsWith('http') ? src : `https://www.gradescope.com${src}`;
+            console.log(`Found PDF iframe/embed: ${pdfUrl}`);
+            return false; // Break out of each loop
+          }
+        });
+      }
+
+      // Method 2.5: Look for links in the assignment description/content area
+      if (!pdfUrl) {
+        $('.assignment-description, .content, .description, .assignment-content').find('a').each((i, elem) => {
+          const href = $(elem).attr('href');
+          if (href && href.includes('.pdf')) {
+            pdfUrl = href.startsWith('http') ? href : `https://www.gradescope.com${href}`;
+            console.log(`Found PDF in content area: ${pdfUrl}`);
+            return false; // Break out of each loop
+          }
+        });
+      }
+
+      // Method 3: Try the assignment outline/template URL pattern
+      if (!pdfUrl) {
+        // Common Gradescope PDF URL patterns - try both with and without .pdf extension
+        const possibleUrls = [
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/outline.pdf`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/template.pdf`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/problem.pdf`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}.pdf`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/outline`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/template`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/problem`
+        ];
+
+        for (const url of possibleUrls) {
+          try {
+            console.log(`Trying URL: ${url}`);
+            const testResponse = await this.session.get(url, { responseType: 'arraybuffer' });
+            if (testResponse.status === 200) {
+              // Check if it's actually a PDF
+              const buffer = Buffer.from(testResponse.data);
+              const contentType = testResponse.headers['content-type'] || '';
+              const isPDF = contentType.includes('application/pdf') || 
+                           buffer.toString('ascii', 0, 4).includes('%PDF') ||
+                           buffer.toString('ascii', 0, 5) === '%PDF-';
+              
+              if (isPDF) {
+                pdfUrl = url;
+                console.log(`Found valid PDF at: ${url}`);
+                break;
+              } else {
+                console.log(`URL ${url} returned non-PDF content: ${contentType}`);
+              }
             }
+          } catch (e) {
+            console.log(`URL ${url} failed: ${e.message}`);
           }
         }
       }
 
-      if (!submissionId) {
-        throw new Error('Could not find submission ID');
+      // Method 4: If we're on a submission page, try to find the submission PDF
+      if (!pdfUrl && pageTitle.includes('View Submission')) {
+        console.log('On submission page, looking for submission PDF links');
+        
+        // Look for submission PDF links
+        $('a').each((i, elem) => {
+          const href = $(elem).attr('href');
+          const text = $(elem).text().toLowerCase().trim();
+          
+          if (href && (href.includes('.pdf') || text.includes('pdf') || text.includes('download'))) {
+            pdfUrl = href.startsWith('http') ? href : `https://www.gradescope.com${href}`;
+            console.log(`Found submission PDF link: "${text}" -> ${pdfUrl}`);
+            return false; // Break out of each loop
+          }
+        });
+        
+        // Also try direct submission PDF URL patterns
+        if (!pdfUrl) {
+          // Extract submission ID from the page
+          let submissionId = null;
+          const responseUrl = response.request?.res?.responseUrl || response.config?.url || '';
+          const submissionMatch = responseUrl.match(/\/submissions\/(\d+)/);
+          if (submissionMatch) {
+            submissionId = submissionMatch[1];
+          } else {
+            // Try to find submission ID in the HTML
+            const scriptTags = $('script').toArray();
+            for (const script of scriptTags) {
+              const html = $(script).html();
+              if (html && html.includes('window.gon')) {
+                const match = html.match(/"id":"?(\d+)"?/);
+                if (match) {
+                  submissionId = match[1];
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (submissionId) {
+            const submissionPdfUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}.pdf`;
+            console.log(`Trying submission PDF URL: ${submissionPdfUrl}`);
+            pdfUrl = submissionPdfUrl;
+          }
+        }
       }
 
-      // Construct the graded copy PDF URL
-      const gradedCopyUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}.pdf`;
+      if (!pdfUrl) {
+        throw new Error('Could not find assignment PDF. This assignment may not have a downloadable PDF or may require submission to view.');
+      }
 
-      // Download the PDF
-      const fileResponse = await this.session.get(gradedCopyUrl, { responseType: 'arraybuffer' });
-      return fileResponse.data;
+             console.log(`Downloading PDF from: ${pdfUrl}`);
+       // Download the PDF
+       const fileResponse = await this.session.get(pdfUrl, { responseType: 'arraybuffer' });
+       
+       // Check if it's actually a PDF by looking at content-type and magic bytes
+       const buffer = Buffer.from(fileResponse.data);
+       const contentType = fileResponse.headers['content-type'] || '';
+       
+       console.log(`Response content-type: ${contentType}`);
+       console.log(`Response size: ${buffer.length} bytes`);
+       console.log(`First 20 bytes: ${buffer.toString('ascii', 0, Math.min(20, buffer.length))}`);
+       
+       // Check if it's a PDF using multiple methods
+       const isPDF = contentType.includes('application/pdf') || 
+                     buffer.toString('ascii', 0, 4).includes('%PDF') ||
+                     buffer.toString('ascii', 0, 5) === '%PDF-';
+       
+       if (!isPDF) {
+         // If it's HTML, it might be an error page or redirect
+         if (contentType.includes('text/html') || buffer.toString('ascii', 0, 15).includes('<!DOCTYPE html>')) {
+           throw new Error('The assignment PDF is not available. This may be a programming assignment or the PDF may require submission access.');
+         } else {
+           throw new Error(`Downloaded file is not a valid PDF. Content-Type: ${contentType}`);
+         }
+       }
+       
+       return buffer;
     } catch (error) {
-      console.error('Error getting assignment PDF/ZIP:', error);
+      console.error('Error getting assignment PDF:', error);
       throw error;
     }
   }

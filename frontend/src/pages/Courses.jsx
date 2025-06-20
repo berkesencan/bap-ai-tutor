@@ -162,30 +162,30 @@ function Courses() {
                 
                 <div className="course-actions">
                   {course.source === 'gradescope' && course.externalId ? (
-                    <a 
+                    <a
                       href={`https://www.gradescope.com/courses/${course.externalId}`}
                       target="_blank"
-                      rel="noopener noreferrer" 
-                      className="action-button primary"
+                      rel="noopener noreferrer"
+                      className="action-button tertiary"
                     >
                       <span className="action-icon">🔗</span>
                       View on Gradescope
                     </a>
                   ) : (
-                    <Link 
-                      to={`/courses/${course.id}`} 
-                      className="action-button secondary"
+                    <Link
+                      to={`/assignments?courseId=${course.id}`}
+                      className="action-button tertiary"
                     >
-                      <span className="action-icon">👁️</span>
-                      View Details
+                      <span className="action-icon">📋</span>
+                      View Assignments
                     </Link>
                   )}
                   <Link 
-                    to={`/assignments?courseId=${course.id}`} 
-                    className="action-button tertiary"
+                    to={`/courses/${course.id}`} 
+                    className="action-button secondary"
                   >
-                    <span className="action-icon">📋</span>
-                    View Assignments
+                    <span className="action-icon">👁️</span>
+                    View Details
                   </Link>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 const { handleError } = require('../middleware/error.middleware');
 const GeminiService = require('../services/gemini.service');
+const aiService = require('../services/ai.service');
 
 class AIController {
   /**
@@ -71,12 +72,14 @@ class AIController {
   }
 
   /**
-   * Handle a chat message using Gemini (maintains history via prompt)
+   * Handle a chat message using Gemini with classroom context
    * @route POST /api/ai/chat
    */
   static async handleChatMessage(req, res) {
     try {
-      const { history, message } = req.body;
+      const { history, message, classroomId, courseId } = req.body;
+      const userId = req.user.uid;
+      
       if (!message) {
         return res.status(400).json({ success: false, message: 'Missing required field: message' });
       }
@@ -84,27 +87,64 @@ class AIController {
          return res.status(400).json({ success: false, message: 'Invalid history format: must be an array' });
       }
 
-      // *** Reconstruct the prompt similar to frontend logic (ensure consistency) ***
-      const MAX_HISTORY_TURNS = 5;
-      const historyToFormat = history || [];
-      const historyToSend = historyToFormat.slice(-MAX_HISTORY_TURNS * 2);
-      const formattedHistory = historyToSend.map(msg => {
+      // Use enhanced AI service with classroom context
+      const response = await aiService.answerQuestion({
+        userId,
+        question: message,
+        courseId: courseId || classroomId,
+        classroomId: classroomId,
+        context: history ? history.map(msg => {
         const prefix = (msg.role === 'user' || msg.sender === 'user') ? 'User:' : 'AI:';
         return `${prefix} ${msg.content || msg.text || msg.parts || ''}`;
-      }).join('\n');
-      
-      // Add the new message to the history string for the prompt
-      const promptForApi = `${formattedHistory}\nUser: ${message}`.trim();
-
-      // Use the service function that returns usage data
-      const { text, usageMetadata } = await GeminiService.generateChatResponseFromPrompt(promptForApi);
+        }).join('\n') : ''
+      });
       
       res.json({ 
         success: true, 
         data: { 
-          response: text, 
-          usageMetadata: usageMetadata // Include usage metadata
+          response: response.answer,
+          materials: response.materials,
+          usageMetadata: response.usageMetadata
         } 
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  /**
+   * Get available classrooms for AI context
+   * @route GET /api/ai/classrooms
+   */
+  static async getAvailableClassrooms(req, res) {
+    try {
+      const userId = req.user.uid;
+      const classrooms = await aiService.getAvailableClassrooms(userId);
+      
+      res.json({ 
+        success: true, 
+        data: classrooms
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  /**
+   * Get integrated materials for a classroom or course
+   * @route GET /api/ai/materials/:contextId
+   */
+  static async getIntegratedMaterials(req, res) {
+    try {
+      const userId = req.user.uid;
+      const { contextId } = req.params;
+      const { type = 'classroom' } = req.query; // 'classroom' or 'course'
+      
+      const materials = await aiService.getIntegratedMaterials(userId, contextId, type);
+      
+      res.json({ 
+        success: true, 
+        data: materials
       });
     } catch (error) {
       handleError(error, res);

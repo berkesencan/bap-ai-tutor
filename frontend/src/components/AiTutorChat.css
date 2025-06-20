@@ -172,11 +172,36 @@
   padding: 1.5rem 2rem;
   color: white;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 1rem;
   position: relative;
   overflow: visible;
   z-index: 1000;
+}
+
+.chat-header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.chat-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.classroom-materials-indicator {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+}
+
+.classroom-selector {
+  position: relative;
+  z-index: 1001;
 }
 
 .enhanced-chat-header::before {

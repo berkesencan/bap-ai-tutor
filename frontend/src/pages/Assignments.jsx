@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useParams, Link } from 'react-router-dom';
 import { getAssignmentsForCourse, getCourses, getAllAssignments } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import './Assignments.css';
@@ -12,15 +12,22 @@ function Assignments() {
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const { currentUser } = useAuth();
   const location = useLocation();
+  const params = useParams();
 
-  // Parse courseId from URL query parameters if present
+  // Parse courseId from URL parameters (both route params and query params)
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const courseId = params.get('courseId');
-    if (courseId) {
-      setSelectedCourseId(courseId);
+    // First check route params (for /courses/:courseId)
+    if (params.courseId) {
+      setSelectedCourseId(params.courseId);
+    } else {
+      // Then check query parameters (for /assignments?courseId=...)
+      const urlParams = new URLSearchParams(location.search);
+      const courseId = urlParams.get('courseId');
+      if (courseId) {
+        setSelectedCourseId(courseId);
+      }
     }
-  }, [location.search]);
+  }, [location.search, params.courseId]);
 
   // Fetch courses
   useEffect(() => {
@@ -86,18 +93,78 @@ function Assignments() {
     }
   }, [currentUser, selectedCourseId, courses.length]);
 
+  // Helper: map common US timezone abbreviations to offsets (hours relative to UTC)
+  const TZ_ABBREV_TO_OFFSET = {
+    EDT: -4,
+    EST: -5,
+    CDT: -5,
+    CST: -6,
+    MDT: -6,
+    MST: -7,
+    PDT: -7,
+    PST: -8,
+  };
+
   // Format the due date for display
   const formatDueDate = (timestamp) => {
     if (!timestamp) return 'No due date';
-    
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return 'Invalid date';
-    
+
+    let date = null;
+
+    // 1) Handle Firebase Timestamp objects coming from Firestore
+    //    These usually have the shape: { seconds: <number>, nanoseconds: <number> }
+    if (typeof timestamp === 'object' && timestamp !== null) {
+      // a) Native Firestore Timestamp instance exposes a .toDate() method
+      if (typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      }
+      // b) Plain object returned through JSON serialisation: { seconds, nanoseconds }
+      else if ('seconds' in timestamp) {
+        const millis = timestamp.seconds * 1000 + Math.floor((timestamp.nanoseconds || 0) / 1e6);
+        date = new Date(millis);
+      }
+      // c) Another possible serialisation (_seconds / _nanoseconds)
+      else if ('_seconds' in timestamp) {
+        const millis = timestamp._seconds * 1000 + Math.floor((timestamp._nanoseconds || 0) / 1e6);
+        date = new Date(millis);
+      }
+    }
+
+    // 2) If the value is a string (e.g. "2024-05-22 09:00:00 -0400") try to parse it
+    if (!date && typeof timestamp === 'string') {
+      let isoLike = timestamp;
+      // Convert timezone abbreviation in parentheses e.g. "(EDT)" or trailing "EDT" to numeric offset
+      const tzMatch = isoLike.match(/\b([A-Z]{2,4})\b/);
+      if (tzMatch && TZ_ABBREV_TO_OFFSET[tzMatch[1]]) {
+        const offsetHours = TZ_ABBREV_TO_OFFSET[tzMatch[1]];
+        const offsetStr = (offsetHours > 0 ? '+' : '-') + String(Math.abs(offsetHours)).padStart(2, '0') + ':00';
+        // Remove the abbreviation and add offset
+        isoLike = isoLike.replace(tzMatch[1], '').trim() + ' ' + offsetStr;
+      }
+      // Replace space between date and time with 'T' to create an ISO-like string
+      if (/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(isoLike)) {
+        isoLike = isoLike.replace(' ', 'T');
+      }
+      // Replace timezone like " -0400" with ISO offset "-04:00"
+      isoLike = isoLike.replace(/ ([+-]\d{2})(\d{2})$/, ' $1:$2');
+      date = new Date(isoLike);
+    }
+
+    // 3) If it's a primitive number or Date-parseable string fall back to new Date()
+    if (!date) {
+      date = new Date(timestamp);
+    }
+
+    // Final guard
+    if (!date || isNaN(date.getTime())) return 'Invalid date';
+
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
     });
   };
 
@@ -145,9 +212,30 @@ function Assignments() {
     );
   }
 
+  // Get the current course name if filtering by course
+  const getCurrentCourseName = () => {
+    if (selectedCourseId) {
+      const course = courses.find(c => c.id === selectedCourseId);
+      return course ? `${course.code}: ${course.name}` : 'Selected Course';
+    }
+    return null;
+  };
+
+  const currentCourseName = getCurrentCourseName();
+
   return (
     <div className="assignments">
-      <h1>📚 Assignments</h1>
+      {selectedCourseId && (
+        <div className="breadcrumb">
+          <Link to="/courses" className="breadcrumb-link">
+            <span className="breadcrumb-icon">📚</span>
+            Courses
+          </Link>
+          <span className="breadcrumb-separator">›</span>
+          <span className="breadcrumb-current">{currentCourseName}</span>
+        </div>
+      )}
+      <h1>📚 {currentCourseName ? `${currentCourseName} - Assignments` : 'Assignments'}</h1>
       
       {/* Course filter */}
       <div className="filter-card">
@@ -214,11 +302,20 @@ function Assignments() {
       )}
 
       {/* No assignments message */}
-      {courses.length > 0 && assignments.length === 0 && !loading && (
+      {courses.length > 0 && assignments.filter(a => !selectedCourseId || a.courseId === selectedCourseId).length === 0 && !loading && (
         <div className="empty-state">
           <div className="empty-state-icon">📝</div>
           <h3 className="empty-state-title">No Assignments Found</h3>
-          <p>No assignments found for the selected course filter.</p>
+          <p>{selectedCourseId ? `No assignments found for ${currentCourseName}.` : 'No assignments found for the selected course filter.'}</p>
+          {selectedCourseId && (
+            <Link 
+              to="/assignments" 
+              className="import-button"
+            >
+              <span className="action-icon">📚</span>
+              View All Assignments
+            </Link>
+          )}
         </div>
       )}
 
@@ -249,7 +346,9 @@ function Assignments() {
       {/* Assignments list */}
       {!loading && assignments.length > 0 && (
         <div className="assignments-grid">
-          {assignments.map(assignment => (
+          {assignments
+            .filter(assignment => !selectedCourseId || assignment.courseId === selectedCourseId)
+            .map(assignment => (
             <div 
               key={assignment.id} 
               className="assignment-card"
@@ -292,7 +391,7 @@ function Assignments() {
                 {assignment.source === 'gradescope' && assignment.externalId && getCourseExternalId(assignment.courseId) ? (
                   <>
                     <a 
-                      href={`https://www.gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
+                      href={`https://gradescope.com/courses/${getCourseExternalId(assignment.courseId)}/assignments/${assignment.externalId}`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="action-button primary"
@@ -301,7 +400,7 @@ function Assignments() {
                       View on Gradescope
                     </a>
                     <Link
-                      to={`/assignments/pdf/${getCourseExternalId(assignment.courseId)}/${assignment.externalId}`}
+                      to={`/assignments/pdf/${getCourseExternalId(assignment.courseId)}/${assignment.externalId}?source=gradescope`}
                       className="action-button tertiary"
                     >
                       <span className="action-icon">📄</span>
@@ -310,7 +409,7 @@ function Assignments() {
                   </>
                 ) : (
                   <Link 
-                    to={`/assignments/${assignment.id}`}
+                    to={`/assignments/pdf/${assignment.courseId}/${assignment.id}`}
                     className="action-button secondary"
                   >
                     <span className="action-icon">👁️</span>

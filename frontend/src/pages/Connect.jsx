@@ -51,7 +51,10 @@ const Connect = () => {
               // Set initial selection state based on imported courses
               const initialSelectedCourses = {};
               courseList.forEach(course => {
-                const isImported = imported.some(importedCourse => importedCourse.externalId === course.id);
+                const isImported = imported.some(importedCourse => {
+                  // Convert both to strings for comparison to handle type mismatches
+                  return String(importedCourse.externalId) === String(course.id);
+                });
                 initialSelectedCourses[course.id] = isImported;
               });
               setSelectedCourses(initialSelectedCourses);
@@ -238,11 +241,19 @@ const Connect = () => {
       if (manageResponse.success) {
         setImportSuccess(true);
         
-        // Refresh imported courses
+        // Refresh imported courses and update selection state
         const importedResponse = await getCourses();
         if (importedResponse.success) {
           const imported = importedResponse.data.courses.filter(course => course.source === 'gradescope');
           setImportedCourses(imported);
+          
+          // Update selection state based on newly imported courses
+          const updatedSelectedCourses = {};
+          courses.forEach(course => {
+            const isImported = imported.some(importedCourse => String(importedCourse.externalId) === String(course.id));
+            updatedSelectedCourses[course.id] = isImported;
+          });
+          setSelectedCourses(updatedSelectedCourses);
         }
       } else {
         throw new Error(manageResponse.error || 'Failed to save changes');

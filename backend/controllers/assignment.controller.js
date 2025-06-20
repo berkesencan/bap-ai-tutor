@@ -17,7 +17,7 @@ class AssignmentController {
       const { courseId } = req.params;
       const userId = req.user.uid;
       
-      // Check if the course exists and belongs to the current user
+      // Check if the course exists and user has access
       const course = await Course.getById(courseId);
       
       if (!course) {
@@ -27,7 +27,8 @@ class AssignmentController {
         });
       }
       
-      if (course.userId !== userId) {
+      // Check if user is a member of the course (and has permission to create assignments)
+      if (!course.members || !course.members.includes(userId)) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to create assignments for this course',
@@ -58,7 +59,7 @@ class AssignmentController {
       const { courseId } = req.params;
       const userId = req.user.uid;
       
-      // Check if the course exists and belongs to the current user
+      // Check if the course exists and user has access
       const course = await Course.getById(courseId);
       
       if (!course) {
@@ -68,7 +69,8 @@ class AssignmentController {
         });
       }
       
-      if (course.userId !== userId) {
+      // Check if user is a member of the course
+      if (!course.members || !course.members.includes(userId)) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to access assignments for this course',

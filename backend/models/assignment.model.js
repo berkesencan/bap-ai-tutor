@@ -130,21 +130,37 @@ class Assignment {
     try {
       const now = new Date();
       
+      // Simplified query to avoid composite index
       const assignmentsRef = db.collection('assignments')
-        .where('userId', '==', userId)
-        .where('dueDate', '>=', now)
-        .where('status', '==', 'pending')
-        .orderBy('dueDate', 'asc')
-        .limit(limit);
+        .where('userId', '==', userId);
       
       const assignmentsSnapshot = await assignmentsRef.get();
       
       const assignments = [];
       assignmentsSnapshot.forEach(doc => {
-        assignments.push(doc.data());
+        const assignment = doc.data();
+        // Filter in memory to avoid composite index
+        if (assignment.dueDate && 
+            assignment.dueDate.toDate && 
+            assignment.dueDate.toDate() >= now &&
+            (assignment.status === 'pending' || assignment.status === 'active')) {
+          assignments.push(assignment);
+        } else if (assignment.dueDate && 
+                   !assignment.dueDate.toDate && 
+                   new Date(assignment.dueDate) >= now &&
+                   (assignment.status === 'pending' || assignment.status === 'active')) {
+          assignments.push(assignment);
+        }
       });
       
-      return assignments;
+      // Sort by due date in memory
+      assignments.sort((a, b) => {
+        const dateA = a.dueDate?.toDate ? a.dueDate.toDate() : new Date(a.dueDate);
+        const dateB = b.dueDate?.toDate ? b.dueDate.toDate() : new Date(b.dueDate);
+        return dateA - dateB; // Ascending order
+      });
+      
+      return assignments.slice(0, limit);
     } catch (error) {
       console.error('Error getting upcoming assignments:', error);
       throw error;
@@ -202,20 +218,32 @@ class Assignment {
     try {
       const now = new Date();
       
+      // Simplified query to avoid composite index
       const assignmentsRef = db.collection('assignments')
-        .where('userId', '==', userId)
-        .where('dueDate', '<', now)
-        .orderBy('dueDate', 'desc') // Most recent first
-        .limit(limit);
+        .where('userId', '==', userId);
       
       const assignmentsSnapshot = await assignmentsRef.get();
       
       const assignments = [];
       assignmentsSnapshot.forEach(doc => {
-        assignments.push(doc.data());
+        const assignment = doc.data();
+        // Filter in memory to avoid composite index
+        if (assignment.dueDate) {
+          const dueDate = assignment.dueDate?.toDate ? assignment.dueDate.toDate() : new Date(assignment.dueDate);
+          if (dueDate < now) {
+            assignments.push(assignment);
+          }
+        }
       });
       
-      return assignments;
+      // Sort by due date in memory (most recent first)
+      assignments.sort((a, b) => {
+        const dateA = a.dueDate?.toDate ? a.dueDate.toDate() : new Date(a.dueDate);
+        const dateB = b.dueDate?.toDate ? b.dueDate.toDate() : new Date(b.dueDate);
+        return dateB - dateA; // Descending order
+      });
+      
+      return assignments.slice(0, limit);
     } catch (error) {
       console.error('Error getting past assignments:', error);
       throw error;

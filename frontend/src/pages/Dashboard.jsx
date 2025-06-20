@@ -51,17 +51,64 @@ export const Dashboard = () => {
     fetchDashboardData();
   }, [currentUser]);
 
-  // Format date for display
+  // Helper: map common US timezone abbreviations to offsets
+  const TZ_ABBREV_TO_OFFSET = {
+    EDT: -4,
+    EST: -5,
+    CDT: -5,
+    CST: -6,
+    MDT: -6,
+    MST: -7,
+    PDT: -7,
+    PST: -8,
+  };
+
+  // Format date for display (supports Firestore timestamps & timezone abbreviations)
   const formatDate = (timestamp) => {
     if (!timestamp) return 'No date';
     
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return 'Invalid date';
+    let date = null;
+
+    // Firestore Timestamp handling
+    if (typeof timestamp === 'object' && timestamp !== null) {
+      if (typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } else if ('seconds' in timestamp) {
+        const millis = timestamp.seconds * 1000 + Math.floor((timestamp.nanoseconds || 0) / 1e6);
+        date = new Date(millis);
+      } else if ('_seconds' in timestamp) {
+        const millis = timestamp._seconds * 1000 + Math.floor((timestamp._nanoseconds || 0) / 1e6);
+        date = new Date(millis);
+      }
+    }
+
+    if (!date && typeof timestamp === 'string') {
+      let isoLike = timestamp;
+      const tzMatch = isoLike.match(/\b([A-Z]{2,4})\b/);
+      if (tzMatch && TZ_ABBREV_TO_OFFSET[tzMatch[1]]) {
+        const offsetHours = TZ_ABBREV_TO_OFFSET[tzMatch[1]];
+        const offsetStr = (offsetHours > 0 ? '+' : '-') + String(Math.abs(offsetHours)).padStart(2, '0') + ':00';
+        isoLike = isoLike.replace(tzMatch[1], '').trim() + ' ' + offsetStr;
+      }
+      if (/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(isoLike)) {
+        isoLike = isoLike.replace(' ', 'T');
+      }
+      isoLike = isoLike.replace(/ ([+-]\d{2})(\d{2})$/, ' $1:$2');
+      date = new Date(isoLike);
+    }
+
+    if (!date) {
+      date = new Date(timestamp);
+    }
+
+    if (!date || isNaN(date.getTime())) return 'Invalid date';
     
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
     });
   };
 

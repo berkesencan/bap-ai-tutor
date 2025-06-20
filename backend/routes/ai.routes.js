@@ -137,6 +137,12 @@ router.post('/practice-questions', AIController.generatePracticeQuestions);
 // Handle chat message (maintains history via request body)
 router.post('/chat', AIController.handleChatMessage);
 
+// Get available classrooms for AI context
+router.get('/classrooms', AIController.getAvailableClassrooms);
+
+// Get integrated materials for a classroom or course
+router.get('/materials/:contextId', AIController.getIntegratedMaterials);
+
 // Test Gemini 1.5 Flash API endpoint
 router.post('/test-gemini', AIController.testGemini);
 

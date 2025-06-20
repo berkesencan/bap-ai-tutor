@@ -13,6 +13,7 @@ const studyRoutes = require('./routes/study.routes');
 const aiRoutes = require('./routes/ai.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const gradescopeRoutes = require('./routes/gradescope.routes');
+const classroomRoutes = require('./routes/classroom.routes');
 
 // Import middleware
 const { errorHandler } = require('./middleware/error.middleware');
@@ -43,6 +44,7 @@ app.use('/api/study', authMiddleware, studyRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/gradescope', authMiddleware, gradescopeRoutes);
+app.use('/api/classrooms', classroomRoutes);
 
 // Root route
 app.get('/', (req, res) => {

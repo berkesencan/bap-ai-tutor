@@ -1,70 +1,34 @@
 const express = require('express');
-const { body } = require('express-validator');
-const CourseController = require('../controllers/course.controller');
-
 const router = express.Router();
+const CourseController = require('../controllers/course.controller');
+const { verifyToken: authMiddleware } = require('../middleware/auth.middleware');
 
-/**
- * @route POST /api/courses
- * @desc Create a new course
- * @access Private
- */
-router.post(
-  '/',
-  [
-    body('name').notEmpty().withMessage('Course name is required'),
-    body('code').notEmpty().withMessage('Course code is required'),
-    body('professor').notEmpty().withMessage('Professor name is required'),
-    body('description').optional(),
-    body('schedule').optional(),
-    body('platform').optional(),
-  ],
-  CourseController.create
-);
+// Apply authentication middleware to all routes
+router.use(authMiddleware);
 
-/**
- * @route GET /api/courses
- * @desc Get all courses for the current user
- * @access Private
- */
-router.get('/', CourseController.getAll);
-
-/**
- * @route GET /api/courses/:courseId
- * @desc Get a course by ID
- * @access Private
- */
-router.get('/:courseId', CourseController.getById);
-
-/**
- * @route PUT /api/courses/:courseId
- * @desc Update a course
- * @access Private
- */
-router.put(
-  '/:courseId',
-  [
-    body('name').optional().notEmpty().withMessage('Course name cannot be empty'),
-    body('code').optional().notEmpty().withMessage('Course code cannot be empty'),
-    body('professor').optional().notEmpty().withMessage('Professor name cannot be empty'),
-    body('description').optional(),
-    body('schedule').optional(),
-    body('platform').optional(),
-  ],
-  CourseController.update
-);
-
-/**
- * @route DELETE /api/courses/:courseId
- * @desc Delete a course
- * @access Private
- */
-router.delete('/:courseId', CourseController.delete);
-
-// Route to import courses and assignments from Gradescope
+// Course management routes
+router.post('/', CourseController.createCourse);
+router.get('/', CourseController.getUserCourses);
+router.get('/search', CourseController.searchPublicCourses);
+router.post('/join', CourseController.joinCourse);
 router.post('/import', CourseController.importFromGradescope);
-
-// Route to manage Gradescope course imports (add/remove courses)
 router.post('/manage-gradescope', CourseController.manageGradescopeImports);
+
+// Individual course routes
+router.get('/:courseId', CourseController.getCourseById);
+router.put('/:courseId', CourseController.updateCourse);
+router.delete('/:courseId', CourseController.deleteCourse);
+router.post('/:courseId/leave', CourseController.leaveCourse);
+
+// Course content routes
+router.get('/:courseId/assignments', CourseController.getCourseAssignments);
+router.get('/:courseId/materials', CourseController.getCourseMaterials);
+router.get('/:courseId/analytics', CourseController.getCourseAnalytics);
+
+// Integration management routes
+router.get('/:courseId/integrations', CourseController.getUserIntegrations);
+router.post('/:courseId/integrations', CourseController.addIntegration);
+router.delete('/:courseId/integrations/:platform', CourseController.removeIntegration);
+router.post('/:courseId/integrations/:platform/sync', CourseController.syncIntegration);
 
 module.exports = router; 

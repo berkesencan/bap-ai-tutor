@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { postChatMessage, testGemini, processPDF, processPDFWithMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip, FaUpload, FaFileAlt } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip, FaUpload, FaFileAlt, FaChalkboardTeacher, FaUsers } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './AiTutorChat.css'; // Import the CSS file
 
@@ -32,6 +32,209 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
   const chatContainerRef = useRef(null);
+
+  // Classroom context states
+  const [availableClassrooms, setAvailableClassrooms] = useState({ teaching: [], enrolled: [] });
+  const [selectedClassroom, setSelectedClassroom] = useState(null);
+  const [showClassroomDropdown, setShowClassroomDropdown] = useState(false);
+  const [classroomMaterials, setClassroomMaterials] = useState([]);
+
+  // Fetch available classrooms on component mount
+  useEffect(() => {
+    fetchAvailableClassrooms();
+  }, [currentUser]);
+
+  const fetchAvailableClassrooms = async () => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('/api/ai/classrooms', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableClassrooms(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching available classrooms:', error);
+    }
+  };
+
+  const handleClassroomSelect = async (classroom) => {
+    setSelectedClassroom(classroom);
+    setShowClassroomDropdown(false);
+    
+    // Fetch integrated materials for this classroom or course
+    if (classroom) {
+      try {
+        const token = await currentUser.getIdToken();
+        const contextType = classroom.type || 'classroom';
+        const response = await fetch(`/api/ai/materials/${classroom.id}?type=${contextType}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setClassroomMaterials(data.data || {});
+        }
+      } catch (error) {
+        console.error('Error fetching context materials:', error);
+      }
+    } else {
+      setClassroomMaterials({});
+    }
+  };
+
+  const ClassroomSelector = () => (
+    <div className="classroom-selector relative">
+      <button
+        onClick={() => setShowClassroomDropdown(!showClassroomDropdown)}
+        className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+      >
+        {selectedClassroom ? (
+          <>
+            <FaChalkboardTeacher className="text-blue-600" />
+            <span>{selectedClassroom.name}</span>
+            <span className="text-xs text-gray-500">({selectedClassroom.role})</span>
+          </>
+        ) : (
+          <>
+            <FaUsers className="text-gray-400" />
+            <span className="text-gray-600">Select Classroom</span>
+          </>
+        )}
+      </button>
+
+      {showClassroomDropdown && (
+        <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+          <div className="p-2">
+            <button
+              onClick={() => handleClassroomSelect(null)}
+              className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
+                !selectedClassroom ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <FaUsers className="text-gray-400" />
+                <span>General AI Tutor (No classroom context)</span>
+              </div>
+            </button>
+            
+            {availableClassrooms.teaching?.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Teaching
+                </div>
+                {availableClassrooms.teaching.map(classroom => (
+                  <button
+                    key={classroom.id}
+                    onClick={() => handleClassroomSelect(classroom)}
+                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
+                      selectedClassroom?.id === classroom.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <FaChalkboardTeacher className="text-blue-600" />
+                        <div>
+                          <div className="font-medium">{classroom.name}</div>
+                          <div className="text-xs text-gray-500">{classroom.subject}</div>
+                        </div>
+                      </div>
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Teacher</span>
+                    </div>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {availableClassrooms.enrolled?.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Enrolled
+                </div>
+                {availableClassrooms.enrolled.map(classroom => (
+                  <button
+                    key={classroom.id}
+                    onClick={() => handleClassroomSelect(classroom)}
+                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
+                      selectedClassroom?.id === classroom.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <FaGraduationCap className="text-green-600" />
+                        <div>
+                          <div className="font-medium">{classroom.name}</div>
+                          <div className="text-xs text-gray-500">{classroom.subject}</div>
+                        </div>
+                      </div>
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Student</span>
+                    </div>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {availableClassrooms.courses?.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  My Courses
+                </div>
+                {availableClassrooms.courses.map(course => (
+                  <button
+                    key={course.id}
+                    onClick={() => handleClassroomSelect(course)}
+                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
+                      selectedClassroom?.id === course.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <FaBookOpen className="text-purple-600" />
+                        <div>
+                          <div className="font-medium">{course.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {course.subject} {course.semester && `• ${course.semester} ${course.year}`}
+                          </div>
+                          {course.totalIntegrations > 0 && (
+                            <div className="text-xs text-blue-600">
+                              {course.totalIntegrations} integrations • {course.totalAssignments} assignments
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        course.role === 'creator' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {course.role === 'creator' ? 'Creator' : 'Member'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {!availableClassrooms.teaching?.length && !availableClassrooms.enrolled?.length && !availableClassrooms.courses?.length && (
+              <div className="px-3 py-4 text-center text-gray-500 text-sm">
+                <FaUsers className="mx-auto mb-2 text-gray-300" size={24} />
+                <p>No classrooms or courses available</p>
+                <p className="text-xs mt-1">Create or join a classroom/course to get started</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   // Initialize audio and try multiple sources
   useEffect(() => {
@@ -312,13 +515,15 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
           }
         }
 
-        // Send to chat API with proper history
+        // Send to chat API with proper history and classroom context
         const chatData = {
           history: fullChatHistory.slice(0, -1).map(msg => ({
             role: (msg.sender === 'user' || msg.role === 'user') ? 'user' : 'ai',
             content: msg.text || msg.content
           })), // All history except the current message, properly formatted
-          message: enhancedMessage
+          message: enhancedMessage,
+          classroomId: selectedClassroom?.type === 'classroom' ? selectedClassroom?.id : null,
+          courseId: selectedClassroom?.type === 'course' ? selectedClassroom?.id : null
         };
 
         response = await postChatMessage(chatData);
@@ -542,6 +747,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
       )}
       
       <div className="enhanced-chat-header">
+        <div className="chat-header-main">
         <div className="chat-header-content">
           <h2 className="chat-title">
             <div className={`enhanced-robot-logo ${soundPlayed ? 'robot-active' : ''} ${audioLoaded ? 'loaded' : 'not-loaded'}`} onClick={playRobotSound}>
@@ -552,7 +758,16 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
             AI Tutor Chat
           </h2>
           <p className="chat-description">
-            Ask me anything about your courses or assignments!
+              {selectedClassroom ? (
+                <>
+                  Chatting with context from <strong>{selectedClassroom.name}</strong> classroom.
+                  {classroomMaterials.length > 0 && (
+                    <span className="text-sm text-blue-600"> I have access to your course materials!</span>
+                  )}
+                </>
+              ) : (
+                'Ask me anything about your courses or assignments!'
+              )}
             {recentPDFs.length > 0 && (
               <div className="pdf-memory-container">
                 <span 
@@ -609,6 +824,17 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
             >
               🗑️
             </button>
+            )}
+          </div>
+        </div>
+        <div className="chat-header-controls">
+          <ClassroomSelector />
+          {selectedClassroom && classroomMaterials.length > 0 && (
+            <div className="classroom-materials-indicator">
+              <span className="text-xs text-white">
+                📚 {classroomMaterials.length} course materials available
+              </span>
+            </div>
           )}
         </div>
       </div>
