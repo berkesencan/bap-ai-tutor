@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const AIController = require('../controllers/ai.controller');
 const GeminiService = require('../services/gemini.service');
+const auth = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -135,7 +136,7 @@ router.post('/explain', AIController.explainConcept);
 router.post('/practice-questions', AIController.generatePracticeQuestions);
 
 // Handle chat message (maintains history via request body)
-router.post('/chat', AIController.handleChatMessage);
+router.post('/chat', auth, AIController.handleChatMessage);
 
 // Get available classrooms for AI context
 router.get('/classrooms', AIController.getAvailableClassrooms);
@@ -145,6 +146,21 @@ router.get('/materials/:contextId', AIController.getIntegratedMaterials);
 
 // Test Gemini 1.5 Flash API endpoint
 router.post('/test-gemini', AIController.testGemini);
+
+// AI Tutor routes
+router.post('/analyze-document', auth, AIController.analyzeDocument);
+router.post('/generate-questions', auth, AIController.generateQuestions);
+router.post('/explain-concept', auth, AIController.explainConcept);
+router.post('/generate-summary', auth, AIController.generateSummary);
+
+// Interactive Activities routes
+router.post('/activities', auth, AIController.createActivity);
+router.get('/activities', auth, AIController.getActivities);
+router.get('/activities/:activityId', auth, AIController.getActivity);
+router.put('/activities/:activityId', auth, AIController.updateActivity);
+router.post('/activities/:activityId/start', auth, AIController.startActivity);
+router.post('/activities/join', auth, AIController.joinActivity);
+router.post('/activities/:activityId/generate-content', auth, AIController.generateActivityContent);
 
 // NOTE: Routes related to the previous custom chat/quiz implementation 
 // (e.g., /chat/:sessionId, /quiz/generate, /quiz/:quizId/submit) 

@@ -10,17 +10,28 @@ import {
   PuzzlePieceIcon,
   AcademicCapIcon,
   ChartBarIcon,
-  BoltIcon
+  BoltIcon,
+  XMarkIcon,
+  DocumentTextIcon,
+  BeakerIcon,
+  LightBulbIcon,
+  FireIcon,
+  StarIcon,
+  EyeIcon,
+  ShareIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
+import './InteractiveActivities.css';
 
 const InteractiveActivities = () => {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
   const [activities, setActivities] = useState([]);
-  const [classrooms, setClassrooms] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('live');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -28,11 +39,12 @@ const InteractiveActivities = () => {
 
   const fetchData = async () => {
     try {
-      const token = await user.getIdToken();
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
       
-      // Fetch classrooms and activities in parallel
-      const [classroomsResponse, activitiesResponse] = await Promise.all([
-        fetch('/api/classrooms', {
+      // Fetch courses and activities
+      const [coursesResponse, activitiesResponse] = await Promise.all([
+        fetch('/api/courses', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch('/api/activities', {
@@ -40,12 +52,9 @@ const InteractiveActivities = () => {
         })
       ]);
 
-      if (classroomsResponse.ok) {
-        const classroomsData = await classroomsResponse.json();
-        setClassrooms([
-          ...classroomsData.data.classrooms.teaching || [],
-          ...classroomsData.data.classrooms.enrolled || []
-        ]);
+      if (coursesResponse.ok) {
+        const coursesData = await coursesResponse.json();
+        setCourses(coursesData.data.courses || []);
       }
 
       if (activitiesResponse.ok) {
@@ -59,63 +68,111 @@ const InteractiveActivities = () => {
     }
   };
 
+  // Enhanced activity types with AI-powered features
+  const activityTypes = [
+    {
+      id: 'ai-quiz-battle',
+      name: 'AI Quiz Battle',
+      icon: '🧠',
+      color: 'purple',
+      description: 'Real-time quiz with AI-generated questions from course materials',
+      features: ['PDF Analysis', 'Adaptive Difficulty', 'Live Leaderboard', 'AI Explanations']
+    },
+    {
+      id: 'concept-race',
+      name: 'Concept Race',
+      icon: '⚡',
+      color: 'blue',
+      description: 'Fast-paced concept identification using course content',
+      features: ['Speed Rounds', 'Visual Recognition', 'Team Mode', 'Progress Tracking']
+    },
+    {
+      id: 'collaborative-solver',
+      name: 'Collaborative Problem Solver',
+      icon: '🤝',
+      color: 'green',
+      description: 'Students work together on complex problems with AI guidance',
+      features: ['Real-time Collaboration', 'AI Hints', 'Step-by-step Guide', 'Peer Review']
+    },
+    {
+      id: 'mystery-case',
+      name: 'Mystery Case Study',
+      icon: '🕵️',
+      color: 'orange',
+      description: 'Interactive case studies with branching scenarios',
+      features: ['Branching Paths', 'Evidence Collection', 'AI Feedback', 'Multiple Endings']
+    },
+    {
+      id: 'debate-arena',
+      name: 'Debate Arena',
+      icon: '⚖️',
+      color: 'red',
+      description: 'Structured debates with AI moderation and fact-checking',
+      features: ['AI Moderation', 'Fact Checking', 'Argument Analysis', 'Voting System']
+    },
+    {
+      id: 'simulation-lab',
+      name: 'Simulation Lab',
+      icon: '🧪',
+      color: 'teal',
+      description: 'Interactive simulations based on course materials',
+      features: ['Virtual Experiments', 'Parameter Testing', 'Data Analysis', 'Report Generation']
+    }
+  ];
+
   const CreateActivityModal = () => {
     const [formData, setFormData] = useState({
       title: '',
-      type: 'ai-quiz',
+      type: 'ai-quiz-battle',
       description: '',
-      classroomId: '',
-      content: {
-        topic: '',
-        difficulty: 'medium'
-      },
+      courseId: '',
+      materials: [],
       settings: {
-        maxParticipants: 50,
-        timeLimit: 300,
+        maxParticipants: 30,
+        timeLimit: 20,
+        difficulty: 'adaptive',
         allowHints: true,
         showLeaderboard: true,
-        gamificationEnabled: true
+        teamMode: false,
+        aiModeration: true
       }
     });
 
-    const activityTypes = [
-      {
-        id: 'ai-quiz',
-        name: 'AI Quiz Battle',
-        icon: '🧠',
-        description: 'AI-generated questions with real-time scoring'
-      },
-      {
-        id: 'collaborative-solving',
-        name: 'Collaborative Problem Solving',
-        icon: '🤝',
-        description: 'Students work together on complex problems'
-      },
-      {
-        id: 'concept-race',
-        name: 'Concept Race',
-        icon: '⚡',
-        description: 'Fast-paced concept identification game'
-      },
-      {
-        id: 'step-by-step',
-        name: 'Step-by-Step Challenge',
-        icon: '📝',
-        description: 'AI guides students through problem-solving steps'
+    const [selectedMaterials, setSelectedMaterials] = useState([]);
+    const [courseMaterials, setCourseMaterials] = useState([]);
+
+    const handleCourseChange = async (courseId) => {
+      setFormData({...formData, courseId});
+      if (courseId) {
+        try {
+          const token = await currentUser.getIdToken();
+          const response = await fetch(`/api/courses/${courseId}/materials`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setCourseMaterials(data.data.materials || []);
+          }
+        } catch (error) {
+          console.error('Error fetching materials:', error);
+        }
       }
-    ];
+    };
 
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        const token = await user.getIdToken();
+        const token = await currentUser.getIdToken();
         const response = await fetch('/api/activities', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(formData)
+          body: JSON.stringify({
+            ...formData,
+            materials: selectedMaterials
+          })
         });
 
         if (response.ok) {
@@ -127,188 +184,189 @@ const InteractiveActivities = () => {
       }
     };
 
+    const selectedType = activityTypes.find(t => t.id === formData.type);
+
     return showCreateModal ? (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <h2 className="text-2xl font-bold mb-6">Create Interactive Activity</h2>
+      <div className="modal-overlay">
+        <div className="modal-content activity-modal">
+          <div className="modal-header">
+            <h2 className="modal-title">Create Interactive Learning Activity</h2>
+            <button onClick={() => setShowCreateModal(false)} className="modal-close">
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+          </div>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Activity Title *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Calculus Quiz Battle"
-              />
+          <form onSubmit={handleSubmit} className="activity-form">
+            <div className="form-section">
+              <h3 className="section-title">Activity Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Activity Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    className="form-input"
+                    placeholder="e.g., Calculus Concepts Battle"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Course</label>
+                  <select
+                    required
+                    value={formData.courseId}
+                    onChange={(e) => handleCourseChange(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="">Select a course</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>
+                        {course.code} - {course.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Activity Type *
-              </label>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="form-section">
+              <h3 className="section-title">Activity Type</h3>
+              <div className="activity-type-grid">
                 {activityTypes.map(type => (
                   <div
                     key={type.id}
                     onClick={() => setFormData({...formData, type: type.id})}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      formData.type === type.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`activity-type-card ${formData.type === type.id ? 'selected' : ''} ${type.color}`}
                   >
-                    <div className="text-2xl mb-2">{type.icon}</div>
-                    <div className="font-medium text-sm mb-1">{type.name}</div>
-                    <div className="text-xs text-gray-500">{type.description}</div>
+                    <div className="type-header">
+                      <span className="type-icon">{type.icon}</span>
+                      <h4 className="type-name">{type.name}</h4>
+                    </div>
+                    <p className="type-description">{type.description}</p>
+                    <div className="type-features">
+                      {type.features.map(feature => (
+                        <span key={feature} className="feature-tag">{feature}</span>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Classroom *
-              </label>
-              <select
-                required
-                value={formData.classroomId}
-                onChange={(e) => setFormData({...formData, classroomId: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a classroom</option>
-                {classrooms.map(classroom => (
-                  <option key={classroom.id} value={classroom.id}>
-                    {classroom.name} ({classroom.subject})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Topic
-                </label>
-                <input
-                  type="text"
-                  value={formData.content.topic}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    content: {...formData.content, topic: e.target.value}
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Derivatives"
-                />
+            {formData.courseId && (
+              <div className="form-section">
+                <h3 className="section-title">Course Materials</h3>
+                <div className="materials-grid">
+                  {courseMaterials.map(material => (
+                    <div
+                      key={material.id}
+                      onClick={() => {
+                        const isSelected = selectedMaterials.includes(material.id);
+                        setSelectedMaterials(
+                          isSelected 
+                            ? selectedMaterials.filter(id => id !== material.id)
+                            : [...selectedMaterials, material.id]
+                        );
+                      }}
+                      className={`material-card ${selectedMaterials.includes(material.id) ? 'selected' : ''}`}
+                    >
+                      <DocumentTextIcon className="material-icon" />
+                      <div className="material-info">
+                        <h4 className="material-name">{material.name}</h4>
+                        <p className="material-type">{material.type}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Difficulty
-                </label>
-                <select
-                  value={formData.content.difficulty}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    content: {...formData.content, difficulty: e.target.value}
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                  <option value="adaptive">Adaptive</option>
-                </select>
-              </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows="3"
-                placeholder="Brief description of the activity..."
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-medium mb-3">Settings</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Participants
-                  </label>
+            <div className="form-section">
+              <h3 className="section-title">Activity Settings</h3>
+              <div className="settings-grid">
+                <div className="setting-group">
+                  <label className="setting-label">Max Participants</label>
                   <input
                     type="number"
-                    min="1"
-                    max="100"
                     value={formData.settings.maxParticipants}
                     onChange={(e) => setFormData({
                       ...formData,
                       settings: {...formData.settings, maxParticipants: parseInt(e.target.value)}
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="setting-input"
+                    min="5"
+                    max="100"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Time Limit (minutes)
-                  </label>
+                <div className="setting-group">
+                  <label className="setting-label">Time Limit (minutes)</label>
                   <input
                     type="number"
-                    min="1"
-                    max="60"
-                    value={formData.settings.timeLimit / 60}
+                    value={formData.settings.timeLimit}
                     onChange={(e) => setFormData({
                       ...formData,
-                      settings: {...formData.settings, timeLimit: parseInt(e.target.value) * 60}
+                      settings: {...formData.settings, timeLimit: parseInt(e.target.value)}
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="setting-input"
+                    min="5"
+                    max="120"
                   />
+                </div>
+                <div className="setting-group">
+                  <label className="setting-label">Difficulty</label>
+                  <select
+                    value={formData.settings.difficulty}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      settings: {...formData.settings, difficulty: e.target.value}
+                    })}
+                    className="setting-select"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                    <option value="adaptive">Adaptive (AI-Powered)</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2">
+              <div className="setting-toggles">
                 {[
-                  { key: 'allowHints', label: 'Allow Hints' },
-                  { key: 'showLeaderboard', label: 'Show Leaderboard' },
-                  { key: 'gamificationEnabled', label: 'Enable Gamification' }
-                ].map(({ key, label }) => (
-                  <label key={key} className="flex items-center space-x-2">
+                  { key: 'allowHints', label: 'Allow AI Hints', desc: 'Students can get AI-powered hints' },
+                  { key: 'showLeaderboard', label: 'Live Leaderboard', desc: 'Show real-time rankings' },
+                  { key: 'teamMode', label: 'Team Mode', desc: 'Students work in teams' },
+                  { key: 'aiModeration', label: 'AI Moderation', desc: 'AI monitors and guides activity' }
+                ].map(setting => (
+                  <div key={setting.key} className="setting-toggle">
+                    <div className="toggle-info">
+                      <label className="toggle-label">{setting.label}</label>
+                      <p className="toggle-desc">{setting.desc}</p>
+                    </div>
                     <input
                       type="checkbox"
-                      checked={formData.settings[key]}
+                      checked={formData.settings[setting.key]}
                       onChange={(e) => setFormData({
                         ...formData,
-                        settings: {...formData.settings, [key]: e.target.checked}
+                        settings: {...formData.settings, [setting.key]: e.target.checked}
                       })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="toggle-input"
                     />
-                    <span className="text-sm text-gray-700">{label}</span>
-                  </label>
+                  </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className="modal-actions">
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                className="btn-secondary"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
+              <button type="submit" className="btn-primary">
+                <SparklesIcon className="w-4 h-4" />
                 Create Activity
               </button>
             </div>
@@ -319,12 +377,10 @@ const InteractiveActivities = () => {
   };
 
   const JoinActivityModal = () => {
-    const [joinCode, setJoinCode] = useState('');
-
     const handleJoin = async (e) => {
       e.preventDefault();
       try {
-        const token = await user.getIdToken();
+        const token = await currentUser.getIdToken();
         const response = await fetch('/api/activities/join', {
           method: 'POST',
           headers: {
@@ -335,9 +391,9 @@ const InteractiveActivities = () => {
         });
 
         if (response.ok) {
-          setShowJoinModal(false);
-          setJoinCode('');
-          // Redirect to activity page
+          const data = await response.json();
+          // Redirect to activity session
+          window.location.href = `/activities/${data.data.activityId}/session`;
         }
       } catch (error) {
         console.error('Error joining activity:', error);
@@ -345,38 +401,46 @@ const InteractiveActivities = () => {
     };
 
     return showJoinModal ? (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md">
-          <h2 className="text-2xl font-bold mb-6">Join Activity</h2>
+      <div className="modal-overlay">
+        <div className="modal-content join-modal">
+          <div className="modal-header">
+            <h2 className="modal-title">Join Learning Activity</h2>
+            <button onClick={() => setShowJoinModal(false)} className="modal-close">
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+          </div>
           
-          <form onSubmit={handleJoin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Activity Join Code *
-              </label>
+          <form onSubmit={handleJoin} className="join-form">
+            <div className="join-illustration">
+              <UsersIcon className="join-icon" />
+              <h3>Ready to Learn?</h3>
+              <p>Enter the activity code provided by your instructor</p>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Activity Code</label>
               <input
                 type="text"
                 required
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-center text-2xl"
-                placeholder="ABCD"
-                maxLength="4"
+                className="join-input"
+                placeholder="Enter 6-digit code"
+                maxLength="6"
+                pattern="[A-Z0-9]{6}"
               />
             </div>
-
-            <div className="flex justify-end space-x-3 pt-4">
+            
+            <div className="modal-actions">
               <button
                 type="button"
                 onClick={() => setShowJoinModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                className="btn-secondary"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
+              <button type="submit" className="btn-primary">
+                <PlayIcon className="w-4 h-4" />
                 Join Activity
               </button>
             </div>
@@ -387,202 +451,182 @@ const InteractiveActivities = () => {
   };
 
   const ActivityCard = ({ activity }) => {
-    const getActivityIcon = (type) => {
-      const icons = {
-        'ai-quiz': '🧠',
-        'collaborative-solving': '🤝',
-        'concept-race': '⚡',
-        'step-by-step': '📝'
-      };
-      return icons[type] || '🎯';
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'live': return 'status-live';
+        case 'scheduled': return 'status-scheduled';
+        case 'completed': return 'status-completed';
+        default: return 'status-draft';
+      }
     };
 
-    const getStatusColor = (status) => {
-      const colors = {
-        draft: 'bg-gray-100 text-gray-800',
-        active: 'bg-green-100 text-green-800',
-        paused: 'bg-yellow-100 text-yellow-800',
-        completed: 'bg-blue-100 text-blue-800'
-      };
-      return colors[status] || 'bg-gray-100 text-gray-800';
+    const getTypeInfo = (type) => {
+      return activityTypes.find(t => t.id === type) || activityTypes[0];
     };
+
+    const typeInfo = getTypeInfo(activity.type);
 
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="text-3xl">{getActivityIcon(activity.type)}</div>
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900">{activity.title}</h3>
-              <p className="text-gray-600">{activity.content?.topic}</p>
-            </div>
+      <div className={`activity-card ${activity.status}`}>
+        <div className="card-header">
+          <div className="activity-type-badge">
+            <span className="type-emoji">{typeInfo.icon}</span>
+            <span className="type-text">{typeInfo.name}</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(activity.status)}`}>
-              {activity.status}
-            </span>
-            {activity.status === 'active' && (
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-mono">
-                {activity.joinCode}
-              </span>
-            )}
-          </div>
+          <span className={`status-indicator ${getStatusColor(activity.status)}`}>
+            {activity.status === 'live' && <span className="pulse-dot"></span>}
+            {activity.status.toUpperCase()}
+          </span>
         </div>
 
-        {activity.description && (
-          <p className="text-gray-700 mb-4">{activity.description}</p>
-        )}
-
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center">
-              <UsersIcon className="h-4 w-4 mr-1" />
-              <span>{activity.stats?.totalParticipants || 0}/{activity.settings?.maxParticipants}</span>
-            </div>
-            <div className="flex items-center">
-              <ClockIcon className="h-4 w-4 mr-1" />
-              <span>{Math.floor(activity.settings?.timeLimit / 60)}min</span>
-            </div>
-            <div className="flex items-center">
-              <TrophyIcon className="h-4 w-4 mr-1" />
-              <span>{activity.stats?.averageScore || 0} avg</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center">
-          <div className="flex space-x-2">
-            {activity.status === 'draft' && (
-              <button className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm">
-                <PlayIcon className="h-4 w-4 mr-1" />
-                Start
-              </button>
-            )}
-            {activity.status === 'active' && (
-              <button className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
-                <SparklesIcon className="h-4 w-4 mr-1" />
-                Monitor
-              </button>
-            )}
-            {activity.status === 'completed' && (
-              <button className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm">
-                <ChartBarIcon className="h-4 w-4 mr-1" />
-                Results
-              </button>
-            )}
-          </div>
+        <div className="card-content">
+          <h3 className="activity-title">{activity.title}</h3>
+          <p className="activity-course">{activity.course?.code} - {activity.course?.name}</p>
           
-          <div className="flex items-center space-x-1">
-            {activity.settings?.allowHints && (
-              <BoltIcon className="h-4 w-4 text-yellow-500" title="Hints enabled" />
-            )}
-            {activity.settings?.showLeaderboard && (
-              <TrophyIcon className="h-4 w-4 text-blue-500" title="Leaderboard enabled" />
-            )}
-            {activity.settings?.gamificationEnabled && (
-              <SparklesIcon className="h-4 w-4 text-purple-500" title="Gamification enabled" />
-            )}
+          <div className="activity-stats">
+            <div className="stat">
+              <UsersIcon className="stat-icon" />
+              <span>{activity.participants || 0}/{activity.maxParticipants}</span>
+            </div>
+            <div className="stat">
+              <ClockIcon className="stat-icon" />
+              <span>{activity.timeLimit}min</span>
+            </div>
+            <div className="stat">
+              <DocumentTextIcon className="stat-icon" />
+              <span>{activity.materials?.length || 0} materials</span>
+            </div>
           </div>
+
+          {activity.features && (
+            <div className="activity-features">
+              {activity.features.slice(0, 3).map(feature => (
+                <span key={feature} className="feature-pill">{feature}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card-actions">
+          {activity.status === 'live' ? (
+            <button className="action-btn live">
+              <PlayIcon className="w-4 h-4" />
+              Join Live
+            </button>
+          ) : activity.status === 'scheduled' ? (
+            <button className="action-btn scheduled">
+              <ClockIcon className="w-4 h-4" />
+              Scheduled
+            </button>
+          ) : (
+            <button className="action-btn start">
+              <PlayIcon className="w-4 h-4" />
+              Start Activity
+            </button>
+          )}
+          
+          <button className="action-btn secondary">
+            <EyeIcon className="w-4 h-4" />
+            View
+          </button>
         </div>
       </div>
     );
   };
 
   const filteredActivities = activities.filter(activity => {
-    if (activeTab === 'all') return true;
-    return activity.status === activeTab;
+    switch (activeTab) {
+      case 'live': return activity.status === 'live';
+      case 'scheduled': return activity.status === 'scheduled';
+      case 'my-activities': return activity.createdBy === currentUser?.uid;
+      default: return true;
+    }
   });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading activities...</p>
+      <div className="interactive-activities">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading activities...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Interactive Activities</h1>
-          <p className="mt-2 text-gray-600">
-            Create and manage AI-powered interactive activities for your classrooms
+    <div className="interactive-activities">
+      <div className="activities-header">
+        <div className="header-content">
+          <h1 className="page-title">Interactive Learning Hub</h1>
+          <p className="page-subtitle">
+            AI-powered interactive activities that transform course materials into engaging learning experiences
           </p>
         </div>
-
-        {/* Action Buttons */}
-        <div className="mb-8 flex space-x-4">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Create Activity
-          </button>
+        
+        <div className="header-actions">
           <button
             onClick={() => setShowJoinModal(true)}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="action-btn secondary"
           >
-            <PlayIcon className="h-5 w-5 mr-2" />
+            <UsersIcon className="w-4 h-4" />
             Join Activity
           </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="action-btn primary"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Create Activity
+          </button>
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              {[
-                { key: 'all', label: 'All Activities' },
-                { key: 'draft', label: 'Draft' },
-                { key: 'active', label: 'Active' },
-                { key: 'completed', label: 'Completed' }
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.key
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
-
-        {/* Activities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredActivities.map(activity => (
-            <ActivityCard key={activity.id} activity={activity} />
+      <div className="activities-nav">
+        <div className="nav-tabs">
+          {[
+            { id: 'live', label: 'Live Now', icon: FireIcon, count: activities.filter(a => a.status === 'live').length },
+            { id: 'scheduled', label: 'Scheduled', icon: ClockIcon, count: activities.filter(a => a.status === 'scheduled').length },
+            { id: 'my-activities', label: 'My Activities', icon: AcademicCapIcon, count: activities.filter(a => a.createdBy === currentUser?.uid).length },
+            { id: 'all', label: 'All Activities', icon: SparklesIcon, count: activities.length }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              <tab.icon className="tab-icon" />
+              <span className="tab-label">{tab.label}</span>
+              <span className="tab-count">{tab.count}</span>
+            </button>
           ))}
         </div>
+      </div>
 
-        {/* Empty State */}
-        {!filteredActivities.length && (
-          <div className="text-center py-12">
-            <PuzzlePieceIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No activities found</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Get started by creating your first interactive activity.
+      <div className="activities-content">
+        {filteredActivities.length > 0 ? (
+          <div className="activities-grid">
+            {filteredActivities.map(activity => (
+              <ActivityCard key={activity.id} activity={activity} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <SparklesIcon className="empty-icon" />
+            <h3 className="empty-title">No Activities Found</h3>
+            <p className="empty-description">
+              {activeTab === 'live' 
+                ? "No live activities right now. Create one to get started!"
+                : "Start creating interactive learning experiences for your students."
+              }
             </p>
-            <div className="mt-6">
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Create Activity
-              </button>
-            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="empty-action"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Create Your First Activity
+            </button>
           </div>
         )}
       </div>

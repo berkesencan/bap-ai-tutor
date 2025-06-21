@@ -146,8 +146,6 @@ export const Navbar = () => {
         <Link to="/dashboard" className={`nav-link ${isActive('/dashboard')}`}>Dashboard</Link>
         <Link to="/courses" className={`nav-link ${isActive('/courses')}`}>Courses</Link>
         <Link to="/assignments" className={`nav-link ${isActive('/assignments')}`}>Assignments</Link>
-        <Link to="/classrooms" className={`nav-link ${isActive('/classrooms')}`}>Classrooms</Link>
-        <Link to="/course-management" className={`nav-link ${isActive('/course-management')}`}>My Courses</Link>
         <Link to="/activities" className={`nav-link ${isActive('/activities')}`}>Activities</Link>
         <Link to="/ai-tutor" className={`nav-link ${isActive('/ai-tutor')}`}>AI Tutor</Link>
         {shouldShowConnect && (

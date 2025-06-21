@@ -884,26 +884,15 @@ class CourseController {
    */
   static async searchPublicCourses(req, res) {
     try {
-      const { query, institution, semester, year } = req.query;
-      
-      const filters = {};
-      if (institution) filters.institution = institution;
-      if (semester) filters.semester = semester;
-      if (year) filters.year = parseInt(year);
-
+      const { query, filters } = req.query;
       const courses = await Course.searchPublicCourses(query, filters);
-
-      res.json({
+      res.status(200).json({
         success: true,
+        message: "Public courses fetched successfully",
         data: courses
       });
     } catch (error) {
-      console.error('Error searching public courses:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to search courses',
-        error: error.message
-      });
+      res.status(500).json({ success: false, message: error.message });
     }
   }
 
@@ -1023,6 +1012,45 @@ class CourseController {
         message: 'Failed to get analytics',
         error: error.message
       });
+    }
+  }
+
+  /**
+   * Update member role
+   */
+  static async updateMemberRole(req, res) {
+    try {
+      const { courseId, memberId } = req.params;
+      const { role } = req.body;
+      const requestingUserId = req.user.uid;
+
+      await Course.updateMemberRole(courseId, requestingUserId, memberId, role);
+
+      res.status(200).json({
+        success: true,
+        message: "Member role updated successfully."
+      });
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * Remove member
+   */
+  static async removeMember(req, res) {
+    try {
+      const { courseId, memberId } = req.params;
+      const requestingUserId = req.user.uid;
+
+      await Course.removeMember(courseId, requestingUserId, memberId);
+
+      res.status(200).json({
+        success: true,
+        message: "Member removed successfully."
+      });
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
     }
   }
 }

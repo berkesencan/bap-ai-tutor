@@ -44,7 +44,7 @@ app.use('/api/study', authMiddleware, studyRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/gradescope', authMiddleware, gradescopeRoutes);
-app.use('/api/classrooms', classroomRoutes);
+app.use('/api/classrooms', authMiddleware, classroomRoutes);
 
 // Root route
 app.get('/', (req, res) => {

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { postChatMessage, testGemini, processPDF, processPDFWithMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip, FaUpload, FaFileAlt, FaChalkboardTeacher, FaUsers } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip, FaUpload, FaFileAlt, FaChalkboardTeacher, FaUsers, FaCog, FaExternalLinkAlt, FaLayerGroup, FaCheck, FaClipboardList } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './AiTutorChat.css'; // Import the CSS file
 
@@ -33,19 +33,20 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   const [dragDepth, setDragDepth] = useState(0);
   const chatContainerRef = useRef(null);
 
-  // Classroom context states
-  const [availableClassrooms, setAvailableClassrooms] = useState({ teaching: [], enrolled: [] });
-  const [selectedClassroom, setSelectedClassroom] = useState(null);
-  const [showClassroomDropdown, setShowClassroomDropdown] = useState(false);
-  const [classroomMaterials, setClassroomMaterials] = useState([]);
+  // Updated course context states
+  const [availableCourses, setAvailableCourses] = useState({ teaching: [], enrolled: [], courses: [] });
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showCourseDropdown, setShowCourseDropdown] = useState(false);
+  const [courseMaterials, setCourseMaterials] = useState([]);
 
-  // Fetch available classrooms on component mount
+  // Fetch available courses on component mount
   useEffect(() => {
-    fetchAvailableClassrooms();
+    fetchAvailableCourses();
   }, [currentUser]);
 
-  const fetchAvailableClassrooms = async () => {
+  const fetchAvailableCourses = async () => {
     try {
+      if (!currentUser) return;
       const token = await currentUser.getIdToken();
       const response = await fetch('/api/ai/classrooms', {
         headers: {
@@ -56,23 +57,24 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setAvailableClassrooms(data.data);
+        console.log('[AI Tutor] Received course data:', data.data);
+        setAvailableCourses(data.data);
       }
     } catch (error) {
-      console.error('Error fetching available classrooms:', error);
+      console.error('Error fetching available courses:', error);
     }
   };
 
-  const handleClassroomSelect = async (classroom) => {
-    setSelectedClassroom(classroom);
-    setShowClassroomDropdown(false);
+  const handleCourseSelect = async (course) => {
+    setSelectedCourse(course);
+    setShowCourseDropdown(false);
     
-    // Fetch integrated materials for this classroom or course
-    if (classroom) {
+    // Fetch integrated materials for this course
+    if (course && currentUser) {
       try {
         const token = await currentUser.getIdToken();
-        const contextType = classroom.type || 'classroom';
-        const response = await fetch(`/api/ai/materials/${classroom.id}?type=${contextType}`, {
+        const contextType = course.type || 'course';
+        const response = await fetch(`/api/ai/materials/${course.id}?type=${contextType}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -81,232 +83,293 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
 
         if (response.ok) {
           const data = await response.json();
-          setClassroomMaterials(data.data || {});
+          setCourseMaterials(data.data || {});
         }
       } catch (error) {
-        console.error('Error fetching context materials:', error);
+        console.error('Error fetching course materials:', error);
       }
     } else {
-      setClassroomMaterials({});
+      setCourseMaterials({});
     }
   };
 
-  const ClassroomSelector = () => (
-    <div className="classroom-selector relative">
+  const getIntegrationIcon = (platform) => {
+    switch (platform?.toLowerCase()) {
+      case 'gradescope':
+        return '🎓';
+      case 'canvas':
+        return '🎨';
+      case 'blackboard':
+        return '📋';
+      case 'moodle':
+        return '📚';
+      default:
+        return '🔗';
+    }
+  };
+
+  const CourseSelector = () => (
+    <div className="course-selector">
       <button
-        onClick={() => setShowClassroomDropdown(!showClassroomDropdown)}
-        className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+        onClick={() => setShowCourseDropdown(!showCourseDropdown)}
+        className="course-selector-button"
       >
-        {selectedClassroom ? (
-          <>
-            <FaChalkboardTeacher className="text-blue-600" />
-            <span>{selectedClassroom.name}</span>
-            <span className="text-xs text-gray-500">({selectedClassroom.role})</span>
-          </>
+        {selectedCourse ? (
+          <div className="selected-course-info">
+            <div className="course-icon">
+              {selectedCourse.type === 'course' ? <FaBookOpen /> : 
+               selectedCourse.role === 'teacher' ? <FaChalkboardTeacher /> : <FaGraduationCap />}
+            </div>
+            <div className="course-details">
+              <span className="course-name">{selectedCourse.name}</span>
+              <span className="course-meta">
+                {selectedCourse.subject && `${selectedCourse.subject} • `}
+                {selectedCourse.role}
+                {selectedCourse.totalIntegrations > 0 && (
+                  <span className="integration-count">
+                    • {selectedCourse.totalIntegrations} integrations
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="selector-arrow">▼</div>
+          </div>
         ) : (
-          <>
-            <FaUsers className="text-gray-400" />
-            <span className="text-gray-600">Select Classroom</span>
-          </>
+          <div className="no-course-selected">
+            <FaUsers className="placeholder-icon" />
+            <div className="placeholder-text">
+              <span className="placeholder-title">Select Course Context</span>
+              <span className="placeholder-subtitle">Choose a course for enhanced AI assistance</span>
+            </div>
+            <div className="selector-arrow">▼</div>
+          </div>
         )}
       </button>
 
-      {showClassroomDropdown && (
-        <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-          <div className="p-2">
+      {showCourseDropdown && (
+        <div className="course-dropdown">
+          <div className="dropdown-header">
+            <h3>Choose Course Context</h3>
+            <p>Select a course to get AI assistance tailored to your materials and integrations</p>
+          </div>
+          
+          <div className="dropdown-content">
+            {/* General AI Option */}
             <button
-              onClick={() => handleClassroomSelect(null)}
-              className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
-                !selectedClassroom ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-              }`}
+              onClick={() => handleCourseSelect(null)}
+              className={`course-option general-option ${!selectedCourse ? 'selected' : ''}`}
             >
-              <div className="flex items-center space-x-2">
-                <FaUsers className="text-gray-400" />
-                <span>General AI Tutor (No classroom context)</span>
+              <div className="option-icon general-icon">
+                <FaRobot />
               </div>
+              <div className="option-content">
+                <div className="option-title">General AI Tutor</div>
+                <div className="option-subtitle">No specific course context</div>
+              </div>
+              {!selectedCourse && <FaCheck className="selected-check" />}
             </button>
-            
-            {availableClassrooms.teaching?.length > 0 && (
-              <>
-                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Teaching
-                </div>
-                {availableClassrooms.teaching.map(classroom => (
-                  <button
-                    key={classroom.id}
-                    onClick={() => handleClassroomSelect(classroom)}
-                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
-                      selectedClassroom?.id === classroom.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <FaChalkboardTeacher className="text-blue-600" />
-                        <div>
-                          <div className="font-medium">{classroom.name}</div>
-                          <div className="text-xs text-gray-500">{classroom.subject}</div>
-                        </div>
-                      </div>
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Teacher</span>
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
 
-            {availableClassrooms.enrolled?.length > 0 && (
-              <>
-                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Enrolled
+            {/* My Courses */}
+            {availableCourses.courses?.length > 0 && (
+              <div className="course-section">
+                <div className="section-header">
+                  <FaBookOpen className="section-icon" />
+                  <span>My Courses</span>
                 </div>
-                {availableClassrooms.enrolled.map(classroom => (
-                  <button
-                    key={classroom.id}
-                    onClick={() => handleClassroomSelect(classroom)}
-                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
-                      selectedClassroom?.id === classroom.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <FaGraduationCap className="text-green-600" />
-                        <div>
-                          <div className="font-medium">{classroom.name}</div>
-                          <div className="text-xs text-gray-500">{classroom.subject}</div>
-                        </div>
-                      </div>
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Student</span>
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
-
-            {availableClassrooms.courses?.length > 0 && (
-              <>
-                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  My Courses
-                </div>
-                {availableClassrooms.courses.map(course => (
+                {availableCourses.courses.map(course => (
                   <button
                     key={course.id}
-                    onClick={() => handleClassroomSelect(course)}
-                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
-                      selectedClassroom?.id === course.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
+                    onClick={() => handleCourseSelect(course)}
+                    className={`course-option ${selectedCourse?.id === course.id ? 'selected' : ''}`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <FaBookOpen className="text-purple-600" />
-                        <div>
-                          <div className="font-medium">{course.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {course.subject} {course.semester && `• ${course.semester} ${course.year}`}
-                          </div>
-                          {course.totalIntegrations > 0 && (
-                            <div className="text-xs text-blue-600">
-                              {course.totalIntegrations} integrations • {course.totalAssignments} assignments
-                            </div>
+                    <div className="option-icon course-icon">
+                      <FaBookOpen />
+                    </div>
+                    <div className="option-content">
+                      <div className="option-title">{course.name}</div>
+                      <div className="option-subtitle">
+                        {course.subject && `${course.subject} • `}
+                        {course.role}
+                        {course.semester && course.year && ` • ${course.semester} ${course.year}`}
+                      </div>
+                      {course.totalIntegrations > 0 && (
+                        <div className="integration-badges">
+                          {Object.entries(course.integrations || {}).map(([platform, integration]) => 
+                            integration.isActive && (
+                              <span key={platform} className="integration-badge">
+                                {getIntegrationIcon(platform)} {platform}
+                              </span>
+                            )
                           )}
                         </div>
-                      </div>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        course.role === 'creator' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {course.role === 'creator' ? 'Creator' : 'Member'}
-                      </span>
+                      )}
                     </div>
+                    <div className="option-stats">
+                      {course.totalIntegrations > 0 && (
+                        <span className="stat-item">
+                          <FaLayerGroup className="stat-icon" />
+                          {course.totalIntegrations}
+                        </span>
+                      )}
+                      {course.totalAssignments > 0 && (
+                        <span className="stat-item">
+                          <FaFileAlt className="stat-icon" />
+                          {course.totalAssignments}
+                        </span>
+                      )}
+                    </div>
+                    {selectedCourse?.id === course.id && <FaCheck className="selected-check" />}
                   </button>
                 ))}
-              </>
+              </div>
             )}
 
-            {!availableClassrooms.teaching?.length && !availableClassrooms.enrolled?.length && !availableClassrooms.courses?.length && (
-              <div className="px-3 py-4 text-center text-gray-500 text-sm">
-                <FaUsers className="mx-auto mb-2 text-gray-300" size={24} />
-                <p>No classrooms or courses available</p>
-                <p className="text-xs mt-1">Create or join a classroom/course to get started</p>
+            {/* Teaching Classrooms (Legacy) */}
+            {availableCourses.teaching?.length > 0 && (
+              <div className="course-section">
+                <div className="section-header">
+                  <FaChalkboardTeacher className="section-icon" />
+                  <span>Teaching</span>
+                </div>
+                {availableCourses.teaching.map(classroom => (
+                  <button
+                    key={classroom.id}
+                    onClick={() => handleCourseSelect(classroom)}
+                    className={`course-option ${selectedCourse?.id === classroom.id ? 'selected' : ''}`}
+                  >
+                    <div className="option-icon teacher-icon">
+                      <FaChalkboardTeacher />
+                    </div>
+                    <div className="option-content">
+                      <div className="option-title">{classroom.name}</div>
+                      <div className="option-subtitle">{classroom.subject} • Teacher</div>
+                    </div>
+                    <span className="role-badge teacher-badge">Teacher</span>
+                    {selectedCourse?.id === classroom.id && <FaCheck className="selected-check" />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Enrolled Classrooms (Legacy) */}
+            {availableCourses.enrolled?.length > 0 && (
+              <div className="course-section">
+                <div className="section-header">
+                  <FaGraduationCap className="section-icon" />
+                  <span>Enrolled</span>
+                </div>
+                {availableCourses.enrolled.map(classroom => (
+                  <button
+                    key={classroom.id}
+                    onClick={() => handleCourseSelect(classroom)}
+                    className={`course-option ${selectedCourse?.id === classroom.id ? 'selected' : ''}`}
+                  >
+                    <div className="option-icon student-icon">
+                      <FaGraduationCap />
+                    </div>
+                    <div className="option-content">
+                      <div className="option-title">{classroom.name}</div>
+                      <div className="option-subtitle">{classroom.subject} • Student</div>
+                    </div>
+                    <span className="role-badge student-badge">Student</span>
+                    {selectedCourse?.id === classroom.id && <FaCheck className="selected-check" />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {availableCourses.courses?.length === 0 && 
+             availableCourses.teaching?.length === 0 && 
+             availableCourses.enrolled?.length === 0 && (
+              <div className="empty-courses">
+                <FaBookOpen className="empty-icon" />
+                <h4>No Courses Available</h4>
+                <p>Create or join courses to get enhanced AI assistance with course materials and integrations.</p>
+                <button 
+                  onClick={() => navigate('/courses')}
+                  className="go-to-courses-btn"
+                >
+                  Go to Courses
+                </button>
               </div>
             )}
           </div>
+
+          {/* Course Materials Preview */}
+          {selectedCourse && courseMaterials && (courseMaterials.totalMaterials > 0 || courseMaterials.totalAssignments > 0) && (
+            <div className="materials-preview">
+              <div className="preview-header">
+                <FaLayerGroup className="preview-icon" />
+                <span>Available Materials</span>
+              </div>
+              <div className="preview-stats">
+                {courseMaterials.totalMaterials > 0 && (
+                  <span className="preview-stat">
+                    <FaFileAlt className="preview-stat-icon" />
+                    {courseMaterials.totalMaterials} materials
+                  </span>
+                )}
+                {courseMaterials.totalAssignments > 0 && (
+                  <span className="preview-stat">
+                    <FaClipboardList className="preview-stat-icon" />
+                    {courseMaterials.totalAssignments} assignments
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 
-  // Initialize audio and try multiple sources
+  // Initialize audio element
   useEffect(() => {
-    // Create the audio element
-    const audio = new Audio();
-    
-    // Try different paths - now using the r2d2.wav file
-    const possiblePaths = [
+    // Try different sound file paths
+    const soundPaths = [
       '/sounds/r2d2.wav',
-      `${window.location.origin}/sounds/r2d2.wav`
+      '/sounds/robot-sound.mp3',
+      '/robot-sound.mp3'
     ];
     
-    // Track which one succeeded
-    let loadedPath = null;
+    let currentSoundIndex = 0;
     
-    // Function to try loading the next path
     const tryNextPath = (index) => {
-      if (index >= possiblePaths.length) {
-        console.error("All audio paths failed to load", possiblePaths);
-        setAudioError("Failed to load robot sound from any location");
+      if (index >= soundPaths.length) {
+        console.log("No sound files found, continuing without audio");
+        setAudioError("No sound files available");
         return;
       }
       
-      const path = possiblePaths[index];
-      console.log(`Trying to load audio from: ${path}`);
+      const audio = new Audio();
+      const soundPath = soundPaths[index];
+      audio.src = soundPath;
       
-      audio.src = path;
-      
-      // Handle successful load
       const handleCanPlayThrough = () => {
-        console.log(`Audio loaded successfully from ${path}`);
-        loadedPath = path;
+        console.log(`Audio loaded successfully from ${soundPath}`);
         setAudioLoaded(true);
         setAudioError(null);
-        // Remove the error listener for this path
         audio.removeEventListener('error', handleError);
+        audio.removeEventListener('canplaythrough', handleCanPlayThrough);
       };
       
-      // Handle load error - try next path
       const handleError = (e) => {
-        console.warn(`Failed to load audio from ${path}`, e);
-        // Remove listeners for this path
+        console.warn(`Failed to load audio from ${soundPath}`, e);
+        audio.removeEventListener('error', handleError);
         audio.removeEventListener('canplaythrough', handleCanPlayThrough);
-        // Try the next path
         tryNextPath(index + 1);
       };
       
-      // Set up event listeners
       audio.addEventListener('canplaythrough', handleCanPlayThrough);
       audio.addEventListener('error', handleError);
-      
-      // Start loading
       audio.load();
+      audioRef.current = audio;
     };
     
-    // Start with the first path
     tryNextPath(0);
     
-    // Set the ref
-    audioRef.current = audio;
-    
-    // Cleanup
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  // Enhanced drag and drop event handlers
-  useEffect(() => {
+    // Drag and drop event listeners
     const handleDragEnter = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -335,38 +398,50 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
 
     const handleDrop = (e) => {
       e.preventDefault();
-      handleFileDrop(e);
+      e.stopPropagation();
+      setIsDragOver(false);
+      setDragDepth(0);
+
+      const files = Array.from(e.dataTransfer.files);
+      const pdfFiles = files.filter(file => file.type === 'application/pdf');
+      
+      if (pdfFiles.length > 0) {
+        // Take the first PDF file
+        const file = pdfFiles[0];
+        setAttachedFile(file);
+        console.log('PDF file attached via drag and drop:', file.name);
+      } else {
+        console.log('No PDF files found in dropped items');
+      }
     };
 
-    const chatContainer = chatContainerRef.current;
-    if (chatContainer) {
-      chatContainer.addEventListener('dragenter', handleDragEnter);
-      chatContainer.addEventListener('dragleave', handleDragLeave);
-      chatContainer.addEventListener('dragover', handleDragOver);
-      chatContainer.addEventListener('drop', handleDrop);
+    // Add event listeners to the chat container
+    const container = chatContainerRef.current;
+    if (container) {
+      container.addEventListener('dragenter', handleDragEnter);
+      container.addEventListener('dragleave', handleDragLeave);
+      container.addEventListener('dragover', handleDragOver);
+      container.addEventListener('drop', handleDrop);
     }
 
+    // Cleanup
     return () => {
-      if (chatContainer) {
-        chatContainer.removeEventListener('dragenter', handleDragEnter);
-        chatContainer.removeEventListener('dragleave', handleDragLeave);
-        chatContainer.removeEventListener('dragover', handleDragOver);
-        chatContainer.removeEventListener('drop', handleDrop);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (container) {
+        container.removeEventListener('dragenter', handleDragEnter);
+        container.removeEventListener('dragleave', handleDragLeave);
+        container.removeEventListener('dragover', handleDragOver);
+        container.removeEventListener('drop', handleDrop);
       }
     };
   }, []);
 
-  // Play robot sound function
   const playRobotSound = () => {
     console.log("Robot clicked! Attempting to play sound...");
-    if (audioRef.current) {
-      if (!audioLoaded) {
-        console.warn("Audio not yet loaded, showing visual feedback only");
-        setSoundPlayed(true);
-        setTimeout(() => setSoundPlayed(false), 500);
-        return;
-      }
-      
+    if (audioRef.current && audioLoaded) {
       audioRef.current.currentTime = 0;
       audioRef.current.play()
         .then(() => {
@@ -380,304 +455,192 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
           setSoundPlayed(true);
           setTimeout(() => setSoundPlayed(false), 500);
         });
+    } else {
+      console.log("Audio not loaded or not available");
+      // Visual feedback even if no sound
+      setSoundPlayed(true);
+      setTimeout(() => setSoundPlayed(false), 500);
     }
   };
 
-  // Scroll to bottom of messages
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [chatHistory]);
 
+  // Close dropdown when clicking outside
   useEffect(() => {
-    // Focus input on mount
-    inputRef.current?.focus();
-  }, []);
+    const handleClickOutside = (event) => {
+      if (showCourseDropdown && !event.target.closest('.course-selector')) {
+        setShowCourseDropdown(false);
+      }
+    };
 
-  // Handle sending a new message (with history in prompt)
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCourseDropdown]);
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    
-    // Check if we have either a message or an attached file
-    if ((!message || !message.trim()) && !attachedFile) {
-      return;
-    }
+    if (!message.trim() && !attachedFile) return;
 
-    const messageToSend = message ? message.trim() : '';
-    const fileToSend = attachedFile;
+    const userMessage = message.trim();
+    const messageToSend = userMessage || `[Attached PDF: ${attachedFile.name}]`;
     
-    // Clear input and attachment
-    setMessage('');
-    setAttachedFile(null);
     setIsLoading(true);
+    setError(null);
+
+    // Add user message to chat immediately
+    const newUserMessage = {
+      role: 'user',
+      content: messageToSend,
+      timestamp: new Date(),
+      hasAttachment: !!attachedFile
+    };
+
+    setChatHistory(prev => [...prev, newUserMessage]);
+    setMessage('');
 
     try {
       let response;
       
-      if (fileToSend) {
-        // Handle PDF with message
+      if (attachedFile) {
+        // Handle PDF processing with message
+        console.log('Processing PDF with message...');
         setIsUploading(true);
-        setUploadProgress(0);
-        setUploadMessage('Starting...');
-
-        // Add user message with attachment to chat
-        const userMessage = {
-          text: messageToSend || 'Uploaded a PDF file for analysis',
-          sender: 'user',
-          timestamp: new Date().toISOString(),
-          attachment: {
-            name: fileToSend.name,
-            type: 'pdf'
-          }
-        };
-        setChatHistory(prev => [...prev, userMessage]);
-
-        // Create prompt with chat history and PDF context (no assumptions)
-        let fullPrompt = messageToSend || `Please analyze this PDF file "${fileToSend.name}" and provide a comprehensive summary of its contents.`;
+        setUploadMessage('Processing PDF...');
         
-        // Add recent chat history for context
-        if (chatHistory.length > 0) {
-          const recentHistory = chatHistory.slice(-6); // Last 6 messages for context
-          const historyContext = recentHistory.map(msg => {
-            const role = (msg.sender === 'user' || msg.role === 'user') ? 'User' : 'AI';
-            return `${role}: ${msg.text || msg.content}`;
-          }).join('\n');
-          fullPrompt = `Recent conversation:\n${historyContext}\n\nUser's current message: "${fullPrompt}"`;
+        const formData = new FormData();
+        formData.append('pdf', attachedFile);
+        if (userMessage) {
+          formData.append('message', userMessage);
         }
-
-        // Add PDF context if available (just for reference, no assumptions)
-        if (recentPDFs.length > 0) {
-          const pdfContext = recentPDFs.map((pdf, index) => 
-            `Previous PDF ${index + 1}: "${pdf.name}" (uploaded ${pdf.timestamp})`
-          ).join('\n');
-          fullPrompt += `\n\nFor reference, recent PDFs in this conversation:\n${pdfContext}\n\nCurrent PDF: "${fileToSend.name}"`;
-        }
-
-        // Process PDF with message and real progress tracking
-        response = await processPDFWithMessage(
-          fileToSend, 
-          fullPrompt,
-          (progress, message) => {
-            setUploadProgress(Math.min(progress, 100)); // Cap at 100%
-            setUploadMessage(message);
-          }
-        );
+        
+        response = await processPDFWithMessage(formData, (progress) => {
+          setUploadProgress(progress);
+        });
 
         setIsUploading(false);
+        setUploadProgress(0);
+        setUploadMessage('');
 
         if (response.success) {
-          // Add PDF to recent PDFs memory (keep last 3 PDFs)
-          const newPDF = {
-            name: fileToSend.name,
-            timestamp: new Date().toLocaleString(),
-            content: response.data.text?.substring(0, 500) + '...' // Store summary
+          // Store PDF info for future reference
+          const pdfInfo = {
+            name: attachedFile.name,
+            processed: true,
+            timestamp: new Date()
           };
-          setRecentPDFs(prev => [...prev.slice(-2), newPDF]); // Keep last 3 PDFs
-
-          // Add AI response to chat history
-          const aiMessage = {
-            text: response.data.text,
-            sender: 'ai',
-            timestamp: new Date().toISOString(),
-            usageMetadata: response.data.usageMetadata
-          };
-          setChatHistory(prev => [...prev, aiMessage]);
-        } else {
-          throw new Error(response.error || 'Failed to process PDF with message');
+          setRecentPDFs(prev => [pdfInfo, ...prev.slice(0, 4)]); // Keep last 5 PDFs
         }
-      } else {
-        // Handle regular text message with full chat history
-        const userMessage = {
-          text: messageToSend,
-          sender: 'user',
-          timestamp: new Date().toISOString()
-        };
-        setChatHistory(prev => [...prev, userMessage]);
-
-        // Create comprehensive chat history for API
-        const fullChatHistory = [...chatHistory, userMessage];
         
-        // Add PDF context only if user's message might reference documents
-        let enhancedMessage = messageToSend;
-        if (recentPDFs.length > 0) {
-          const messageWords = messageToSend.toLowerCase();
-          const documentKeywords = ['pdf', 'document', 'file', 'paper', 'previous', 'earlier', 'last', 'that', 'this', 'it', 'compare', 'difference', 'similar'];
-          const mightReferenceDocs = documentKeywords.some(keyword => messageWords.includes(keyword));
-          
-          if (mightReferenceDocs) {
-            const pdfContext = recentPDFs.map((pdf, index) => 
-              `PDF ${index + 1}: "${pdf.name}" (uploaded ${pdf.timestamp})`
-            ).join('\n');
-            enhancedMessage += `\n\n[Context: Recent PDFs in this conversation: ${pdfContext}]`;
-          }
-        }
-
-        // Send to chat API with proper history and classroom context
-        const chatData = {
-          history: fullChatHistory.slice(0, -1).map(msg => ({
-            role: (msg.sender === 'user' || msg.role === 'user') ? 'user' : 'ai',
-            content: msg.text || msg.content
-          })), // All history except the current message, properly formatted
-          message: enhancedMessage,
-          classroomId: selectedClassroom?.type === 'classroom' ? selectedClassroom?.id : null,
-          courseId: selectedClassroom?.type === 'course' ? selectedClassroom?.id : null
+        // Clear the attached file
+        setAttachedFile(null);
+        } else {
+        // Regular chat message
+        const chatPayload = {
+          message: userMessage,
+          history: chatHistory,
+          courseId: selectedCourse?.id,
+          classroomId: selectedCourse?.type === 'classroom' ? selectedCourse.id : null
         };
+        
+        response = await postChatMessage(chatPayload);
+      }
 
-        response = await postChatMessage(chatData);
+      console.log('Chat API Response:', response);
+      setLastApiResponse(response);
 
         if (response.success) {
           const aiMessage = {
-            text: response.data.response,
-            sender: 'ai',
-            timestamp: new Date().toISOString(),
+          role: 'assistant',
+          content: response.data.response,
+          timestamp: new Date(),
+          materials: response.data.materials,
             usageMetadata: response.data.usageMetadata
           };
           setChatHistory(prev => [...prev, aiMessage]);
         } else {
-          throw new Error(response.error || 'Failed to send message');
-        }
+        setError(response.message || 'Failed to get response from AI');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      setError(error.message || 'Failed to send message. Please try again.');
-      
-      // Add error message to chat
-      const errorMessage = {
-        text: `Error: ${error.message || 'Failed to process your request'}`,
-        sender: 'error',
-        timestamp: new Date().toISOString()
-      };
-      setChatHistory(prev => [...prev, errorMessage]);
+      console.error('Chat error:', error);
+      setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
-      setIsUploading(false);
-      setUploadProgress(0);
-      setUploadMessage('');
     }
   };
 
-  // Handle quick prompt selection
   const handleQuickPrompt = (promptText) => {
     setMessage(promptText);
     inputRef.current?.focus();
   };
 
-  // Handle navigation to different pages based on quick prompt selection
   const handleNavigateToPage = (page) => {
-    playRobotSound(); // Play sound for feedback
-    setTimeout(() => {
-      navigate(page);
-    }, 300); // Small delay to let sound play
+    navigate(`/ai-tutor?tab=${page}`);
   };
 
-  // Helper function to render text with **bold** formatting
   const renderFormattedContent = (text) => {
-    const parts = text.split(/(\*{2})/); // Split by '**', keeping the delimiter
-    let isBold = false;
-    return parts.map((part, index) => {
-      if ( part === '* **' || part === '**' ) {
-        isBold = !isBold; // Toggle bold state
-        return null; // Don't render the markers themselves
-      }
-      if (isBold) {
-        return <strong key={index}>{part}</strong>;
-      }
-      return part; // Render plain text
-    });
+    if (!text) return null;
+    
+    // Split by double newlines to create paragraphs
+    const paragraphs = text.split('\n\n');
+    
+    return paragraphs.map((paragraph, index) => (
+      <p key={index} className="message-paragraph">
+        {paragraph.split('\n').map((line, lineIndex) => (
+          <React.Fragment key={lineIndex}>
+            {lineIndex > 0 && <br />}
+            {line}
+          </React.Fragment>
+        ))}
+      </p>
+    ));
   };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file || file.type !== 'application/pdf') {
-      setError('Please select a PDF file.');
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setError('Please select a PDF file');
       return;
     }
 
-    setIsUploading(true);
-    setUploadProgress(0);
-    setError(null);
-
-    try {
-      // Simulate progress updates for user feedback
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          const increment = Math.random() * 15 + 5; // Random increment between 5-20
-          const newProgress = prev + increment;
-          
-          // Cap progress at 95% until we get the actual response
-          if (newProgress >= 95) {
-            clearInterval(progressInterval);
-            return 95;
-          }
-          return newProgress;
-        });
-      }, 300);
-
-      const response = await processPDF(file);
-
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      if (response.success || response.text) {
-        const aiMessage = {
-          role: 'ai',
-          content: response.text || response.data?.text || 'PDF processed successfully!'
-        };
-        setChatHistory(prev => [...prev, aiMessage]);
-        
-        // Show success briefly then reset
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 1000);
-      } else {
-        throw new Error(response.error || 'Failed to process PDF');
-      }
-    } catch (error) {
-      console.error('Error processing PDF:', error);
-      setError(error.message || 'Failed to process PDF. Please try again.');
-      setIsUploading(false);
-      setUploadProgress(0);
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      setError('File size must be less than 10MB');
+      return;
     }
+
+    setAttachedFile(file);
+    setError(null);
+    
+    console.log('PDF file attached:', file.name);
   };
 
   const handleFileDrop = (e) => {
     e.preventDefault();
-    setIsDragOver(false);
-    setDragDepth(0);
-
-    const files = Array.from(e.dataTransfer.files);
-    const pdfFile = files.find(file => file.type === 'application/pdf');
-
-    if (pdfFile) {
-      setAttachedFile(pdfFile);
-    } else {
-      setError('Please drop a PDF file.');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      setAttachedFile(file);
+      console.log('PDF file dropped:', file.name);
     }
   };
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type === 'application/pdf') {
-      setAttachedFile(file);
-    } else {
-      setError('Please select a PDF file.');
-    }
+    e.preventDefault();
+    fileInputRef.current?.click();
   };
 
   const removeAttachment = () => {
     setAttachedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const clearPDFMemory = () => {
     setRecentPDFs([]);
-    setShowPDFDropdown(false);
   };
 
   const removePDFFromMemory = (indexToRemove) => {
@@ -685,10 +648,10 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   };
 
   const togglePDFDropdown = () => {
-    setShowPDFDropdown(prev => !prev);
+    setShowPDFDropdown(!showPDFDropdown);
   };
 
-  // Close dropdown when clicking outside
+  // Close PDF dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showPDFDropdown && !event.target.closest('.pdf-memory-container')) {
@@ -697,9 +660,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showPDFDropdown]);
 
   return (
@@ -758,10 +719,10 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
             AI Tutor Chat
           </h2>
           <p className="chat-description">
-              {selectedClassroom ? (
+              {selectedCourse ? (
                 <>
-                  Chatting with context from <strong>{selectedClassroom.name}</strong> classroom.
-                  {classroomMaterials.length > 0 && (
+                  Chatting with context from <strong>{selectedCourse.name}</strong> course.
+                  {courseMaterials.length > 0 && (
                     <span className="text-sm text-blue-600"> I have access to your course materials!</span>
                   )}
                 </>
@@ -828,11 +789,11 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
           </div>
         </div>
         <div className="chat-header-controls">
-          <ClassroomSelector />
-          {selectedClassroom && classroomMaterials.length > 0 && (
+          <CourseSelector />
+          {selectedCourse && courseMaterials.length > 0 && (
             <div className="classroom-materials-indicator">
               <span className="text-xs text-white">
-                📚 {classroomMaterials.length} course materials available
+                📚 {courseMaterials.length} course materials available
               </span>
             </div>
           )}

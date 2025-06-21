@@ -18,7 +18,6 @@ import Assignments from './pages/Assignments';
 import AiTutorPage from './pages/AiTutorPage';
 import Connect from './pages/Connect';
 import AssignmentPDFViewer from './pages/AssignmentPDFViewer';
-import ClassroomManagement from './pages/ClassroomManagement';
 import InteractiveActivities from './pages/InteractiveActivities';
 import CourseManagement from './pages/CourseManagement';
 
@@ -50,6 +49,11 @@ function App() {
                   <Assignments />
                 </ProtectedRoute>
               } />
+              <Route path="courses/:courseId/manage" element={
+                <ProtectedRoute>
+                  <CourseManagement />
+                </ProtectedRoute>
+              } />
               <Route path="assignments" element={
                 <ProtectedRoute>
                   <Assignments />
@@ -70,21 +74,12 @@ function App() {
                   <Connect />
                 </ProtectedRoute>
               } />
-              <Route path="classrooms" element={
-                <ProtectedRoute>
-                  <ClassroomManagement />
-                </ProtectedRoute>
-              } />
               <Route path="activities" element={
                 <ProtectedRoute>
                   <InteractiveActivities />
                 </ProtectedRoute>
               } />
-              <Route path="course-management" element={
-                <ProtectedRoute>
-                  <CourseManagement />
-                </ProtectedRoute>
-              } />
+
               
               {/* Fallback route with authentication check */}
               <Route path="*" element={<NotFound />} />

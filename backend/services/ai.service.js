@@ -564,19 +564,46 @@ async function getAvailableClassrooms(userId) {
     const userCourses = await Course.getByUserId(userId);
     
     // Transform courses to match classroom format for AI context
-    const courseClassrooms = userCourses.map(course => ({
-      id: course.id,
-      name: course.name,
-      subject: course.code || course.name,
-      role: course.userRole,
-      type: 'course',
-      integrations: course.integrations?.[userId] || {},
-      totalIntegrations: course.analytics?.totalIntegrations || 0,
-      totalAssignments: course.analytics?.totalAssignments || 0,
-      semester: course.semester,
-      year: course.year,
-      instructor: course.instructor
-    }));
+    const courseClassrooms = userCourses.map(course => {
+      const userIntegrations = course.integrations?.[userId] || {};
+      const activeIntegrations = {};
+      let userIntegrationCount = 0;
+      
+      // Filter and count active integrations for this user
+      Object.entries(userIntegrations).forEach(([platform, integration]) => {
+        if (integration && integration.isActive) {
+          activeIntegrations[platform] = integration;
+          userIntegrationCount++;
+        }
+      });
+      
+      // If this is an imported Gradescope course, treat it as having a Gradescope integration
+      if (course.source === 'gradescope' && course.externalId) {
+        activeIntegrations.gradescope = {
+          isActive: true,
+          imported: true,
+          externalId: course.externalId,
+          courses: [{ id: course.externalId, name: course.name }],
+          assignments: course.assignments || [],
+          materials: course.materials || []
+        };
+        userIntegrationCount++;
+      }
+      
+      return {
+        id: course.id,
+        name: course.name,
+        subject: course.code || course.name,
+        role: course.userRole,
+        type: 'course',
+        integrations: activeIntegrations,
+        totalIntegrations: userIntegrationCount, // User-specific integration count
+        totalAssignments: course.analytics?.totalAssignments || course.assignments?.length || 0,
+        semester: course.semester,
+        year: course.year,
+        instructor: course.instructor
+      };
+    });
     
     return {
       teaching: teachingClassrooms.map(c => ({
@@ -626,16 +653,43 @@ async function getIntegratedMaterials(userId, contextId, contextType = 'classroo
       materials = course.materials || [];
       assignments = course.assignments || [];
       
+      // If this is an imported Gradescope course, add its data as materials
+      if (course.source === 'gradescope' && course.externalId) {
+        // Add course info as material
+        materials.push({
+          id: course.externalId,
+          name: course.name,
+          type: 'course',
+          platform: 'gradescope',
+          contextId,
+          contextType: 'course',
+          imported: true
+        });
+      }
+      
       // Also get user-specific integration materials
       const userIntegrations = course.integrations[userId] || {};
       Object.entries(userIntegrations).forEach(([platform, integration]) => {
-        if (integration.isActive && integration.materials) {
-          materials.push(...integration.materials.map(material => ({
-            ...material,
-            platform,
-            contextId,
-            contextType: 'course'
-          })));
+        if (integration && integration.isActive) {
+          // Add materials from this integration
+          if (integration.materials && Array.isArray(integration.materials)) {
+            materials.push(...integration.materials.map(material => ({
+              ...material,
+              platform,
+              contextId,
+              contextType: 'course'
+            })));
+          }
+          
+          // Add assignments from this integration
+          if (integration.assignments && Array.isArray(integration.assignments)) {
+            assignments.push(...integration.assignments.map(assignment => ({
+              ...assignment,
+              platform,
+              contextId,
+              contextType: 'course'
+            })));
+          }
         }
       });
       

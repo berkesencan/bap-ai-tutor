@@ -1,4 +1,5 @@
 const { db } = require('../config/firebase');
+const firebase = require('firebase-admin');
 const { v4: uuidv4 } = require('uuid');
 
 /**
@@ -36,7 +37,7 @@ class Course {
         // Course members and roles
         members: [userId], // Array of user IDs
         memberRoles: {
-          [userId]: 'creator' // creator, member
+          [userId]: 'creator' // creator, admin, member
         },
         
         // Integration mappings per user
@@ -605,6 +606,82 @@ class Course {
       return courses.slice(0, 50);
     } catch (error) {
       console.error('Error searching public courses:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a member's role in a course
+   * @param {string} courseId - The ID of the course
+   * @param {string} requestingUserId - The ID of the user making the request
+   * @param {string} targetUserId - The ID of the user whose role is to be updated
+   * @param {string} newRole - The new role ('admin' or 'member')
+   * @returns {Promise<void>}
+   */
+  static async updateMemberRole(courseId, requestingUserId, targetUserId, newRole) {
+    if (newRole !== 'admin' && newRole !== 'member') {
+      throw new Error('Invalid role specified. Must be "admin" or "member".');
+    }
+
+    try {
+      const course = await this.getById(courseId);
+      if (!course) {
+        throw new Error('Course not found.');
+      }
+
+      const requesterRole = course.memberRoles[requestingUserId];
+      if (requesterRole !== 'creator' && requesterRole !== 'admin') {
+        throw new Error('Permission denied. User must be a creator or admin to change roles.');
+      }
+
+      if (course.memberRoles[targetUserId] === 'creator') {
+        throw new Error('Cannot change the role of the course creator.');
+      }
+
+      await db.collection('courses').doc(courseId).update({
+        [`memberRoles.${targetUserId}`]: newRole,
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a member from a course
+   * @param {string} courseId - The ID of the course
+   * @param {string} requestingUserId - The ID of the user making the request
+   * @param {string} targetUserId - The ID of the user to be removed
+   * @returns {Promise<void>}
+   */
+  static async removeMember(courseId, requestingUserId, targetUserId) {
+    try {
+      const course = await this.getById(courseId);
+      if (!course) {
+        throw new Error('Course not found.');
+      }
+
+      const requesterRole = course.memberRoles[requestingUserId];
+      if (requesterRole !== 'creator' && requesterRole !== 'admin') {
+        throw new Error('Permission denied. User must be a creator or admin to remove members.');
+      }
+
+      if (targetUserId === course.createdBy) {
+        throw new Error('Cannot remove the course creator.');
+      }
+      
+      const newMembers = course.members.filter(id => id !== targetUserId);
+      
+      // Firestore allows deleting fields using dot notation in an update call
+      await db.collection('courses').doc(courseId).update({
+        members: newMembers,
+        [`memberRoles.${targetUserId}`]: firebase.firestore.FieldValue.delete(),
+        'analytics.totalMembers': newMembers.length,
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Error removing member:', error);
       throw error;
     }
   }

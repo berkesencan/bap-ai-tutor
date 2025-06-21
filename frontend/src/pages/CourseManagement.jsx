@@ -1,86 +1,57 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  BookOpenIcon,
-  PlusIcon,
   UserGroupIcon,
-  AcademicCapIcon,
   CogIcon,
+  ChartBarIcon,
+  DocumentTextIcon,
   LinkIcon,
+  PlusIcon,
   TrashIcon,
-  ArrowPathIcon,
-  MagnifyingGlassIcon,
-  ShareIcon,
+  PencilIcon,
+  ClipboardDocumentIcon,
   XMarkIcon,
-  CheckIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  AcademicCapIcon,
+  ShieldCheckIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
+import './CourseManagement.css';
 
-const CourseManagement = () => {
+function CourseManagement() {
+  const { courseId } = useParams();
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const [courses, setCourses] = useState([]);
+  
+  const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('my-courses');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [showIntegrationModal, setShowIntegrationModal] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  
-  // Form states
-  const [createForm, setCreateForm] = useState({
+  const [editForm, setEditForm] = useState({
     name: '',
     code: '',
-    semester: '',
-    year: new Date().getFullYear(),
     description: '',
-    institution: '',
     instructor: '',
-    joinPassword: '',
-    settings: {
-      allowMemberInvites: true,
-      autoDeduplication: true,
-      aiEnabled: true,
-      publiclyJoinable: false
-    }
+    semester: '',
+    year: '',
+    settings: {}
   });
-  
-  const [joinForm, setJoinForm] = useState({
-    joinCode: '',
-    password: ''
-  });
-  
-  const [integrationForm, setIntegrationForm] = useState({
-    platform: 'gradescope',
-    credentials: {
-      email: '',
-      password: '',
-      apiKey: '',
-      baseUrl: ''
-    }
-  });
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [publicCourses, setPublicCourses] = useState([]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchUserCourses();
-    }
-  }, [currentUser]);
+    fetchCourse();
+  }, [courseId]);
 
-  useEffect(() => {
-    if (activeTab === 'discover') {
-      searchPublicCourses();
-    }
-  }, [activeTab, searchQuery]);
-
-  const fetchUserCourses = async () => {
+  const fetchCourse = async () => {
     try {
+      setLoading(true);
+      if (!currentUser) return;
+      
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/courses', {
+      const response = await fetch(`/api/courses/${courseId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -89,146 +60,76 @@ const CourseManagement = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setCourses(data.data || []);
+        setCourse(data.data);
+        setEditForm({
+          name: data.data.name || '',
+          code: data.data.code || '',
+          description: data.data.description || '',
+          instructor: data.data.instructor || '',
+          semester: data.data.semester || '',
+          year: data.data.year || new Date().getFullYear(),
+          settings: data.data.settings || {}
+        });
       } else {
-        throw new Error('Failed to fetch courses');
+        setError('Failed to load course');
       }
     } catch (err) {
-      setError(err.message);
-      console.error('Error fetching courses:', err);
+      setError('Error loading course');
     } finally {
       setLoading(false);
     }
   };
 
-  const searchPublicCourses = async () => {
-    try {
-      const token = await currentUser.getIdToken();
-      const queryParam = searchQuery ? `?query=${encodeURIComponent(searchQuery)}` : '';
-      const response = await fetch(`/api/courses/search${queryParam}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPublicCourses(data.data || []);
-      }
-    } catch (err) {
-      console.error('Error searching public courses:', err);
-    }
-  };
-
-  const createCourse = async (e) => {
+  const updateCourse = async (e) => {
     e.preventDefault();
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/courses', {
-        method: 'POST',
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(createForm)
+        body: JSON.stringify(editForm)
       });
 
       if (response.ok) {
-        setShowCreateModal(false);
-        setCreateForm({
-          name: '',
-          code: '',
-          semester: '',
-          year: new Date().getFullYear(),
-          description: '',
-          institution: '',
-          instructor: '',
-          joinPassword: '',
-          settings: {
-            allowMemberInvites: true,
-            autoDeduplication: true,
-            aiEnabled: true,
-            publiclyJoinable: false
-          }
-        });
-        fetchUserCourses();
+        setShowEditModal(false);
+        fetchCourse();
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to create course');
+        setError('Failed to update course');
       }
     } catch (err) {
-      setError(err.message);
+      setError('Error updating course');
     }
   };
 
-  const joinCourse = async (e) => {
-    e.preventDefault();
+  const updateMemberRole = async (memberId, newRole) => {
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/courses/join', {
-        method: 'POST',
+      const response = await fetch(`/api/courses/${courseId}/members/${memberId}/role`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(joinForm)
+        body: JSON.stringify({ role: newRole })
       });
 
       if (response.ok) {
-        setShowJoinModal(false);
-        setJoinForm({ joinCode: '', password: '' });
-        fetchUserCourses();
+        fetchCourse();
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to join course');
+        setError('Failed to update member role');
       }
     } catch (err) {
-      setError(err.message);
+      setError('Error updating member role');
     }
   };
 
-  const addIntegration = async (e) => {
-    e.preventDefault();
+  const removeMember = async (memberId) => {
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/courses/${selectedCourse.id}/integrations`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          platform: integrationForm.platform,
-          credentials: integrationForm.credentials
-        })
-      });
-
-      if (response.ok) {
-        setShowIntegrationModal(false);
-        setIntegrationForm({
-          platform: 'gradescope',
-          credentials: {
-            email: '',
-            password: '',
-            apiKey: '',
-            baseUrl: ''
-          }
-        });
-        fetchUserCourses();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to add integration');
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const removeIntegration = async (courseId, platform) => {
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/courses/${courseId}/integrations/${platform}`, {
+      const response = await fetch(`/api/courses/${courseId}/members/${memberId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -237,21 +138,20 @@ const CourseManagement = () => {
       });
 
       if (response.ok) {
-        fetchUserCourses();
+        fetchCourse();
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to remove integration');
+        setError('Failed to remove member');
       }
     } catch (err) {
-      setError(err.message);
+      setError('Error removing member');
     }
   };
 
-  const syncIntegration = async (courseId, platform) => {
+  const deleteCourse = async () => {
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/courses/${courseId}/integrations/${platform}/sync`, {
-        method: 'POST',
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -259,640 +159,535 @@ const CourseManagement = () => {
       });
 
       if (response.ok) {
-        fetchUserCourses();
+        navigate('/courses');
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to sync integration');
+        setError('Failed to delete course');
       }
     } catch (err) {
-      setError(err.message);
+      setError('Error deleting course');
     }
   };
 
   const copyJoinCode = (joinCode) => {
     navigator.clipboard.writeText(joinCode);
-    // You could add a toast notification here
   };
 
-  const getPlatformIcon = (platform) => {
-    switch (platform.toLowerCase()) {
-      case 'gradescope':
-        return '📝';
-      case 'canvas':
-        return '🎨';
-      case 'brightspace':
-        return '💡';
-      default:
-        return '🔗';
-    }
+  const getRoleIcon = (role) => {
+    const icons = {
+      creator: <AcademicCapIcon className="w-4 h-4" />,
+      admin: <ShieldCheckIcon className="w-4 h-4" />,
+      instructor: <AcademicCapIcon className="w-4 h-4" />,
+      ta: <UserGroupIcon className="w-4 h-4" />,
+      student: <UserIcon className="w-4 h-4" />,
+      member: <UserIcon className="w-4 h-4" />
+    };
+    return icons[role] || <UserIcon className="w-4 h-4" />;
   };
+
+  const getRoleColor = (role) => {
+    const colors = {
+      creator: 'role-creator',
+      admin: 'role-admin',
+      instructor: 'role-instructor',
+      ta: 'role-ta',
+      student: 'role-student',
+      member: 'role-member'
+    };
+    return colors[role] || 'role-member';
+  };
+
+  const isCreator = course?.createdBy === currentUser?.uid;
+  const userRole = course?.memberRoles?.[currentUser?.uid] || 'member';
+  const canManage = isCreator || userRole === 'admin';
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="course-management">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading course...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="course-management">
+        <div className="error-container">
+          <ExclamationTriangleIcon className="error-icon" />
+          <h3>Error</h3>
+          <p>{error}</p>
+          <Link to="/courses" className="btn-primary">
+            Back to Courses
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="course-management">
+        <div className="error-container">
+          <ExclamationTriangleIcon className="error-icon" />
+          <h3>Course Not Found</h3>
+          <p>The course you're looking for doesn't exist or you don't have access to it.</p>
+          <Link to="/courses" className="btn-primary">
+            Back to Courses
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <BookOpenIcon className="h-8 w-8 mr-3 text-blue-600" />
-                Course Management
-              </h1>
-              <p className="mt-2 text-gray-600">
-                Create courses, join with invite codes, and link your LMS integrations
-              </p>
+    <div className="course-management">
+      {/* Header */}
+      <div className="course-header">
+        <div className="course-header-content">
+          <div className="course-title-section">
+            <div className="course-breadcrumb">
+              <Link to="/courses" className="breadcrumb-link">Courses</Link>
+              <span className="breadcrumb-separator">›</span>
+              <span className="breadcrumb-current">{course.code}</span>
             </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <UserGroupIcon className="h-4 w-4 mr-2" />
-                Join Course
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Create Course
-              </button>
+            <h1 className="course-title">{course.name}</h1>
+            <p className="course-subtitle">{course.code} • {course.semester} {course.year}</p>
+            <div className="course-badges">
+              <span className={`role-badge ${getRoleColor(userRole)}`}>
+                {getRoleIcon(userRole)}
+                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+              </span>
+              <span className="members-count">
+                <UserGroupIcon className="w-4 h-4" />
+                {course.members?.length || 0} members
+              </span>
             </div>
           </div>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-              <div className="ml-3">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-              <div className="ml-auto pl-3">
-                <button
-                  onClick={() => setError(null)}
-                  className="text-red-400 hover:text-red-600"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="mb-6">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('my-courses')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'my-courses'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              My Courses ({courses.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('discover')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'discover'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Discover Public Courses
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'my-courses' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map((course) => (
-              <div key={course.id} className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{course.name}</h3>
-                    {course.code && (
-                      <p className="text-sm text-gray-600">{course.code}</p>
-                    )}
-                    {course.instructor && (
-                      <p className="text-sm text-gray-500">Prof. {course.instructor}</p>
-                    )}
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    course.userRole === 'creator' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {course.userRole === 'creator' ? 'Creator' : 'Member'}
-                  </span>
-                </div>
-
-                {/* Course Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-4 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {course.analytics?.totalMembers || 0}
-                    </p>
-                    <p className="text-xs text-gray-500">Members</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-green-600">
-                      {course.analytics?.totalIntegrations || 0}
-                    </p>
-                    <p className="text-xs text-gray-500">Integrations</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-purple-600">
-                      {course.analytics?.totalAssignments || 0}
-                    </p>
-                    <p className="text-xs text-gray-500">Assignments</p>
-                  </div>
-                </div>
-
-                {/* Join Code */}
-                {course.userRole === 'creator' && (
-                  <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500">Join Code</p>
-                        <p className="font-mono text-sm font-bold">{course.joinCode}</p>
-                      </div>
-                      <button
-                        onClick={() => copyJoinCode(course.joinCode)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <ShareIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Integrations */}
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Your Integrations</p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(course.integrations?.[currentUser.uid] || {}).map(([platform, integration]) => (
-                      <div key={platform} className="flex items-center space-x-1 bg-blue-50 px-2 py-1 rounded-md">
-                        <span className="text-sm">{getPlatformIcon(platform)}</span>
-                        <span className="text-xs font-medium text-blue-800 capitalize">{platform}</span>
-                        <button
-                          onClick={() => syncIntegration(course.id, platform)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <ArrowPathIcon className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => removeIntegration(course.id, platform)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <XMarkIcon className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        setSelectedCourse(course);
-                        setShowIntegrationModal(true);
-                      }}
-                      className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200"
-                    >
-                      <PlusIcon className="h-3 w-3" />
-                      <span className="text-xs">Add</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Course Actions */}
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-gray-500">
-                    {course.semester} {course.year}
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="text-gray-600 hover:text-gray-800">
-                      <CogIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {courses.length === 0 && (
-              <div className="col-span-full text-center py-12">
-                <AcademicCapIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No courses yet</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by creating your first course.</p>
-                <div className="mt-6">
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-2" />
-                    Create Course
-                  </button>
-                </div>
-              </div>
+          
+          <div className="course-actions">
+            {canManage && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="action-btn secondary"
+              >
+                <PencilIcon className="w-4 h-4" />
+                Edit Course
+              </button>
             )}
           </div>
-        )}
+        </div>
+      </div>
 
-        {activeTab === 'discover' && (
-          <div>
-            {/* Search Bar */}
-            <div className="mb-6">
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search public courses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+      {/* Navigation Tabs */}
+      <div className="course-nav">
+        <div className="nav-tabs">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`nav-tab ${activeTab === 'overview' ? 'active' : ''}`}
+          >
+            <DocumentTextIcon className="w-4 h-4" />
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('members')}
+            className={`nav-tab ${activeTab === 'members' ? 'active' : ''}`}
+          >
+            <UserGroupIcon className="w-4 h-4" />
+            Members ({course.members?.length || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('integrations')}
+            className={`nav-tab ${activeTab === 'integrations' ? 'active' : ''}`}
+          >
+            <LinkIcon className="w-4 h-4" />
+            Integrations
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`nav-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+          >
+            <ChartBarIcon className="w-4 h-4" />
+            Analytics
+          </button>
+          {canManage && (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`nav-tab ${activeTab === 'settings' ? 'active' : ''}`}
+            >
+              <CogIcon className="w-4 h-4" />
+              Settings
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="course-content">
+        {activeTab === 'overview' && (
+          <div className="tab-content">
+            <div className="overview-grid">
+              <div className="info-card">
+                <h3>Course Information</h3>
+                <div className="info-item">
+                  <label>Course Name:</label>
+                  <span>{course.name}</span>
+                </div>
+                <div className="info-item">
+                  <label>Course Code:</label>
+                  <span>{course.code}</span>
+                </div>
+                <div className="info-item">
+                  <label>Instructor:</label>
+                  <span>{course.instructor || 'Not specified'}</span>
+                </div>
+                <div className="info-item">
+                  <label>Semester:</label>
+                  <span>{course.semester} {course.year}</span>
+                </div>
+                <div className="info-item">
+                  <label>Description:</label>
+                  <span>{course.description || 'No description provided'}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Public Courses Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {publicCourses.map((course) => (
-                <div key={course.id} className="bg-white rounded-lg shadow-md p-6">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{course.name}</h3>
-                    {course.code && (
-                      <p className="text-sm text-gray-600">{course.code}</p>
-                    )}
-                    {course.instructor && (
-                      <p className="text-sm text-gray-500">Prof. {course.instructor}</p>
-                    )}
-                    {course.institution && (
-                      <p className="text-sm text-gray-500">{course.institution}</p>
-                    )}
+              <div className="stats-card">
+                <h3>Course Statistics</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <div className="stat-value">{course.members?.length || 0}</div>
+                    <div className="stat-label">Total Members</div>
                   </div>
+                  <div className="stat-item">
+                    <div className="stat-value">{course.assignments?.length || 0}</div>
+                    <div className="stat-label">Assignments</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value">{Object.keys(course.integrations || {}).length}</div>
+                    <div className="stat-label">Integrations</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value">{course.analytics?.totalIntegrations || 0}</div>
+                    <div className="stat-label">Active Integrations</div>
+                  </div>
+                </div>
+              </div>
 
-                  {course.description && (
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-3">{course.description}</p>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-gray-500">
-                      {course.analytics?.totalMembers || 0} members
-                    </div>
+              <div className="join-card">
+                <h3>Join Information</h3>
+                <div className="join-code-section">
+                  <label>Join Code:</label>
+                  <div className="join-code-display">
+                    <code>{course.joinCode}</code>
                     <button
-                      onClick={() => {
-                        setJoinForm({ joinCode: course.joinCode, password: '' });
-                        setShowJoinModal(true);
-                      }}
-                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200"
+                      onClick={() => copyJoinCode(course.joinCode)}
+                      className="copy-btn"
+                      title="Copy join code"
                     >
-                      Join Course
+                      <ClipboardDocumentIcon className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-              ))}
+                {course.joinPassword && (
+                  <div className="join-password-section">
+                    <label>Join Password:</label>
+                    <span>Password protected</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'members' && (
+          <div className="tab-content">
+            <div className="members-section">
+              <div className="section-header">
+                <h3>Course Members</h3>
+              </div>
+
+              <div className="members-list">
+                {course.members?.map(memberId => {
+                  const memberRole = course.memberRoles?.[memberId] || 'member';
+                  const isCurrentUser = memberId === currentUser.uid;
+                  
+                  return (
+                    <div key={memberId} className="member-item">
+                      <div className="member-info">
+                        <div className="member-avatar">
+                          {getRoleIcon(memberRole)}
+                        </div>
+                        <div className="member-details">
+                          <div className="member-name">
+                            {isCurrentUser ? 'You' : `User ${memberId.slice(-6)}`}
+                            {course.createdBy === memberId && <span className="creator-badge">Creator</span>}
+                          </div>
+                          <div className="member-email">{memberId}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="member-actions">
+                        <span className={`role-badge ${getRoleColor(memberRole)}`}>
+                          {memberRole.charAt(0).toUpperCase() + memberRole.slice(1)}
+                        </span>
+                        
+                        {canManage && !isCurrentUser && course.createdBy !== memberId && (
+                          <>
+                            <select
+                              value={memberRole}
+                              onChange={(e) => updateMemberRole(memberId, e.target.value)}
+                              className="role-select"
+                            >
+                              <option value="student">Student</option>
+                              <option value="ta">Teaching Assistant</option>
+                              <option value="instructor">Instructor</option>
+                              {isCreator && <option value="admin">Admin</option>}
+                            </select>
+                            <button
+                              onClick={() => removeMember(memberId)}
+                              className="remove-btn"
+                              title="Remove member"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'integrations' && (
+          <div className="tab-content">
+            <div className="integrations-section">
+              <div className="section-header">
+                <h3>Course Integrations</h3>
+                <Link
+                  to="/connect"
+                  className="action-btn primary"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Add Integration
+                </Link>
+              </div>
+              
+              <div className="integrations-grid">
+                <div className="integration-placeholder">
+                  <LinkIcon className="placeholder-icon" />
+                  <h4>No Integrations Yet</h4>
+                  <p>Connect external platforms like Gradescope, Canvas, or Blackboard to sync course content.</p>
+                  <Link to="/connect" className="btn-primary">
+                    Connect Platform
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="tab-content">
+            <div className="analytics-section">
+              <div className="analytics-placeholder">
+                <ChartBarIcon className="placeholder-icon" />
+                <h4>Analytics Coming Soon</h4>
+                <p>Detailed course analytics and insights will be available here.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && canManage && (
+          <div className="tab-content">
+            <div className="settings-section">
+              <div className="settings-card">
+                <h3>Course Settings</h3>
+                <div className="settings-grid">
+                  <div className="setting-item">
+                    <label>Allow Member Invites</label>
+                    <input
+                      type="checkbox"
+                      checked={course.settings?.allowMemberInvites ?? true}
+                      readOnly
+                    />
+                  </div>
+                  <div className="setting-item">
+                    <label>AI Tutoring Enabled</label>
+                    <input
+                      type="checkbox"
+                      checked={course.settings?.aiEnabled ?? true}
+                      readOnly
+                    />
+                  </div>
+                  <div className="setting-item">
+                    <label>Publicly Joinable</label>
+                    <input
+                      type="checkbox"
+                      checked={course.settings?.publiclyJoinable ?? false}
+                      readOnly
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {isCreator && (
+                <div className="danger-zone">
+                  <h3>Danger Zone</h3>
+                  <div className="danger-actions">
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="danger-btn"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                      Delete Course
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Create Course Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Create New Course</h3>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
+      {/* Edit Course Modal */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Edit Course</h2>
+              <button onClick={() => setShowEditModal(false)} className="modal-close">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={updateCourse} className="modal-form">
+              <div className="form-group">
+                <label>Course Name *</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                  required
+                />
               </div>
               
-              <form onSubmit={createCourse} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Course Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.name}
-                    onChange={(e) => setCreateForm({...createForm, name: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., Introduction to Computer Science"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Course Code</label>
-                    <input
-                      type="text"
-                      value={createForm.code}
-                      onChange={(e) => setCreateForm({...createForm, code: e.target.value})}
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="CS101"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Year</label>
-                    <input
-                      type="number"
-                      value={createForm.year}
-                      onChange={(e) => setCreateForm({...createForm, year: parseInt(e.target.value)})}
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Semester</label>
+              <div className="form-group">
+                <label>Course Code *</label>
+                <input
+                  type="text"
+                  value={editForm.code}
+                  onChange={(e) => setEditForm({...editForm, code: e.target.value})}
+                  required
+                />
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Semester</label>
                   <select
-                    value={createForm.semester}
-                    onChange={(e) => setCreateForm({...createForm, semester: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editForm.semester}
+                    onChange={(e) => setEditForm({...editForm, semester: e.target.value})}
                   >
                     <option value="">Select Semester</option>
-                    <option value="Fall">Fall</option>
                     <option value="Spring">Spring</option>
                     <option value="Summer">Summer</option>
+                    <option value="Fall">Fall</option>
                     <option value="Winter">Winter</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Instructor</label>
+                
+                <div className="form-group">
+                  <label>Year</label>
                   <input
-                    type="text"
-                    value={createForm.instructor}
-                    onChange={(e) => setCreateForm({...createForm, instructor: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Professor Name"
+                    type="number"
+                    value={editForm.year}
+                    onChange={(e) => setEditForm({...editForm, year: parseInt(e.target.value)})}
+                    min="2020"
+                    max="2030"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Institution</label>
-                  <input
-                    type="text"
-                    value={createForm.institution}
-                    onChange={(e) => setCreateForm({...createForm, institution: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="University Name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Join Password (Optional)</label>
-                  <input
-                    type="password"
-                    value={createForm.joinPassword}
-                    onChange={(e) => setCreateForm({...createForm, joinPassword: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Leave empty for no password"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={createForm.settings.publiclyJoinable}
-                      onChange={(e) => setCreateForm({
-                        ...createForm,
-                        settings: {...createForm.settings, publiclyJoinable: e.target.checked}
-                      })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Make course publicly discoverable</span>
-                  </label>
-                  
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={createForm.settings.autoDeduplication}
-                      onChange={(e) => setCreateForm({
-                        ...createForm,
-                        settings: {...createForm.settings, autoDeduplication: e.target.checked}
-                      })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Auto-deduplicate assignments</span>
-                  </label>
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    Create Course
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+              
+              <div className="form-group">
+                <label>Instructor</label>
+                <input
+                  type="text"
+                  value={editForm.instructor}
+                  onChange={(e) => setEditForm({...editForm, instructor: e.target.value})}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  rows="3"
+                />
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Join Course Modal */}
-      {showJoinModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Join Course</h3>
-                <button
-                  onClick={() => setShowJoinModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-              
-              <form onSubmit={joinCourse} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Join Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={joinForm.joinCode}
-                    onChange={(e) => setJoinForm({...joinForm, joinCode: e.target.value.toUpperCase()})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    placeholder="ABC123"
-                    maxLength={6}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Password (if required)</label>
-                  <input
-                    type="password"
-                    value={joinForm.password}
-                    onChange={(e) => setJoinForm({...joinForm, password: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter password if required"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowJoinModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    Join Course
-                  </button>
-                </div>
-              </form>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Delete Course</h2>
+              <button onClick={() => setShowDeleteConfirm(false)} className="modal-close">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Integration Modal */}
-      {showIntegrationModal && selectedCourse && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Add Integration</h3>
-                <button
-                  onClick={() => setShowIntegrationModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
+            
+            <div className="modal-body">
+              <div className="warning-content">
+                <ExclamationTriangleIcon className="warning-icon" />
+                <h3>Are you sure you want to delete this course?</h3>
+                <p>This action cannot be undone. All course data, members, and integrations will be permanently removed.</p>
+                <p><strong>Course:</strong> {course.name} ({course.code})</p>
               </div>
               
-              <form onSubmit={addIntegration} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Platform</label>
-                  <select
-                    value={integrationForm.platform}
-                    onChange={(e) => setIntegrationForm({...integrationForm, platform: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="gradescope">Gradescope</option>
-                    <option value="canvas">Canvas (Coming Soon)</option>
-                    <option value="brightspace">Brightspace (Coming Soon)</option>
-                  </select>
-                </div>
-
-                {integrationForm.platform === 'gradescope' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Gradescope Email *</label>
-                      <input
-                        type="email"
-                        required
-                        value={integrationForm.credentials.email}
-                        onChange={(e) => setIntegrationForm({
-                          ...integrationForm,
-                          credentials: {...integrationForm.credentials, email: e.target.value}
-                        })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Gradescope Password *</label>
-                      <input
-                        type="password"
-                        required
-                        value={integrationForm.credentials.password}
-                        onChange={(e) => setIntegrationForm({
-                          ...integrationForm,
-                          credentials: {...integrationForm.credentials, password: e.target.value}
-                        })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {(integrationForm.platform === 'canvas' || integrationForm.platform === 'brightspace') && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">API Key *</label>
-                      <input
-                        type="password"
-                        required
-                        value={integrationForm.credentials.apiKey}
-                        onChange={(e) => setIntegrationForm({
-                          ...integrationForm,
-                          credentials: {...integrationForm.credentials, apiKey: e.target.value}
-                        })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Base URL *</label>
-                      <input
-                        type="url"
-                        required
-                        value={integrationForm.credentials.baseUrl}
-                        onChange={(e) => setIntegrationForm({
-                          ...integrationForm,
-                          credentials: {...integrationForm.credentials, baseUrl: e.target.value}
-                        })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="https://your-institution.instructure.com"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Privacy Note:</strong> Your credentials are securely stored and only used to sync your course data. We never share your login information.
-                  </p>
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowIntegrationModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    Add Integration
-                  </button>
-                </div>
-              </form>
+              <div className="modal-actions">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={deleteCourse}
+                  className="danger-btn"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                  Delete Course
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
+}
 
 export default CourseManagement; 
