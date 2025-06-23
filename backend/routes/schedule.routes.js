@@ -5,6 +5,79 @@ const ScheduleController = require('../controllers/schedule.controller');
 const router = express.Router();
 
 /**
+ * @route POST /api/schedules/events
+ * @desc Create a new calendar event
+ * @access Private
+ */
+router.post(
+  '/events',
+  [
+    body('title').notEmpty().withMessage('Title is required'),
+    body('start').isISO8601().withMessage('Start date must be a valid ISO 8601 date'),
+    body('end').isISO8601().withMessage('End date must be a valid ISO 8601 date'),
+    body('allDay').optional().isBoolean().withMessage('All day must be a boolean'),
+    body('location').optional(),
+    body('description').optional(),
+    body('color').optional().matches(/^#[0-9A-F]{6}$/i).withMessage('Color must be a valid hex color'),
+    body('type').optional().isIn(['custom', 'assignment', 'class', 'exam', 'imported']).withMessage('Invalid event type'),
+  ],
+  ScheduleController.createEvent
+);
+
+/**
+ * @route GET /api/schedules/events
+ * @desc Get calendar events for the current user
+ * @access Private
+ */
+router.get('/events', ScheduleController.getCalendarEvents);
+
+/**
+ * @route GET /api/schedules/calendar
+ * @desc Get comprehensive calendar data (events + assignments)
+ * @access Private
+ */
+router.get('/calendar', ScheduleController.getCalendarData);
+
+/**
+ * @route PUT /api/schedules/events/:eventId
+ * @desc Update a calendar event
+ * @access Private
+ */
+router.put(
+  '/events/:eventId',
+  [
+    body('title').optional().notEmpty().withMessage('Title cannot be empty'),
+    body('start').optional().isISO8601().withMessage('Start date must be a valid ISO 8601 date'),
+    body('end').optional().isISO8601().withMessage('End date must be a valid ISO 8601 date'),
+    body('allDay').optional().isBoolean().withMessage('All day must be a boolean'),
+    body('location').optional(),
+    body('description').optional(),
+    body('color').optional().matches(/^#[0-9A-F]{6}$/i).withMessage('Color must be a valid hex color'),
+  ],
+  ScheduleController.updateCalendarEvent
+);
+
+/**
+ * @route DELETE /api/schedules/events/:eventId
+ * @desc Delete a calendar event
+ * @access Private
+ */
+router.delete('/events/:eventId', ScheduleController.deleteCalendarEvent);
+
+/**
+ * @route POST /api/schedules/import/ics
+ * @desc Import calendar events from ICS file
+ * @access Private
+ */
+router.post(
+  '/import/ics',
+  [
+    body('icsData').notEmpty().withMessage('ICS data is required'),
+  ],
+  ScheduleController.importICS
+);
+
+/**
  * @route POST /api/schedule
  * @desc Create a new schedule entry
  * @access Private

@@ -29,6 +29,148 @@ class ScheduleController {
   }
   
   /**
+   * Create a new calendar event
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async createEvent(req, res, next) {
+    try {
+      const eventData = req.body;
+      const userId = req.user.uid;
+      
+      const event = await Schedule.createEvent(eventData, userId);
+      
+      res.status(201).json({
+        success: true,
+        data: {
+          event,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all calendar events for the current user
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getCalendarEvents(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      const { startDate, endDate } = req.query;
+      
+      const events = await Schedule.getCalendarEvents(userId, startDate, endDate);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          events,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get calendar data including events and assignments
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getCalendarData(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      const { startDate, endDate } = req.query;
+      
+      const calendarData = await Schedule.getCalendarData(userId, startDate, endDate);
+      
+      res.status(200).json({
+        success: true,
+        data: calendarData,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update a calendar event
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async updateCalendarEvent(req, res, next) {
+    try {
+      const { eventId } = req.params;
+      const updateData = req.body;
+      const userId = req.user.uid;
+      
+      const updatedEvent = await Schedule.updateCalendarEvent(eventId, updateData, userId);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          event: updatedEvent,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete a calendar event
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async deleteCalendarEvent(req, res, next) {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user.uid;
+      
+      await Schedule.deleteCalendarEvent(eventId, userId);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Event deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Import calendar data from ICS file
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async importICS(req, res, next) {
+    try {
+      const { icsData } = req.body;
+      const userId = req.user.uid;
+      
+      const importedEvents = await Schedule.importICS(icsData, userId);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          events: importedEvents,
+          message: `Successfully imported ${importedEvents.length} events`,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  /**
    * Get all schedules for the current user
    * @param {Request} req - Express request object
    * @param {Response} res - Express response object

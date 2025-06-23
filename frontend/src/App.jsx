@@ -20,6 +20,7 @@ import Connect from './pages/Connect';
 import AssignmentPDFViewer from './pages/AssignmentPDFViewer';
 import InteractiveActivities from './pages/InteractiveActivities';
 import CourseManagement from './pages/CourseManagement';
+import CourseDetails from './pages/CourseDetails';
 
 function App() {
   return (
@@ -46,7 +47,7 @@ function App() {
               } />
               <Route path="courses/:courseId" element={
                 <ProtectedRoute>
-                  <Assignments />
+                  <CourseDetails />
                 </ProtectedRoute>
               } />
               <Route path="courses/:courseId/manage" element={

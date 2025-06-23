@@ -25,11 +25,15 @@ function CourseManagement() {
   const { currentUser } = useAuth();
   
   const [course, setCourse] = useState(null);
+  const [memberDetails, setMemberDetails] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddIntegrationModal, setShowAddIntegrationModal] = useState(false);
+  const [availableIntegrations, setAvailableIntegrations] = useState([]);
+  const [selectedIntegrations, setSelectedIntegrations] = useState([]);
   
   const [editForm, setEditForm] = useState({
     name: '',
@@ -45,12 +49,214 @@ function CourseManagement() {
     fetchCourse();
   }, [courseId]);
 
+  const fetchMemberDetails = async (memberIds, token) => {
+    console.log('CourseManagement: Fetching member details for:', memberIds);
+    try {
+      const memberDetailsMap = {};
+      
+      // Fetch user details for each member
+      for (const memberId of memberIds) {
+        try {
+          console.log(`CourseManagement: Fetching details for member ${memberId}`);
+          const response = await fetch(`/api/users/${memberId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            console.log(`CourseManagement: Received user data for ${memberId}:`, userData);
+            memberDetailsMap[memberId] = userData.data?.user || { displayName: 'Unknown User' };
+          } else {
+            console.warn(`CourseManagement: Failed to fetch user details for ${memberId}, status: ${response.status}`);
+            // If user details can't be fetched, use a fallback
+            memberDetailsMap[memberId] = { displayName: `User ${memberId.slice(-6)}` };
+          }
+        } catch (err) {
+          console.error(`CourseManagement: Error fetching details for member ${memberId}:`, err);
+          memberDetailsMap[memberId] = { displayName: `User ${memberId.slice(-6)}` };
+        }
+      }
+      
+      console.log('CourseManagement: Final member details map:', memberDetailsMap);
+      setMemberDetails(memberDetailsMap);
+    } catch (err) {
+      console.error('CourseManagement: Error fetching member details:', err);
+    }
+  };
+
+  // Load available integrations for the modal
+  const loadAvailableIntegrations = async () => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('/api/courses/integrations/available', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableIntegrations(data.data.availableIntegrations || []);
+      }
+    } catch (err) {
+      console.error('Error loading available integrations:', err);
+    }
+  };
+
+  // Handle adding integrations
+  const handleAddIntegration = async () => {
+    await loadAvailableIntegrations();
+    setShowAddIntegrationModal(true);
+  };
+
+  // Link integrations to course
+  const linkIntegrationsToCourse = async () => {
+    if (selectedIntegrations.length === 0) return;
+
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${courseId}/link-integrations`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          integrationIds: selectedIntegrations
+        })
+      });
+
+      if (response.ok) {
+        setShowAddIntegrationModal(false);
+        setSelectedIntegrations([]);
+        
+        // Refresh course data
+        fetchCourse();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to link integrations');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Unlink integration from course
+  const handleUnlinkIntegration = async (integrationId) => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${courseId}/unlink-integration/${integrationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Refresh course data
+        fetchCourse();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to unlink integration');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Helper function to format dates properly
+  const formatLinkedDate = (linkedAt) => {
+    console.log('CourseManagement formatLinkedDate input:', linkedAt, 'type:', typeof linkedAt);
+    
+    try {
+      let date;
+      
+      // Handle Firestore Timestamp objects
+      if (linkedAt && typeof linkedAt === 'object') {
+        // Firestore Timestamp with toDate method
+        if (typeof linkedAt.toDate === 'function') {
+          console.log('Using toDate() method');
+          date = linkedAt.toDate();
+        }
+        // Firestore Timestamp with seconds property
+        else if (linkedAt.seconds !== undefined) {
+          console.log('Using seconds property:', linkedAt.seconds);
+          date = new Date(linkedAt.seconds * 1000);
+        }
+        // Firestore Timestamp with _seconds property (alternative format)
+        else if (linkedAt._seconds !== undefined) {
+          console.log('Using _seconds property:', linkedAt._seconds);
+          date = new Date(linkedAt._seconds * 1000);
+        }
+        // Regular Date object
+        else if (linkedAt instanceof Date) {
+          console.log('Already a Date object');
+          date = linkedAt;
+        }
+        // Object with nanoseconds (full Firestore timestamp)
+        else if (linkedAt.nanoseconds !== undefined && linkedAt.seconds !== undefined) {
+          console.log('Using full Firestore timestamp');
+          date = new Date(linkedAt.seconds * 1000 + linkedAt.nanoseconds / 1000000);
+        }
+        // Try to parse as ISO string if it has the right properties
+        else if (linkedAt.toString && linkedAt.toString().includes('T')) {
+          console.log('Trying to parse as ISO string');
+          date = new Date(linkedAt.toString());
+        }
+        else {
+          console.log('Unknown object format, trying direct conversion');
+          date = new Date(linkedAt);
+        }
+      }
+      // Handle string dates
+      else if (typeof linkedAt === 'string') {
+        console.log('Parsing string date:', linkedAt);
+        date = new Date(linkedAt);
+      }
+      // Handle number timestamps
+      else if (typeof linkedAt === 'number') {
+        console.log('Using number timestamp:', linkedAt);
+        date = new Date(linkedAt);
+      }
+      // Fallback
+      else if (linkedAt) {
+        console.log('Fallback conversion');
+        date = new Date(linkedAt);
+      }
+      else {
+        console.log('No date provided');
+        return 'Unknown date';
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date created:', date);
+        return 'Invalid date';
+      }
+      
+      const formatted = date.toLocaleDateString();
+      console.log('Formatted date:', formatted);
+      return formatted;
+      
+    } catch (err) {
+      console.error('Error formatting date:', err, 'Input was:', linkedAt);
+      return 'Date error';
+    }
+  };
+
   const fetchCourse = async () => {
     try {
       setLoading(true);
       if (!currentUser) return;
       
       const token = await currentUser.getIdToken();
+      console.log('CourseManagement: Fetching course details for courseId:', courseId);
+      
       const response = await fetch(`/api/courses/${courseId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -60,20 +266,36 @@ function CourseManagement() {
 
       if (response.ok) {
         const data = await response.json();
-        setCourse(data.data);
+        console.log('CourseManagement: Received course data:', data);
+        
+        // Handle both possible response formats
+        const courseData = data.data?.course || data.data;
+        setCourse(courseData);
+        
         setEditForm({
-          name: data.data.name || '',
-          code: data.data.code || '',
-          description: data.data.description || '',
-          instructor: data.data.instructor || '',
-          semester: data.data.semester || '',
-          year: data.data.year || new Date().getFullYear(),
-          settings: data.data.settings || {}
+          name: courseData.name || '',
+          code: courseData.code || '',
+          description: courseData.description || '',
+          instructor: courseData.instructor || '',
+          semester: courseData.semester || '',
+          year: courseData.year || new Date().getFullYear(),
+          settings: courseData.settings || {}
         });
+
+        // Fetch member details if members exist
+        if (courseData.members && courseData.members.length > 0) {
+          console.log('CourseManagement: Found members, fetching details:', courseData.members);
+          await fetchMemberDetails(courseData.members, token);
+        } else {
+          console.log('CourseManagement: No members found in course');
+        }
       } else {
-        setError('Failed to load course');
+        const errorData = await response.json();
+        console.error('CourseManagement: Failed to fetch course:', errorData);
+        setError(errorData.message || 'Failed to load course');
       }
     } catch (err) {
+      console.error('CourseManagement: Error loading course:', err);
       setError('Error loading course');
     } finally {
       setLoading(false);
@@ -420,10 +642,12 @@ function CourseManagement() {
                         </div>
                         <div className="member-details">
                           <div className="member-name">
-                            {isCurrentUser ? 'You' : `User ${memberId.slice(-6)}`}
+                            {isCurrentUser ? 'You' : memberDetails[memberId]?.displayName || `User ${memberId.slice(-6)}`}
                             {course.createdBy === memberId && <span className="creator-badge">Creator</span>}
                           </div>
-                          <div className="member-email">{memberId}</div>
+                          <div className="member-email">
+                            {memberDetails[memberId]?.email || `ID: ${memberId.slice(-6)}`}
+                          </div>
                         </div>
                       </div>
                       
@@ -467,24 +691,58 @@ function CourseManagement() {
             <div className="integrations-section">
               <div className="section-header">
                 <h3>Course Integrations</h3>
-                <Link
-                  to="/connect"
+                <button
+                  onClick={handleAddIntegration}
                   className="action-btn primary"
                 >
                   <PlusIcon className="w-4 h-4" />
                   Add Integration
-                </Link>
+                </button>
               </div>
               
               <div className="integrations-grid">
-                <div className="integration-placeholder">
-                  <LinkIcon className="placeholder-icon" />
-                  <h4>No Integrations Yet</h4>
-                  <p>Connect external platforms like Gradescope, Canvas, or Blackboard to sync course content.</p>
-                  <Link to="/connect" className="btn-primary">
-                    Connect Platform
-                  </Link>
-                </div>
+                {course.userLinkedIntegrations && course.userLinkedIntegrations[currentUser?.uid] && course.userLinkedIntegrations[currentUser.uid].length > 0 ? (
+                  course.userLinkedIntegrations[currentUser.uid].map(integration => (
+                    <div key={integration.integrationId} className="integration-card">
+                      <div className="integration-header">
+                        <span 
+                          className="integration-icon"
+                          style={{ backgroundColor: integration.platform === 'gradescope' ? '#4f46e5' : '#6b7280' }}
+                        >
+                          {integration.platform === 'gradescope' ? '🎓' : '🔗'}
+                        </span>
+                        <div className="integration-info">
+                          <h3 className="integration-platform">{integration.platformName}</h3>
+                          <p className="integration-course">{integration.courseName}</p>
+                          {integration.courseCode && (
+                            <p className="integration-code">{integration.courseCode}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleUnlinkIntegration(integration.integrationId)}
+                          className="unlink-button"
+                          title="Remove integration"
+                        >
+                          <XMarkIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="integration-meta">
+                        <span className="linked-date">
+                          Linked {formatLinkedDate(integration.linkedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="integration-placeholder">
+                    <LinkIcon className="placeholder-icon" />
+                    <h4>No Integrations Yet</h4>
+                    <p>Connect external platforms like Gradescope, Canvas, or Blackboard to sync course content.</p>
+                    <button onClick={handleAddIntegration} className="btn-primary">
+                      Add Integration
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -681,6 +939,83 @@ function CourseManagement() {
                   <TrashIcon className="w-4 h-4" />
                   Delete Course
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Integration Modal */}
+      {showAddIntegrationModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Add Integration</h2>
+              <button onClick={() => setShowAddIntegrationModal(false)} className="modal-close">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {availableIntegrations.length > 0 ? (
+                <>
+                  <p>Select integrations to link to this course:</p>
+                  <div className="integration-list">
+                    {availableIntegrations.map(integration => (
+                      <div key={integration.id} className="integration-item">
+                        <input
+                          type="checkbox"
+                          id={`integration-${integration.id}`}
+                          checked={selectedIntegrations.includes(integration.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIntegrations([...selectedIntegrations, integration.id]);
+                            } else {
+                              setSelectedIntegrations(selectedIntegrations.filter(id => id !== integration.id));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`integration-${integration.id}`} className="integration-label">
+                          <div className="integration-details">
+                            <span className="integration-platform-icon">
+                              {integration.source === 'gradescope' ? '🎓' : '🔗'}
+                            </span>
+                            <div>
+                              <strong>{integration.name}</strong>
+                              <br />
+                              <small>{integration.code} • {integration.source}</small>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-integrations">
+                  <p>No available integrations found. Please import some courses from external platforms first.</p>
+                  <Link to="/connect" className="btn-secondary">
+                    Import Courses
+                  </Link>
+                </div>
+              )}
+              
+              <div className="modal-actions">
+                <button
+                  onClick={() => setShowAddIntegrationModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                {availableIntegrations.length > 0 && (
+                  <button
+                    onClick={linkIntegrationsToCourse}
+                    className="btn-primary"
+                    disabled={selectedIntegrations.length === 0}
+                  >
+                    Link {selectedIntegrations.length} Integration{selectedIntegrations.length !== 1 ? 's' : ''}
+                  </button>
+                )}
               </div>
             </div>
           </div>

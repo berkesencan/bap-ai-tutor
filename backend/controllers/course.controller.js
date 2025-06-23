@@ -399,6 +399,9 @@ class CourseController {
       const userId = req.user.uid;
       const courseData = req.body;
 
+      console.log('Creating course with data:', JSON.stringify(courseData, null, 2));
+      console.log('User ID:', userId);
+
       // Validate required fields
       if (!courseData.name) {
         return res.status(400).json({
@@ -408,11 +411,15 @@ class CourseController {
       }
 
       const course = await Course.create(courseData, userId);
+      
+      console.log('Course created successfully:', JSON.stringify(course, null, 2));
 
       res.status(201).json({
         success: true,
         message: 'Course created successfully',
-        data: course
+        data: {
+          course: course
+        }
       });
     } catch (error) {
       console.error('Error creating course:', error);
@@ -477,7 +484,9 @@ class CourseController {
 
       res.json({
         success: true,
-        data: course
+        data: {
+          course
+        }
       });
     } catch (error) {
       console.error('Error getting course:', error);
@@ -1051,6 +1060,321 @@ class CourseController {
       });
     } catch (error) {
       res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * Get available integrations for merging (integrations not linked to any course by current user)
+   */
+  static async getAvailableIntegrations(req, res) {
+    try {
+      const userId = req.user.uid;
+      
+      // Get all courses for the user
+      const allCourses = await Course.getByUserId(userId);
+      
+      // Get all integration courses (courses with source)
+      const integrationCourses = allCourses.filter(course => 
+        course.source && course.source !== 'native'
+      );
+      
+      // Get all linked integration IDs for this user
+      const linkedIntegrationIds = new Set();
+      allCourses.forEach(course => {
+        // Check user-specific linked integrations
+        if (course.userLinkedIntegrations && course.userLinkedIntegrations[userId]) {
+          course.userLinkedIntegrations[userId].forEach(integration => {
+            linkedIntegrationIds.add(integration.integrationId);
+          });
+        }
+        // Legacy format fallback
+        if (course.linkedIntegrations) {
+          course.linkedIntegrations.forEach(integration => {
+            linkedIntegrationIds.add(integration.integrationId);
+          });
+        }
+      });
+      
+      // Filter out linked integrations for this user
+      const availableIntegrations = integrationCourses.filter(course => 
+        !linkedIntegrationIds.has(course.id)
+      );
+      
+      // Group by platform
+      const integrationsByPlatform = availableIntegrations.reduce((acc, course) => {
+        const platform = course.source;
+        if (!acc[platform]) {
+          acc[platform] = [];
+        }
+        acc[platform].push(course);
+        return acc;
+      }, {});
+      
+      console.log(`[Course Controller] Found ${availableIntegrations.length} available integrations for user ${userId}`);
+      console.log(`[Course Controller] User has ${linkedIntegrationIds.size} already linked integrations`);
+      
+      res.json({
+        success: true,
+        data: {
+          availableIntegrations,
+          integrationsByPlatform,
+          totalAvailable: availableIntegrations.length,
+          totalLinked: linkedIntegrationIds.size
+        }
+      });
+    } catch (error) {
+      console.error('Error getting available integrations:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get available integrations',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Link existing integrations to a course
+   */
+  static async linkIntegrationsToCourse(req, res) {
+    try {
+      const { courseId } = req.params;
+      const { integrationIds } = req.body;
+      const userId = req.user.uid;
+
+      if (!Array.isArray(integrationIds) || integrationIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Integration IDs array is required'
+        });
+      }
+
+      const course = await Course.getById(courseId);
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found'
+        });
+      }
+
+      // Check if user is a member of the course (any member can link integrations for themselves)
+      if (!course.members || !course.members.includes(userId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You must be a member of this course to link integrations'
+        });
+      }
+
+      // Get integration courses
+      const integrationCourses = [];
+      for (const integrationId of integrationIds) {
+        const integrationCourse = await Course.getById(integrationId);
+        if (integrationCourse && integrationCourse.source && integrationCourse.source !== 'native') {
+          integrationCourses.push(integrationCourse);
+        }
+      }
+
+      if (integrationCourses.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid integration courses found'
+        });
+      }
+
+      // Link integrations to the course for this user
+      const updatedCourse = await Course.linkIntegrations(courseId, integrationCourses, userId);
+
+      res.json({
+        success: true,
+        message: `Successfully linked ${integrationCourses.length} integration(s) to course`,
+        data: updatedCourse
+      });
+    } catch (error) {
+      console.error('Error linking integrations to course:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to link integrations to course',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Unlink integration from a course
+   */
+  static async unlinkIntegrationFromCourse(req, res) {
+    try {
+      const { courseId, integrationId } = req.params;
+      const userId = req.user.uid;
+
+      const course = await Course.getById(courseId);
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found'
+        });
+      }
+
+      // Check if user is a member of the course (any member can unlink their own integrations)
+      if (!course.members || !course.members.includes(userId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You must be a member of this course to unlink integrations'
+        });
+      }
+
+      const updatedCourse = await Course.unlinkIntegration(courseId, integrationId, userId);
+
+      res.json({
+        success: true,
+        message: 'Integration unlinked successfully',
+        data: updatedCourse
+      });
+    } catch (error) {
+      console.error('Error unlinking integration from course:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to unlink integration from course',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Merge multiple integrations into a new course
+   */
+  static async mergeIntegrationsIntoCourse(req, res) {
+    try {
+      const { integrationIds, courseData } = req.body;
+      const userId = req.user.uid;
+
+      console.log('Merging integrations with data:', JSON.stringify({ integrationIds, courseData }, null, 2));
+      console.log('User ID:', userId);
+
+      if (!Array.isArray(integrationIds) || integrationIds.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least 2 integration IDs are required for merging'
+        });
+      }
+
+      if (!courseData || !courseData.name) {
+        return res.status(400).json({
+          success: false,
+          message: 'Course data with name is required'
+        });
+      }
+
+      // Get integration courses
+      const integrationCourses = [];
+      for (const integrationId of integrationIds) {
+        const integrationCourse = await Course.getById(integrationId);
+        if (integrationCourse && integrationCourse.source && integrationCourse.source !== 'native') {
+          integrationCourses.push(integrationCourse);
+        }
+      }
+
+      if (integrationCourses.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least 2 valid integration courses are required'
+        });
+      }
+
+      // Create new course with merged data
+      const newCourse = await Course.createWithIntegrations(courseData, integrationCourses, userId);
+      
+      console.log('Course with integrations created successfully:', JSON.stringify(newCourse, null, 2));
+
+      res.status(201).json({
+        success: true,
+        message: `Successfully created course with ${integrationCourses.length} integrated platforms`,
+        data: {
+          course: newCourse
+        }
+      });
+    } catch (error) {
+      console.error('Error merging integrations into course:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to merge integrations into course',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Delete integration course with warning if linked
+   */
+  static async deleteIntegrationCourse(req, res) {
+    try {
+      const { courseId } = req.params;
+      const { force } = req.query; // Allow force deletion
+      const userId = req.user.uid;
+
+      const course = await Course.getById(courseId);
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found'
+        });
+      }
+
+      // Check if this is an integration course
+      if (!course.source || course.source === 'native') {
+        return res.status(400).json({
+          success: false,
+          message: 'This is not an integration course'
+        });
+      }
+
+      // Check if user has permission
+      const userRole = course.memberRoles[userId];
+      if (!userRole || !['creator', 'admin'].includes(userRole)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to delete this course'
+        });
+      }
+
+      // Check if this integration is linked to any course
+      const allCourses = await Course.getByUserId(userId);
+      const linkedCourses = allCourses.filter(c => 
+        c.linkedIntegrations && 
+        c.linkedIntegrations.some(integration => integration.integrationId === courseId)
+      );
+
+      if (linkedCourses.length > 0 && force !== 'true') {
+        return res.status(409).json({
+          success: false,
+          message: 'This integration is currently linked to active courses',
+          linkedCourses: linkedCourses.map(c => ({ id: c.id, name: c.name, code: c.code })),
+          requiresForce: true
+        });
+      }
+
+      // If force deletion or no links, proceed with deletion
+      if (linkedCourses.length > 0) {
+        // Remove from linked courses first
+        for (const linkedCourse of linkedCourses) {
+          await Course.unlinkIntegration(linkedCourse.id, courseId, userId);
+        }
+      }
+
+      // Delete the integration course
+      await Course.delete(courseId, userId);
+
+      res.json({
+        success: true,
+        message: 'Integration course deleted successfully',
+        unlinkedFrom: linkedCourses.length
+      });
+    } catch (error) {
+      console.error('Error deleting integration course:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete integration course',
+        error: error.message
+      });
     }
   }
 }

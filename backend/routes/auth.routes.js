@@ -1,6 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const AuthController = require('../controllers/auth.controller');
+const { verifyToken } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ router.post(
  * @desc Get current user
  * @access Private
  */
-router.get('/me', AuthController.getCurrentUser);
+router.get('/me', verifyToken, AuthController.getCurrentUser);
 
 /**
  * @route PUT /api/auth/me
@@ -46,6 +47,7 @@ router.get('/me', AuthController.getCurrentUser);
  */
 router.put(
   '/me',
+  verifyToken,
   [
     body('displayName').optional().notEmpty().withMessage('Display name cannot be empty'),
     body('photoURL').optional().isURL().withMessage('Photo URL must be a valid URL'),
@@ -58,6 +60,6 @@ router.put(
  * @desc Delete current user
  * @access Private
  */
-router.delete('/me', AuthController.deleteCurrentUser);
+router.delete('/me', verifyToken, AuthController.deleteCurrentUser);
 
 module.exports = router; 

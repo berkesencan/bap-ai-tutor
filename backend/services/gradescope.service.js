@@ -981,19 +981,19 @@ async getCourses() {
             submissionId = submissionMatch[1];
           } else {
             // Try to find submission ID in the HTML
-            const scriptTags = $('script').toArray();
-            for (const script of scriptTags) {
-              const html = $(script).html();
-              if (html && html.includes('window.gon')) {
+        const scriptTags = $('script').toArray();
+        for (const script of scriptTags) {
+          const html = $(script).html();
+          if (html && html.includes('window.gon')) {
                 const match = html.match(/"id":"?(\d+)"?/);
-                if (match) {
-                  submissionId = match[1];
-                  break;
-                }
-              }
+            if (match) {
+              submissionId = match[1];
+              break;
             }
           }
-          
+        }
+      }
+
           if (submissionId) {
             const submissionPdfUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}.pdf`;
             console.log(`Trying submission PDF URL: ${submissionPdfUrl}`);
@@ -1007,7 +1007,7 @@ async getCourses() {
       }
 
              console.log(`Downloading PDF from: ${pdfUrl}`);
-       // Download the PDF
+      // Download the PDF
        const fileResponse = await this.session.get(pdfUrl, { responseType: 'arraybuffer' });
        
        // Check if it's actually a PDF by looking at content-type and magic bytes

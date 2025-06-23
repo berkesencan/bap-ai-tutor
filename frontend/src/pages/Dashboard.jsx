@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getUpcomingAssignments, getPastAssignments, getCourses } from '../services/api';
+import Calendar from '../components/Calendar';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -147,6 +148,11 @@ export const Dashboard = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Calendar Section - Full Width */}
+      <div className="dashboard-calendar-section">
+        <Calendar />
       </div>
       
       {loading ? (

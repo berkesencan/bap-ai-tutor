@@ -3,15 +3,56 @@
 @tailwind utilities;
 
 :root {
-  --primary-color: #3b82f6;
-  --primary-dark: #2563eb;
-  --secondary-color: #10b981;
+  /* Primary Green Theme */
+  --primary-color: #16a34a;
+  --primary-dark: #059669;
+  --primary-light: #dcfce7;
+  --primary-lighter: #f0fdf4;
+  
+  /* Secondary Colors */
+  --secondary-color: #6b7280;
+  --secondary-dark: #374151;
+  --secondary-light: #f3f4f6;
+  
+  /* Accent Colors */
+  --accent-blue: #0ea5e9;
+  --accent-blue-light: #e0f2fe;
+  --accent-yellow: #eab308;
+  --accent-yellow-light: #fef3c7;
+  --accent-purple: #8b5cf6;
+  --accent-purple-light: #f3e8ff;
+  
+  /* Status Colors */
+  --success-color: #16a34a;
+  --success-light: #dcfce7;
+  --warning-color: #eab308;
+  --warning-light: #fef3c7;
+  --error-color: #dc2626;
+  --error-light: #fee2e2;
+  --info-color: #0ea5e9;
+  --info-light: #e0f2fe;
+  
+  /* Text Colors */
   --text-color: #1f2937;
-  --bg-color: #f9fafb;
-  --card-bg: #ffffff;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  
+  /* Background Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  
+  /* Border Colors */
   --border-color: #e5e7eb;
-  --error-color: #ef4444;
-  --success-color: #10b981;
+  --border-focus: #16a34a;
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-green: 0 4px 12px rgba(22, 163, 74, 0.3);
+
+  --card-bg: #ffffff;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -22,7 +63,7 @@
 
   color-scheme: light dark;
   color: var(--text-color);
-  background-color: var(--bg-color);
+  background-color: var(--bg-primary);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

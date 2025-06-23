@@ -63,12 +63,15 @@ class AuthController {
       const decodedToken = await auth.verifyIdToken(idToken);
       
       // Get user from Firestore
-      const user = await User.getById(decodedToken.uid);
+      let user = await User.getById(decodedToken.uid);
       
+      // If user doesn't exist in Firestore, create them
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found',
+        user = await User.create({
+          uid: decodedToken.uid,
+          email: decodedToken.email,
+          displayName: decodedToken.name,
+          photoURL: decodedToken.picture,
         });
       }
       
@@ -99,12 +102,15 @@ class AuthController {
    */
   static async getCurrentUser(req, res, next) {
     try {
-      const user = await User.getById(req.user.uid);
+      let user = await User.getById(req.user.uid);
       
+      // If user doesn't exist in Firestore, create them
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found',
+        user = await User.create({
+          uid: req.user.uid,
+          email: req.user.email,
+          displayName: req.user.displayName,
+          photoURL: req.user.photoURL,
         });
       }
       

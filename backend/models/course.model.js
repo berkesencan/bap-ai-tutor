@@ -40,12 +40,22 @@ class Course {
           [userId]: 'creator' // creator, admin, member
         },
         
-        // Integration mappings per user
+        // Integration mappings per user (both old format and new linked integrations)
         integrations: {
           // Structure: { userId: { platform: integrationData } }
         },
         
-        // Aggregated course data from all integrations
+        // NEW: Per-user linked integrations
+        userLinkedIntegrations: {
+          // Structure: { userId: [{ integrationId, platform, platformName, courseName, courseCode, linkedAt, linkedBy, isActive }] }
+        },
+        
+        // Aggregated course data from all integrations (now per-user)
+        userAggregatedData: {
+          // Structure: { userId: { assignments: [], materials: [], announcements: [], grades: {} } }
+        },
+        
+        // Legacy: Global aggregated data (deprecated, kept for backwards compatibility)
         assignments: [], // Deduplicated assignments from all integrations
         materials: [], // Course materials from all integrations
         announcements: [], // Announcements from all integrations
@@ -72,7 +82,7 @@ class Course {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-
+      
       await db.collection('courses').doc(courseId).set(course);
       return course;
     } catch (error) {
@@ -80,7 +90,7 @@ class Course {
       throw error;
     }
   }
-
+  
   /**
    * Generate a unique 6-character join code
    * @returns {string} - Join code
@@ -129,7 +139,7 @@ class Course {
       throw error;
     }
   }
-
+  
   /**
    * Get all courses for a user
    * @param {string} userId - User ID
@@ -165,7 +175,7 @@ class Course {
       throw error;
     }
   }
-
+  
   /**
    * Join a course
    * @param {string} courseId - Course ID
@@ -466,13 +476,13 @@ class Course {
       if (course.createdBy !== userId) {
         throw new Error('Only the course creator can update course settings');
       }
-
+      
       const updateDoc = {
         ...updateData,
         updatedAt: new Date(),
         'analytics.lastActivity': new Date()
       };
-
+      
       await db.collection('courses').doc(courseId).update(updateDoc);
       return this.getById(courseId);
     } catch (error) {
@@ -480,7 +490,7 @@ class Course {
       throw error;
     }
   }
-
+  
   /**
    * Leave a course
    * @param {string} courseId - Course ID
@@ -514,7 +524,7 @@ class Course {
 
       await db.collection('courses').doc(courseId).update({
         members: course.members,
-        [`memberRoles.${userId}`]: null,
+        [`memberRoles.${userId}`]: firebase.firestore.FieldValue.delete(),
         [`integrations.${userId}`]: null,
         'analytics.totalMembers': course.analytics.totalMembers,
         'analytics.totalIntegrations': course.analytics.totalIntegrations,
@@ -553,7 +563,7 @@ class Course {
         isActive: false,
         updatedAt: new Date()
       });
-
+      
       return true;
     } catch (error) {
       console.error('Error deleting course:', error);
@@ -684,6 +694,481 @@ class Course {
       console.error('Error removing member:', error);
       throw error;
     }
+  }
+
+  /**
+   * Link integrations to an existing course for a specific user
+   * @param {string} courseId - Course ID
+   * @param {Array} integrationCourses - Array of integration course objects
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} - Updated course data
+   */
+  static async linkIntegrations(courseId, integrationCourses, userId) {
+    try {
+      const course = await this.getById(courseId);
+      if (!course) {
+        throw new Error('Course not found');
+      }
+
+      // Check if user has permission (creator, admin, or member)
+      if (!course.members.includes(userId)) {
+        throw new Error('User is not a member of this course');
+      }
+
+      // Initialize user-specific linked integrations if not exists
+      if (!course.userLinkedIntegrations) {
+        course.userLinkedIntegrations = {};
+      }
+      if (!course.userLinkedIntegrations[userId]) {
+        course.userLinkedIntegrations[userId] = [];
+      }
+
+      // Add each integration for this user
+      const newIntegrations = [];
+      for (const integrationCourse of integrationCourses) {
+        // Check if already linked for this user
+        const existingLink = course.userLinkedIntegrations[userId].find(
+          link => link.integrationId === integrationCourse.id
+        );
+
+        if (!existingLink) {
+          const integrationLink = {
+            integrationId: integrationCourse.id,
+            platform: integrationCourse.source,
+            platformName: this.getPlatformDisplayName(integrationCourse.source),
+            courseName: integrationCourse.name,
+            courseCode: integrationCourse.code,
+            linkedAt: new Date(),
+            linkedBy: userId,
+            isActive: true
+          };
+
+          course.userLinkedIntegrations[userId].push(integrationLink);
+          newIntegrations.push(integrationLink);
+        }
+      }
+
+      // Update course with user-specific linked integrations
+      course.updatedAt = new Date();
+      course.analytics.lastActivity = new Date();
+
+      await db.collection('courses').doc(courseId).update({
+        userLinkedIntegrations: course.userLinkedIntegrations,
+        updatedAt: course.updatedAt,
+        'analytics.lastActivity': course.analytics.lastActivity
+      });
+
+      // Aggregate content from linked integrations for this user
+      await this.aggregateUserLinkedIntegrationContent(courseId, userId);
+
+      return course;
+    } catch (error) {
+      console.error('Error linking integrations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unlink integration from a course for a specific user
+   * @param {string} courseId - Course ID
+   * @param {string} integrationId - Integration course ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} - Updated course data
+   */
+  static async unlinkIntegration(courseId, integrationId, userId) {
+    try {
+      const course = await this.getById(courseId);
+      if (!course) {
+        throw new Error('Course not found');
+      }
+
+      if (!course.userLinkedIntegrations || !course.userLinkedIntegrations[userId]) {
+        throw new Error('No integrations linked to this course for this user');
+      }
+
+      // Remove the integration for this user
+      const initialLength = course.userLinkedIntegrations[userId].length;
+      course.userLinkedIntegrations[userId] = course.userLinkedIntegrations[userId].filter(
+        link => link.integrationId !== integrationId
+      );
+
+      if (course.userLinkedIntegrations[userId].length === initialLength) {
+        throw new Error('Integration not found in user linked integrations');
+      }
+
+      // Update course
+      course.updatedAt = new Date();
+      course.analytics.lastActivity = new Date();
+
+      await db.collection('courses').doc(courseId).update({
+        userLinkedIntegrations: course.userLinkedIntegrations,
+        updatedAt: course.updatedAt,
+        'analytics.lastActivity': course.analytics.lastActivity
+      });
+
+      // Re-aggregate content for this user
+      await this.aggregateUserLinkedIntegrationContent(courseId, userId);
+
+      return course;
+    } catch (error) {
+      console.error('Error unlinking integration:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new course with user-specific linked integrations
+   * @param {Object} courseData - Course data
+   * @param {Array} integrationCourses - Array of integration course objects
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} - Created course data
+   */
+  static async createWithIntegrations(courseData, integrationCourses, userId) {
+    try {
+      // Create the base course
+      const course = await this.create(courseData, userId);
+
+      // Link the integrations for this user
+      const linkedIntegrations = integrationCourses.map(integrationCourse => ({
+        integrationId: integrationCourse.id,
+        platform: integrationCourse.source,
+        platformName: this.getPlatformDisplayName(integrationCourse.source),
+        courseName: integrationCourse.name,
+        courseCode: integrationCourse.code,
+        linkedAt: new Date(),
+        linkedBy: userId,
+        isActive: true
+      }));
+
+      // Initialize user-specific linked integrations
+      const userLinkedIntegrations = {
+        [userId]: linkedIntegrations
+      };
+
+      // Update the course with user-specific linked integrations
+      course.userLinkedIntegrations = userLinkedIntegrations;
+      course.updatedAt = new Date();
+
+      await db.collection('courses').doc(course.id).update({
+        userLinkedIntegrations: course.userLinkedIntegrations,
+        updatedAt: course.updatedAt
+      });
+
+      // Aggregate content from linked integrations for this user
+      await this.aggregateUserLinkedIntegrationContent(course.id, userId);
+
+      return course;
+    } catch (error) {
+      console.error('Error creating course with integrations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Aggregate content from user-specific linked integrations
+   * @param {string} courseId - Course ID
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
+  static async aggregateUserLinkedIntegrationContent(courseId, userId) {
+    try {
+      const course = await this.getById(courseId);
+      if (!course || !course.userLinkedIntegrations || !course.userLinkedIntegrations[userId]) return;
+
+      console.log(`[Course Model] Starting aggregation for user ${userId} with ${course.userLinkedIntegrations[userId].length} linked integrations`);
+
+      const aggregatedAssignments = [];
+      const aggregatedMaterials = [];
+      const aggregatedAnnouncements = [];
+
+      // Import Assignment model to fetch assignments
+      const Assignment = require('./assignment.model');
+
+      // Process each linked integration for this user
+      for (const integration of course.userLinkedIntegrations[userId]) {
+        if (!integration.isActive) continue;
+
+        console.log(`[Course Model] Processing integration: ${integration.platformName} - ${integration.courseName} (ID: ${integration.integrationId})`);
+
+        const integrationCourse = await this.getById(integration.integrationId);
+        if (!integrationCourse) {
+          console.log(`[Course Model] Integration course not found: ${integration.integrationId}`);
+          continue;
+        }
+
+        // Fetch assignments from the assignments collection for this integration course
+        try {
+          const integrationAssignments = await Assignment.getByCourseId(integration.integrationId);
+          console.log(`[Course Model] Found ${integrationAssignments.length} assignments in integration course ${integration.courseName}`);
+
+          if (integrationAssignments && integrationAssignments.length > 0) {
+            const userAssignments = this.filterAssignmentsForUser(integrationAssignments, userId, integrationCourse);
+            userAssignments.forEach(assignment => {
+              aggregatedAssignments.push({
+                ...assignment,
+                sourceIntegration: integration.integrationId,
+                sourcePlatform: integration.platform,
+                sourcePlatformName: integration.platformName,
+                aggregatedAt: new Date()
+              });
+            });
+            console.log(`[Course Model] Added ${userAssignments.length} assignments from ${integration.courseName}`);
+          }
+        } catch (assignmentError) {
+          console.error(`[Course Model] Error fetching assignments for integration ${integration.integrationId}:`, assignmentError);
+        }
+
+        // Add materials (from course document if they exist)
+        if (integrationCourse.materials) {
+          const userMaterials = this.filterMaterialsForUser(integrationCourse.materials, userId, integrationCourse);
+          userMaterials.forEach(material => {
+            aggregatedMaterials.push({
+              ...material,
+              sourceIntegration: integration.integrationId,
+              sourcePlatform: integration.platform,
+              sourcePlatformName: integration.platformName,
+              aggregatedAt: new Date()
+            });
+          });
+          console.log(`[Course Model] Added ${userMaterials.length} materials from ${integration.courseName}`);
+        }
+
+        // Add announcements (from course document if they exist)
+        if (integrationCourse.announcements) {
+          const userAnnouncements = this.filterAnnouncementsForUser(integrationCourse.announcements, userId, integrationCourse);
+          userAnnouncements.forEach(announcement => {
+            aggregatedAnnouncements.push({
+              ...announcement,
+              sourceIntegration: integration.integrationId,
+              sourcePlatform: integration.platform,
+              sourcePlatformName: integration.platformName,
+              aggregatedAt: new Date()
+            });
+          });
+          console.log(`[Course Model] Added ${userAnnouncements.length} announcements from ${integration.courseName}`);
+        }
+      }
+
+      // Deduplicate content if enabled
+      let finalAssignments = aggregatedAssignments;
+      if (course.settings && course.settings.autoDeduplication) {
+        finalAssignments = this.deduplicateAssignments(aggregatedAssignments);
+      }
+
+      console.log(`[Course Model] Final aggregated data for user ${userId}: ${finalAssignments.length} assignments, ${aggregatedMaterials.length} materials, ${aggregatedAnnouncements.length} announcements`);
+
+      // Initialize user aggregated data if not exists
+      if (!course.userAggregatedData) {
+        course.userAggregatedData = {};
+      }
+
+      // Update course with user-specific aggregated content
+      const userAggregatedData = {
+        ...course.userAggregatedData,
+        [userId]: {
+          assignments: finalAssignments,
+          materials: aggregatedMaterials,
+          announcements: aggregatedAnnouncements,
+          lastAggregated: new Date()
+        }
+      };
+
+      await db.collection('courses').doc(courseId).update({
+        userAggregatedData: userAggregatedData,
+        'analytics.lastActivity': new Date(),
+        updatedAt: new Date()
+      });
+
+      console.log(`[Course Model] Successfully updated user aggregated data for user ${userId}`);
+
+    } catch (error) {
+      console.error('Error aggregating user linked integration content:', error);
+    }
+  }
+
+  /**
+   * Filter assignments for a specific user based on their access in the integration
+   * @param {Array} assignments - All assignments
+   * @param {string} userId - User ID
+   * @param {Object} integrationCourse - Integration course data
+   * @returns {Array} - Filtered assignments
+   */
+  static filterAssignmentsForUser(assignments, userId, integrationCourse) {
+    // For now, return all assignments. In the future, this can be enhanced
+    // to filter based on user's role, enrollment status, or visibility settings
+    // in the integration platform
+    
+    // Check if user has specific integration data
+    if (integrationCourse.integrations && integrationCourse.integrations[userId]) {
+      const userIntegrationData = integrationCourse.integrations[userId];
+      
+      // If user has platform-specific assignments, use those
+      Object.values(userIntegrationData).forEach(platformData => {
+        if (platformData.assignments && platformData.assignments.length > 0) {
+          return platformData.assignments;
+        }
+      });
+    }
+    
+    return assignments;
+  }
+
+  /**
+   * Filter materials for a specific user
+   * @param {Array} materials - All materials
+   * @param {string} userId - User ID
+   * @param {Object} integrationCourse - Integration course data
+   * @returns {Array} - Filtered materials
+   */
+  static filterMaterialsForUser(materials, userId, integrationCourse) {
+    // Similar filtering logic for materials
+    if (integrationCourse.integrations && integrationCourse.integrations[userId]) {
+      const userIntegrationData = integrationCourse.integrations[userId];
+      
+      Object.values(userIntegrationData).forEach(platformData => {
+        if (platformData.materials && platformData.materials.length > 0) {
+          return platformData.materials;
+        }
+      });
+    }
+    
+    return materials;
+  }
+
+  /**
+   * Filter announcements for a specific user
+   * @param {Array} announcements - All announcements
+   * @param {string} userId - User ID
+   * @param {Object} integrationCourse - Integration course data
+   * @returns {Array} - Filtered announcements
+   */
+  static filterAnnouncementsForUser(announcements, userId, integrationCourse) {
+    // Similar filtering logic for announcements
+    if (integrationCourse.integrations && integrationCourse.integrations[userId]) {
+      const userIntegrationData = integrationCourse.integrations[userId];
+      
+      Object.values(userIntegrationData).forEach(platformData => {
+        if (platformData.announcements && platformData.announcements.length > 0) {
+          return platformData.announcements;
+        }
+      });
+    }
+    
+    return announcements;
+  }
+
+  /**
+   * Legacy: Aggregate content from linked integrations (deprecated)
+   * @param {string} courseId - Course ID
+   * @returns {Promise<void>}
+   */
+  static async aggregateLinkedIntegrationContent(courseId) {
+    try {
+      const course = await this.getById(courseId);
+      if (!course || !course.linkedIntegrations) return;
+
+      const aggregatedAssignments = [];
+      const aggregatedMaterials = [];
+      const aggregatedAnnouncements = [];
+
+      // Process each linked integration
+      for (const integration of course.linkedIntegrations) {
+        if (!integration.isActive) continue;
+
+        const integrationCourse = await this.getById(integration.integrationId);
+        if (!integrationCourse) continue;
+
+        // Add assignments with integration metadata
+        if (integrationCourse.assignments) {
+          integrationCourse.assignments.forEach(assignment => {
+            aggregatedAssignments.push({
+              ...assignment,
+              sourceIntegration: integration.integrationId,
+              sourcePlatform: integration.platform,
+              sourcePlatformName: integration.platformName,
+              aggregatedAt: new Date()
+            });
+          });
+        }
+
+        // Add materials
+        if (integrationCourse.materials) {
+          integrationCourse.materials.forEach(material => {
+            aggregatedMaterials.push({
+              ...material,
+              sourceIntegration: integration.integrationId,
+              sourcePlatform: integration.platform,
+              sourcePlatformName: integration.platformName,
+              aggregatedAt: new Date()
+            });
+          });
+        }
+
+        // Add announcements
+        if (integrationCourse.announcements) {
+          integrationCourse.announcements.forEach(announcement => {
+            aggregatedAnnouncements.push({
+              ...announcement,
+              sourceIntegration: integration.integrationId,
+              sourcePlatform: integration.platform,
+              sourcePlatformName: integration.platformName,
+              aggregatedAt: new Date()
+            });
+          });
+        }
+      }
+
+      // Deduplicate content if enabled
+      let finalAssignments = aggregatedAssignments;
+      if (course.settings && course.settings.autoDeduplication) {
+        finalAssignments = this.deduplicateAssignments(aggregatedAssignments);
+      }
+
+      // Update course with aggregated content (legacy format)
+      await db.collection('courses').doc(courseId).update({
+        assignments: finalAssignments,
+        materials: aggregatedMaterials,
+        announcements: aggregatedAnnouncements,
+        'analytics.totalAssignments': finalAssignments.length,
+        'analytics.lastActivity': new Date(),
+        updatedAt: new Date()
+      });
+
+    } catch (error) {
+      console.error('Error aggregating linked integration content:', error);
+    }
+  }
+
+  /**
+   * Get platform display name
+   * @param {string} platform - Platform identifier
+   * @returns {string} - Display name
+   */
+  static getPlatformDisplayName(platform) {
+    const platformNames = {
+      gradescope: 'Gradescope',
+      canvas: 'Canvas',
+      blackboard: 'Blackboard',
+      brightspace: 'Brightspace',
+      moodle: 'Moodle'
+    };
+    return platformNames[platform] || platform;
+  }
+
+  /**
+   * Get platform icon
+   * @param {string} platform - Platform identifier
+   * @returns {string} - Platform icon
+   */
+  static getPlatformIcon(platform) {
+    const platformIcons = {
+      gradescope: '🎓',
+      canvas: '🎨',
+      blackboard: '📚',
+      brightspace: '💡',
+      moodle: '📖'
+    };
+    return platformIcons[platform] || '🔗';
   }
 }
 

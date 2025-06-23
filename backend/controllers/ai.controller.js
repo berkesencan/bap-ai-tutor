@@ -550,22 +550,22 @@ class AIController {
 
       switch (activityType) {
         case 'ai-quiz-battle':
-          generatedContent = await generateQuizContent(materials, difficulty, questionCount);
+          generatedContent = await AIController.generateQuizContent(materials, difficulty, questionCount);
           break;
         case 'concept-race':
-          generatedContent = await generateConceptRaceContent(materials, difficulty);
+          generatedContent = await AIController.generateConceptRaceContent(materials, difficulty);
           break;
         case 'collaborative-solver':
-          generatedContent = await generateProblemSolvingContent(materials, difficulty);
+          generatedContent = await AIController.generateProblemSolvingContent(materials, difficulty);
           break;
         case 'mystery-case':
-          generatedContent = await generateCaseStudyContent(materials, difficulty);
+          generatedContent = await AIController.generateCaseStudyContent(materials, difficulty);
           break;
         case 'debate-arena':
-          generatedContent = await generateDebateContent(materials, difficulty);
+          generatedContent = await AIController.generateDebateContent(materials, difficulty);
           break;
         case 'simulation-lab':
-          generatedContent = await generateSimulationContent(materials, difficulty);
+          generatedContent = await AIController.generateSimulationContent(materials, difficulty);
           break;
         default:
           return res.status(400).json({ error: 'Unsupported activity type' });

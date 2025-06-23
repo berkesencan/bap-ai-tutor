@@ -383,4 +383,104 @@ export const checkGradescopeAuthStatus = async () => {
   }
 };
 
+// Calendar API Functions
+export const getCalendarData = async (startDate, endDate) => {
+  try {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const response = await apiClient.get(`/schedules/calendar?${params}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getCalendarEvents = async (startDate, endDate) => {
+  try {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const response = await apiClient.get(`/schedules/events?${params}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const createCalendarEvent = async (eventData) => {
+  try {
+    const response = await apiClient.post('/schedules/events', eventData);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const updateCalendarEvent = async (eventId, eventData) => {
+  try {
+    const response = await apiClient.put(`/schedules/events/${eventId}`, eventData);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const deleteCalendarEvent = async (eventId) => {
+  try {
+    const response = await apiClient.delete(`/schedules/events/${eventId}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const importICSCalendar = async (icsData) => {
+  try {
+    const response = await apiClient.post('/schedules/import/ics', { icsData });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Schedule API Functions (existing functionality)
+export const getSchedules = async () => {
+  try {
+    const response = await apiClient.get('/schedules');
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const createSchedule = async (scheduleData) => {
+  try {
+    const response = await apiClient.post('/schedules', scheduleData);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const updateSchedule = async (scheduleId, scheduleData) => {
+  try {
+    const response = await apiClient.put(`/schedules/${scheduleId}`, scheduleData);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const deleteSchedule = async (scheduleId) => {
+  try {
+    const response = await apiClient.delete(`/schedules/${scheduleId}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 export default apiClient; 

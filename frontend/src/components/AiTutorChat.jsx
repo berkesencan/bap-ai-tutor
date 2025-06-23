@@ -192,12 +192,19 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
                         {course.role}
                         {course.semester && course.year && ` • ${course.semester} ${course.year}`}
                       </div>
-                      {course.totalIntegrations > 0 && (
+                      {(course.linkedIntegrations?.length > 0 || course.totalIntegrations > 0) && (
                         <div className="integration-badges">
-                          {Object.entries(course.integrations || {}).map(([platform, integration]) => 
+                          {/* Show user-specific linked integrations first */}
+                          {course.linkedIntegrations?.map(integration => (
+                            <span key={integration.integrationId} className="integration-badge">
+                              {getIntegrationIcon(integration.platform)} {integration.platformName}
+                            </span>
+                          )) || 
+                          /* Fallback to active integrations */
+                          Object.entries(course.integrations || {}).map(([platform, integration]) => 
                             integration.isActive && (
                               <span key={platform} className="integration-badge">
-                                {getIntegrationIcon(platform)} {platform}
+                                {getIntegrationIcon(platform)} {integration.platformName || platform}
                               </span>
                             )
                           )}
@@ -518,7 +525,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
         if (userMessage) {
           formData.append('message', userMessage);
         }
-        
+
         response = await processPDFWithMessage(formData, (progress) => {
           setUploadProgress(progress);
         });
@@ -549,7 +556,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
         };
         
         response = await postChatMessage(chatPayload);
-      }
+          }
 
       console.log('Chat API Response:', response);
       setLastApiResponse(response);
@@ -613,7 +620,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
       setError('File size must be less than 10MB');
       return;
-    }
+          }
 
     setAttachedFile(file);
     setError(null);

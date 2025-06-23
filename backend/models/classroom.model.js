@@ -111,13 +111,22 @@ class Classroom {
     try {
       const snapshot = await db.collection('classrooms')
         .where('teacherId', '==', teacherId)
-        .where('isActive', '==', true)
-        .orderBy('createdAt', 'desc')
         .get();
       
       const classrooms = [];
       snapshot.forEach(doc => {
-        classrooms.push(doc.data());
+        const data = doc.data();
+        // Filter for active classrooms and sort in memory
+        if (data.isActive !== false) { // Include undefined as active
+          classrooms.push(data);
+        }
+      });
+      
+      // Sort by createdAt in memory
+      classrooms.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
+        const bTime = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
+        return bTime - aTime; // desc order
       });
       
       return classrooms;
@@ -136,13 +145,22 @@ class Classroom {
     try {
       const snapshot = await db.collection('classrooms')
         .where('enrolledStudents', 'array-contains', studentId)
-        .where('isActive', '==', true)
-        .orderBy('createdAt', 'desc')
         .get();
       
       const classrooms = [];
       snapshot.forEach(doc => {
-        classrooms.push(doc.data());
+        const data = doc.data();
+        // Filter for active classrooms and sort in memory
+        if (data.isActive !== false) { // Include undefined as active
+          classrooms.push(data);
+        }
+      });
+      
+      // Sort by createdAt in memory
+      classrooms.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
+        const bTime = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
+        return bTime - aTime; // desc order
       });
       
       return classrooms;

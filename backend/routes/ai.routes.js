@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const AIController = require('../controllers/ai.controller');
 const GeminiService = require('../services/gemini.service');
-const auth = require('../middleware/auth.middleware');
+const { verifyToken: auth } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -147,11 +147,8 @@ router.get('/materials/:contextId', AIController.getIntegratedMaterials);
 // Test Gemini 1.5 Flash API endpoint
 router.post('/test-gemini', AIController.testGemini);
 
-// AI Tutor routes
-router.post('/analyze-document', auth, AIController.analyzeDocument);
-router.post('/generate-questions', auth, AIController.generateQuestions);
-router.post('/explain-concept', auth, AIController.explainConcept);
-router.post('/generate-summary', auth, AIController.generateSummary);
+// AI Tutor routes (using existing methods)
+router.post('/generate-questions', auth, AIController.generatePracticeQuestions);
 
 // Interactive Activities routes
 router.post('/activities', auth, AIController.createActivity);

@@ -18,6 +18,10 @@ import {
   ExclamationTriangleIcon,
   ChartBarIcon,
   WrenchScrewdriverIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '@heroicons/react/24/outline';
 import './Courses.css';
 
@@ -30,7 +34,17 @@ function Courses() {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showAddIntegrationModal, setShowAddIntegrationModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [showDeleteWarningModal, setShowDeleteWarningModal] = useState(false);
 
+  // Integration management states
+  const [selectedCourseForIntegration, setSelectedCourseForIntegration] = useState(null);
+  const [availableIntegrations, setAvailableIntegrations] = useState([]);
+  const [selectedIntegrations, setSelectedIntegrations] = useState([]);
+  const [showLinkedIntegrations, setShowLinkedIntegrations] = useState(false);
+  const [showMergeMenu, setShowMergeMenu] = useState(false);
+  const [deleteWarningData, setDeleteWarningData] = useState(null);
   
   // Form states
   const [createForm, setCreateForm] = useState({
@@ -107,7 +121,11 @@ function Courses() {
   const createCourse = async (e) => {
     e.preventDefault();
     try {
+      console.log('Creating course with form data:', createForm);
+      
       const token = await currentUser.getIdToken();
+      console.log('Token obtained:', token ? 'Yes' : 'No');
+      
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
@@ -117,7 +135,13 @@ function Courses() {
         body: JSON.stringify(createForm)
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('Course creation response:', responseData);
+        
         setShowCreateModal(false);
         setCreateForm({
           name: '',
@@ -135,16 +159,25 @@ function Courses() {
             publiclyJoinable: false
           }
         });
+        
+        console.log('Refreshing courses...');
         // Refresh courses
         const refreshResponse = await getCourses();
+        console.log('Refresh response:', refreshResponse);
+        
         if (refreshResponse.success && refreshResponse.data && refreshResponse.data.courses) {
           setCourses(refreshResponse.data.courses);
+          console.log('Courses updated successfully');
+        } else {
+          console.error('Failed to refresh courses:', refreshResponse);
         }
       } else {
         const errorData = await response.json();
+        console.error('Course creation failed:', errorData);
         setError(errorData.message || 'Failed to create course');
       }
     } catch (err) {
+      console.error('Course creation error:', err);
       setError(err.message);
     }
   };
@@ -291,8 +324,6 @@ function Courses() {
     // Could add a toast notification here
   };
 
-
-
   const canManageCourse = (course) => {
     if (!course.members || !currentUser) return false;
     const userMember = course.members.find(m => m.userId === currentUser.uid);
@@ -313,7 +344,6 @@ function Courses() {
     return role === 'creator' || role === 'admin';
   };
 
-  // Function to organize courses in the requested order
   const organizedCourses = () => {
     // Separate platform courses from native courses
     const nativeCourses = courses.filter(course => !course.source || course.source === 'native');
@@ -364,6 +394,303 @@ function Courses() {
     });
     
     return { nativeCourses, coursesByPlatform };
+  };
+
+  // Load available integrations when needed
+  const loadAvailableIntegrations = async () => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('/api/courses/integrations/available', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableIntegrations(data.data.availableIntegrations || []);
+      }
+    } catch (err) {
+      console.error('Error loading available integrations:', err);
+    }
+  };
+
+  // New integration management methods
+  const handleAddIntegration = async (courseId) => {
+    setSelectedCourseForIntegration(courseId);
+    await loadAvailableIntegrations();
+    setShowAddIntegrationModal(true);
+  };
+
+  const linkIntegrationsToCourse = async () => {
+    if (!selectedCourseForIntegration || selectedIntegrations.length === 0) return;
+
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${selectedCourseForIntegration}/link-integrations`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          integrationIds: selectedIntegrations
+        })
+      });
+
+      if (response.ok) {
+        setShowAddIntegrationModal(false);
+        setSelectedIntegrations([]);
+        setSelectedCourseForIntegration(null);
+        
+        // Refresh courses
+        const refreshResponse = await getCourses();
+        if (refreshResponse.success && refreshResponse.data && refreshResponse.data.courses) {
+          setCourses(refreshResponse.data.courses);
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to link integrations');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleUnlinkIntegration = async (courseId, integrationId) => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${courseId}/unlink-integration/${integrationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Refresh courses
+        const refreshResponse = await getCourses();
+        if (refreshResponse.success && refreshResponse.data && refreshResponse.data.courses) {
+          setCourses(refreshResponse.data.courses);
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to unlink integration');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleMergeIntegrations = async () => {
+    if (selectedIntegrations.length < 2) return;
+
+    try {
+      console.log('Merging integrations:', selectedIntegrations);
+      console.log('Course form data:', createForm);
+      
+      const token = await currentUser.getIdToken();
+      console.log('Token obtained for merge:', token ? 'Yes' : 'No');
+      
+      const response = await fetch('/api/courses/merge-integrations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          integrationIds: selectedIntegrations,
+          courseData: createForm
+        })
+      });
+
+      console.log('Merge response status:', response.status);
+      console.log('Merge response ok:', response.ok);
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('Merge response data:', responseData);
+        
+        setShowMergeModal(false);
+        setSelectedIntegrations([]);
+        setCreateForm({
+          name: '',
+          code: '',
+          semester: '',
+          year: new Date().getFullYear(),
+          description: '',
+          institution: '',
+          instructor: '',
+          joinPassword: '',
+          settings: {
+            allowMemberInvites: true,
+            autoDeduplication: true,
+            aiEnabled: true,
+            publiclyJoinable: false
+          }
+        });
+        
+        console.log('Refreshing courses after merge...');
+        // Refresh courses
+        const refreshResponse = await getCourses();
+        console.log('Merge refresh response:', refreshResponse);
+        
+        if (refreshResponse.success && refreshResponse.data && refreshResponse.data.courses) {
+          setCourses(refreshResponse.data.courses);
+          console.log('Courses updated successfully after merge');
+        } else {
+          console.error('Failed to refresh courses after merge:', refreshResponse);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Merge failed:', errorData);
+        setError(errorData.message || 'Failed to merge integrations');
+      }
+    } catch (err) {
+      console.error('Merge error:', err);
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteIntegrationCourse = async (courseId, force = false) => {
+    try {
+      const token = await currentUser.getIdToken();
+      const queryParam = force ? '?force=true' : '';
+      const response = await fetch(`/api/courses/integration/${courseId}${queryParam}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 409) {
+        // Integration is linked, show warning
+        const data = await response.json();
+        setDeleteWarningData({
+          courseId,
+          linkedCourses: data.linkedCourses,
+          courseName: courses.find(c => c.id === courseId)?.name || 'Unknown Course'
+        });
+        setShowDeleteWarningModal(true);
+        return;
+      }
+
+      if (response.ok) {
+        setShowDeleteWarningModal(false);
+        setDeleteWarningData(null);
+        
+        // Refresh courses
+        const refreshResponse = await getCourses();
+        if (refreshResponse.success && refreshResponse.data && refreshResponse.data.courses) {
+          setCourses(refreshResponse.data.courses);
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to delete integration course');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Helper function to format dates properly
+  const formatLinkedDate = (linkedAt) => {
+    console.log('formatLinkedDate input:', linkedAt, 'type:', typeof linkedAt);
+    
+    try {
+      let date;
+      
+      // Handle Firestore Timestamp objects
+      if (linkedAt && typeof linkedAt === 'object') {
+        // Firestore Timestamp with toDate method
+        if (typeof linkedAt.toDate === 'function') {
+          console.log('Using toDate() method');
+          date = linkedAt.toDate();
+        }
+        // Firestore Timestamp with seconds property
+        else if (linkedAt.seconds !== undefined) {
+          console.log('Using seconds property:', linkedAt.seconds);
+          date = new Date(linkedAt.seconds * 1000);
+        }
+        // Firestore Timestamp with _seconds property (alternative format)
+        else if (linkedAt._seconds !== undefined) {
+          console.log('Using _seconds property:', linkedAt._seconds);
+          date = new Date(linkedAt._seconds * 1000);
+        }
+        // Regular Date object
+        else if (linkedAt instanceof Date) {
+          console.log('Already a Date object');
+          date = linkedAt;
+        }
+        // Object with nanoseconds (full Firestore timestamp)
+        else if (linkedAt.nanoseconds !== undefined && linkedAt.seconds !== undefined) {
+          console.log('Using full Firestore timestamp');
+          date = new Date(linkedAt.seconds * 1000 + linkedAt.nanoseconds / 1000000);
+        }
+        // Try to parse as ISO string if it has the right properties
+        else if (linkedAt.toString && linkedAt.toString().includes('T')) {
+          console.log('Trying to parse as ISO string');
+          date = new Date(linkedAt.toString());
+        }
+        else {
+          console.log('Unknown object format, trying direct conversion');
+          date = new Date(linkedAt);
+        }
+      }
+      // Handle string dates
+      else if (typeof linkedAt === 'string') {
+        console.log('Parsing string date:', linkedAt);
+        date = new Date(linkedAt);
+      }
+      // Handle number timestamps
+      else if (typeof linkedAt === 'number') {
+        console.log('Using number timestamp:', linkedAt);
+        date = new Date(linkedAt);
+      }
+      // Fallback
+      else if (linkedAt) {
+        console.log('Fallback conversion');
+        date = new Date(linkedAt);
+      }
+      else {
+        console.log('No date provided');
+        return 'Unknown date';
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date created:', date);
+        return 'Invalid date';
+      }
+      
+      const formatted = date.toLocaleDateString();
+      console.log('Formatted date:', formatted);
+      return formatted;
+      
+    } catch (err) {
+      console.error('Error formatting date:', err, 'Input was:', linkedAt);
+      return 'Date error';
+    }
+  };
+
+  // Get user-specific linked integrations
+  const getUserLinkedIntegrations = (course) => {
+    if (!currentUser?.uid) return [];
+    
+    // New format: userLinkedIntegrations
+    if (course.userLinkedIntegrations && course.userLinkedIntegrations[currentUser.uid]) {
+      return course.userLinkedIntegrations[currentUser.uid];
+    }
+    
+    // Legacy format: linkedIntegrations (for backward compatibility)
+    if (course.linkedIntegrations) {
+      return course.linkedIntegrations;
+    }
+    
+    return [];
   };
 
   if (loading) {
@@ -445,13 +772,13 @@ function Courses() {
               <UserGroupIcon className="action-icon" />
               Join Course
             </button>
-            <Link 
-              to="/connect" 
-              className="import-button"
-            >
-              <span className="action-icon">📥</span>
+          <Link 
+            to="/connect" 
+            className="import-button"
+          >
+            <span className="action-icon">📥</span>
               Import from Gradescope
-            </Link>
+          </Link>
           </div>
         </div>
       ) : (
@@ -482,7 +809,7 @@ function Courses() {
             </div>
           </div>
 
-                    <div className="courses-content">
+          <div className="courses-content">
             {(() => {
               const { nativeCourses, coursesByPlatform } = organizedCourses();
               
@@ -498,22 +825,40 @@ function Courses() {
                         </h2>
                         <span className="section-count">{nativeCourses.length}</span>
                       </div>
-                      <div className="courses-grid">
+          <div className="courses-grid">
                         {nativeCourses.map(course => (
-                          <div 
-                            key={course.id} 
-                            className="course-card"
-                          >
-                            <div className="course-card-header">
-                              <div className="course-info">
-                                <h2 className="course-code">{course.code}</h2>
-                                <h3 className="course-name">{course.name}</h3>
-                              </div>
-                              <div className="course-badges">
-                                {course.term && (
-                                  <span className="term-badge">
-                                    <span className="badge-icon">📅</span>
-                                    {course.term}
+              <div 
+                key={course.id} 
+                className="course-card"
+              >
+                <div className="course-card-header">
+                  <div className="course-info">
+                    <h2 className="course-code">{course.code}</h2>
+                    <h3 className="course-name">{course.name}</h3>
+                  </div>
+                  <div className="course-badges">
+                                {course.linkedIntegrations && course.linkedIntegrations.length > 0 && (
+                                  <div className="integration-badges">
+                                    {course.linkedIntegrations.map(integration => (
+                                      <span 
+                                        key={integration.integrationId}
+                                        className={`integration-badge ${integration.platform}`}
+                                        title={`${integration.platformName}: ${integration.courseName}`}
+                                      >
+                                        {integration.platform === 'gradescope' && '🎓'}
+                                        {integration.platform === 'canvas' && '🎨'}
+                                        {integration.platform === 'blackboard' && '📚'}
+                                        {integration.platform === 'brightspace' && '💡'}
+                                        {integration.platform === 'moodle' && '📖'}
+                                        {!['gradescope', 'canvas', 'blackboard', 'brightspace', 'moodle'].includes(integration.platform) && '🔗'}
+                      </span>
+                                    ))}
+                                  </div>
+                    )}
+                    {course.term && (
+                      <span className="term-badge">
+                        <span className="badge-icon">📅</span>
+                        {course.term}
                                   </span>
                                 )}
                                 {course.members && (
@@ -537,6 +882,34 @@ function Courses() {
                                 <span className="description-icon">📝</span>
                                 <span>{course.description || 'No description available'}</span>
                               </div>
+
+                              {(() => {
+                                const userIntegrations = getUserLinkedIntegrations(course);
+                                return userIntegrations.length > 0 && (
+                                  <div className="linked-integrations">
+                                    <h4>Your Linked Integrations:</h4>
+                                    {userIntegrations.map(integration => (
+                                      <div key={integration.integrationId} className="linked-integration-item">
+                                        <div className="integration-details">
+                                          <span className="integration-name">
+                                            {integration.platformName}: {integration.courseName}
+                                          </span>
+                                          <span className="integration-date">
+                                            Linked {formatLinkedDate(integration.linkedAt)}
+                                          </span>
+                                        </div>
+                                        <button
+                                          onClick={() => handleUnlinkIntegration(course.id, integration.integrationId)}
+                                          className="unlink-button"
+                                          title="Unlink integration"
+                                        >
+                                          <XMarkIcon className="unlink-icon" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                             </div>
                             
                             <div className="course-actions">
@@ -547,6 +920,14 @@ function Courses() {
                                 <span className="action-icon">📋</span>
                                 View Assignments
                               </Link>
+                              
+                              <button
+                                onClick={() => handleAddIntegration(course.id)}
+                                className="action-button secondary"
+                              >
+                                <LinkIcon className="action-icon" />
+                                Add Integration
+                              </button>
                               
                               {isOwnerOrAdmin(course) ? (
                                 <Link
@@ -572,8 +953,125 @@ function Courses() {
                     </div>
                   )}
 
+                  {/* Merge Menu Section */}
+                  {(() => {
+                    const { nativeCourses, coursesByPlatform } = organizedCourses();
+                    const allIntegrationCourses = Object.values(coursesByPlatform).flat();
+                    
+                    // Filter out linked integrations unless toggle is on
+                    const visibleIntegrationCourses = showLinkedIntegrations 
+                      ? allIntegrationCourses 
+                      : allIntegrationCourses.filter(course => {
+                          const isLinked = nativeCourses.some(nativeCourse => 
+                            nativeCourse.linkedIntegrations && 
+                            nativeCourse.linkedIntegrations.some(integration => 
+                              integration.integrationId === course.id
+                            )
+                          );
+                          return !isLinked;
+                        });
+
+                    return visibleIntegrationCourses.length > 0 && (
+                      <div className="merge-section">
+                        <div className="merge-header">
+                          <h3>🔗 Merge Integrations</h3>
+                          <div className="merge-controls">
+                            <button
+                              onClick={() => setShowLinkedIntegrations(!showLinkedIntegrations)}
+                              className="toggle-linked-button"
+                              title={showLinkedIntegrations ? 'Hide linked integrations' : 'Show linked integrations'}
+                            >
+                              {showLinkedIntegrations ? <EyeSlashIcon className="toggle-icon" /> : <EyeIcon className="toggle-icon" />}
+                              {showLinkedIntegrations ? 'Hide Linked' : 'Show Linked'}
+                            </button>
+                            <button
+                              onClick={() => setShowMergeMenu(!showMergeMenu)}
+                              className="merge-menu-toggle"
+                            >
+                              {showMergeMenu ? <ChevronUpIcon className="toggle-icon" /> : <ChevronDownIcon className="toggle-icon" />}
+                              Select to Merge
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {showMergeMenu && (
+                          <div className="merge-menu">
+                            <div className="merge-instructions">
+                              <p>Select 2 or more integrations to merge into a new course:</p>
+                            </div>
+                            <div className="integration-selection">
+                              {visibleIntegrationCourses.map(course => (
+                                <div key={course.id} className="integration-select-item">
+                                  <input
+                                    type="checkbox"
+                                    id={`merge-${course.id}`}
+                                    checked={selectedIntegrations.includes(course.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedIntegrations([...selectedIntegrations, course.id]);
+                                      } else {
+                                        setSelectedIntegrations(selectedIntegrations.filter(id => id !== course.id));
+                                      }
+                                    }}
+                                  />
+                                  <label htmlFor={`merge-${course.id}`} className="integration-select-label">
+                                    <span className="platform-icon">
+                                      {course.source === 'gradescope' && '🎓'}
+                                      {course.source === 'canvas' && '🎨'}
+                                      {course.source === 'blackboard' && '📚'}
+                                      {course.source === 'brightspace' && '💡'}
+                                      {course.source === 'moodle' && '📖'}
+                                      {!['gradescope', 'canvas', 'blackboard', 'brightspace', 'moodle'].includes(course.source) && '🔗'}
+                                    </span>
+                                    <div className="course-select-info">
+                                      <span className="course-select-name">{course.name}</span>
+                                      <span className="course-select-code">{course.code}</span>
+                                      <span className="course-select-platform">{course.source}</span>
+                                    </div>
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {selectedIntegrations.length >= 2 && (
+                              <div className="merge-actions">
+                                <button
+                                  onClick={() => {
+                                    setShowMergeModal(true);
+                                    loadAvailableIntegrations();
+                                  }}
+                                  className="merge-button"
+                                >
+                                  <PlusIcon className="merge-icon" />
+                                  Create Course with {selectedIntegrations.length} Integrations
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Platform Courses Sections */}
-                  {Object.entries(coursesByPlatform).map(([platform, platformCourses]) => {
+                  {(() => {
+                    const { nativeCourses, coursesByPlatform } = organizedCourses();
+                    
+                    return Object.entries(coursesByPlatform).map(([platform, platformCourses]) => {
+                      // Filter courses based on toggle
+                      const visibleCourses = showLinkedIntegrations 
+                        ? platformCourses 
+                        : platformCourses.filter(course => {
+                            const isLinked = nativeCourses.some(nativeCourse => 
+                              nativeCourse.linkedIntegrations && 
+                              nativeCourse.linkedIntegrations.some(integration => 
+                                integration.integrationId === course.id
+                              )
+                            );
+                            return !isLinked;
+                          });
+
+                      if (visibleCourses.length === 0) return null;
                     const platformInfo = {
                       gradescope: { name: 'Gradescope', icon: '🎓' },
                       canvas: { name: 'Canvas', icon: '🎨' },
@@ -591,10 +1089,10 @@ function Courses() {
                             <span className="section-icon">{info.icon}</span>
                             {info.name} Courses
                           </h2>
-                          <span className="section-count">{platformCourses.length}</span>
+                          <span className="section-count">{visibleCourses.length}</span>
                         </div>
                         <div className="courses-grid">
-                          {platformCourses.map(course => (
+                          {visibleCourses.map(course => (
                             <div 
                               key={course.id} 
                               className="course-card"
@@ -619,45 +1117,53 @@ function Courses() {
                                     <span className="members-badge">
                                       <span className="badge-icon">👥</span>
                                       {course.members.length} members
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="course-card-body">
-                                {course.professor && (
-                                  <div className="course-professor">
-                                    <span className="professor-icon">👨‍🏫</span>
-                                    <span>Professor: {course.professor}</span>
-                                  </div>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="course-card-body">
+                  {course.professor && (
+                    <div className="course-professor">
+                      <span className="professor-icon">👨‍🏫</span>
+                      <span>Professor: {course.professor}</span>
+                    </div>
+                  )}
+                  
+                  <div className="course-description">
+                    <span className="description-icon">📝</span>
+                    <span>{course.description || 'No description available'}</span>
+                  </div>
+                </div>
+                
+                <div className="course-actions">
+                  {course.source === 'gradescope' && course.externalId ? (
+                    <a 
+                      href={`https://www.gradescope.com/courses/${course.externalId}`}
+                      target="_blank"
+                      rel="noopener noreferrer" 
+                                    className="action-button tertiary"
+                    >
+                      <span className="action-icon">🔗</span>
+                                    View on {info.name}
+                    </a>
+                  ) : (
+                  <Link 
+                    to={`/assignments?courseId=${course.id}`} 
+                    className="action-button tertiary"
+                  >
+                    <span className="action-icon">📋</span>
+                    View Assignments
+                  </Link>
                                 )}
                                 
-                                <div className="course-description">
-                                  <span className="description-icon">📝</span>
-                                  <span>{course.description || 'No description available'}</span>
-                                </div>
-                              </div>
-                              
-                              <div className="course-actions">
-                                {course.source === 'gradescope' && course.externalId ? (
-                                  <a
-                                    href={`https://www.gradescope.com/courses/${course.externalId}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="action-button tertiary"
-                                  >
-                                    <span className="action-icon">🔗</span>
-                                    View on {info.name}
-                                  </a>
-                                ) : (
-                                  <Link
-                                    to={`/assignments?courseId=${course.id}`}
-                                    className="action-button tertiary"
-                                  >
-                                    <span className="action-icon">📋</span>
-                                    View Assignments
-                                  </Link>
-                                )}
+                                <button
+                                  onClick={() => handleAddIntegration(course.id)}
+                                  className="action-button secondary"
+                                >
+                                  <LinkIcon className="action-icon" />
+                                  Add Integration
+                                </button>
                                 
                                 {isOwnerOrAdmin(course) ? (
                                   <Link
@@ -676,13 +1182,14 @@ function Courses() {
                                     View Details
                                   </Link>
                                 )}
-                              </div>
-                            </div>
-                          ))}
+                </div>
+              </div>
+            ))}
                         </div>
                       </div>
                     );
-                  })}
+                    });
+                  })()}
                 </>
               );
             })()}
@@ -717,6 +1224,35 @@ function Courses() {
         />
       )}
 
+      {/* Add Integration Modal */}
+      {showAddIntegrationModal && (
+        <AddIntegrationModal
+          availableIntegrations={availableIntegrations}
+          selectedIntegrations={selectedIntegrations}
+          setSelectedIntegrations={setSelectedIntegrations}
+          onClose={() => setShowAddIntegrationModal(false)}
+          onLinkIntegrations={linkIntegrationsToCourse}
+        />
+      )}
+
+      {/* Merge Modal */}
+      {showMergeModal && (
+        <MergeModal
+          onClose={() => setShowMergeModal(false)}
+          onMerge={handleMergeIntegrations}
+          createForm={createForm}
+          setCreateForm={setCreateForm}
+        />
+      )}
+
+      {/* Delete Warning Modal */}
+      {showDeleteWarningModal && (
+        <DeleteWarningModal
+          onClose={() => setShowDeleteWarningModal(false)}
+          onDelete={handleDeleteIntegrationCourse}
+          data={deleteWarningData}
+        />
+      )}
 
     </div>
   );
@@ -979,6 +1515,189 @@ const JoinCourseModal = ({
   );
 };
 
+// Add Integration Modal Component
+const AddIntegrationModal = ({ availableIntegrations, selectedIntegrations, setSelectedIntegrations, onClose, onLinkIntegrations }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2>Add Integration</h2>
+          <button onClick={onClose} className="modal-close">
+            <XMarkIcon className="close-icon" />
+          </button>
+        </div>
+        
+        <div className="integration-list">
+          {availableIntegrations.map(integration => (
+            <div key={integration.id} className="integration-item">
+              <input
+                type="checkbox"
+                checked={selectedIntegrations.includes(integration.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedIntegrations([...selectedIntegrations, integration.id]);
+                  } else {
+                    setSelectedIntegrations(selectedIntegrations.filter(id => id !== integration.id));
+                  }
+                }}
+              />
+              <span>{integration.name}</span>
+            </div>
+          ))}
+        </div>
+        
+        <div className="modal-actions">
+          <button type="button" onClick={onClose} className="btn-secondary">
+            Cancel
+          </button>
+          <button type="button" onClick={onLinkIntegrations} className="btn-primary">
+            Link Integrations
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
+// Merge Modal Component
+const MergeModal = ({ onClose, onMerge, createForm, setCreateForm }) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onMerge();
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2>Create Course with Integrations</h2>
+          <button onClick={onClose} className="modal-close">
+            <XMarkIcon className="close-icon" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="modal-form">
+          <div className="form-group">
+            <label>Course Name *</label>
+            <input
+              type="text"
+              value={createForm.name}
+              onChange={(e) => setCreateForm({...createForm, name: e.target.value})}
+              placeholder="e.g., Introduction to Computer Science"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Course Code *</label>
+            <input
+              type="text"
+              value={createForm.code}
+              onChange={(e) => setCreateForm({...createForm, code: e.target.value})}
+              placeholder="e.g., CS101"
+              required
+            />
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Semester</label>
+              <select
+                value={createForm.semester}
+                onChange={(e) => setCreateForm({...createForm, semester: e.target.value})}
+              >
+                <option value="">Select Semester</option>
+                <option value="Spring">Spring</option>
+                <option value="Summer">Summer</option>
+                <option value="Fall">Fall</option>
+                <option value="Winter">Winter</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label>Year</label>
+              <input
+                type="number"
+                value={createForm.year}
+                onChange={(e) => setCreateForm({...createForm, year: parseInt(e.target.value)})}
+                min="2020"
+                max="2030"
+              />
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Institution</label>
+            <input
+              type="text"
+              value={createForm.institution}
+              onChange={(e) => setCreateForm({...createForm, institution: e.target.value})}
+              placeholder="e.g., New York University"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Instructor</label>
+            <input
+              type="text"
+              value={createForm.instructor}
+              onChange={(e) => setCreateForm({...createForm, instructor: e.target.value})}
+              placeholder="e.g., Dr. Smith"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Description</label>
+            <textarea
+              value={createForm.description}
+              onChange={(e) => setCreateForm({...createForm, description: e.target.value})}
+              placeholder="Brief description of the course..."
+              rows="3"
+            />
+          </div>
+          
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              Create Course with Integrations
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Delete Warning Modal Component
+const DeleteWarningModal = ({ onClose, onDelete, data }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2>Delete Course</h2>
+          <button onClick={onClose} className="modal-close">
+            <XMarkIcon className="close-icon" />
+          </button>
+        </div>
+        
+        <div className="warning-message">
+          <p>This course is linked to other courses. Deleting this course will also delete the linked courses.</p>
+          <p>Are you sure you want to delete the course "{data.courseName}"?</p>
+        </div>
+        
+        <div className="warning-actions">
+          <button type="button" onClick={onClose} className="btn-secondary">
+            Cancel
+          </button>
+          <button type="button" onClick={() => onDelete(data.courseId, true)} className="btn-primary">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default Courses; 
