@@ -197,7 +197,8 @@ class Course {
 
       // Check if user is already a member
       if (course.members.includes(userId)) {
-        throw new Error('User already joined this course');
+        // User is already a member, just return the course
+        return course;
       }
 
       // Add user to course
@@ -495,25 +496,43 @@ class Course {
    * Leave a course
    * @param {string} courseId - Course ID
    * @param {string} userId - User ID
+   * @param {string} newOwnerId - New owner ID (required if current user is creator)
    * @returns {Promise<boolean>} - Success status
    */
-  static async leaveCourse(courseId, userId) {
+  static async leaveCourse(courseId, userId, newOwnerId = null) {
     try {
       const course = await this.getById(courseId);
       if (!course) {
         throw new Error('Course not found');
       }
 
+      // If user is the creator, they need to transfer ownership first
       if (course.createdBy === userId) {
-        throw new Error('Course creator cannot leave the course');
+        if (!newOwnerId) {
+          throw new Error('Course creator must transfer ownership before leaving');
+        }
+        
+        // Validate new owner is a member and not the same person
+        if (!course.members.includes(newOwnerId)) {
+          throw new Error('New owner must be a member of the course');
+        }
+        
+        if (newOwnerId === userId) {
+          throw new Error('Cannot transfer ownership to yourself');
+        }
+        
+        // Transfer ownership
+        await this.transferOwnership(courseId, userId, newOwnerId);
       }
 
       // Remove user from members
       course.members = course.members.filter(id => id !== userId);
       delete course.memberRoles[userId];
       
-      // Remove user's integrations
+      // Remove user's integrations and linked integrations
       delete course.integrations[userId];
+      delete course.userLinkedIntegrations[userId];
+      delete course.userAggregatedData[userId];
 
       // Update analytics
       course.analytics.totalMembers = course.members.length;
@@ -525,7 +544,9 @@ class Course {
       await db.collection('courses').doc(courseId).update({
         members: course.members,
         [`memberRoles.${userId}`]: firebase.firestore.FieldValue.delete(),
-        [`integrations.${userId}`]: null,
+        [`integrations.${userId}`]: firebase.firestore.FieldValue.delete(),
+        [`userLinkedIntegrations.${userId}`]: firebase.firestore.FieldValue.delete(),
+        [`userAggregatedData.${userId}`]: firebase.firestore.FieldValue.delete(),
         'analytics.totalMembers': course.analytics.totalMembers,
         'analytics.totalIntegrations': course.analytics.totalIntegrations,
         'analytics.lastActivity': new Date(),
@@ -538,6 +559,46 @@ class Course {
       return true;
     } catch (error) {
       console.error('Error leaving course:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transfer course ownership
+   * @param {string} courseId - Course ID
+   * @param {string} currentOwnerId - Current owner ID
+   * @param {string} newOwnerId - New owner ID
+   * @returns {Promise<boolean>} - Success status
+   */
+  static async transferOwnership(courseId, currentOwnerId, newOwnerId) {
+    try {
+      const course = await this.getById(courseId);
+      if (!course) {
+        throw new Error('Course not found');
+      }
+
+      if (course.createdBy !== currentOwnerId) {
+        throw new Error('Only the course creator can transfer ownership');
+      }
+
+      if (!course.members.includes(newOwnerId)) {
+        throw new Error('New owner must be a member of the course');
+      }
+
+      if (newOwnerId === currentOwnerId) {
+        throw new Error('Cannot transfer ownership to yourself');
+      }
+
+      await db.collection('courses').doc(courseId).update({
+        createdBy: newOwnerId,
+        [`memberRoles.${newOwnerId}`]: 'creator',
+        [`memberRoles.${currentOwnerId}`]: 'admin', // Demote previous owner to admin
+        updatedAt: new Date()
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error transferring ownership:', error);
       throw error;
     }
   }

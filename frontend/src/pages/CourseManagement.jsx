@@ -32,6 +32,9 @@ function CourseManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddIntegrationModal, setShowAddIntegrationModal] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [selectedNewOwner, setSelectedNewOwner] = useState('');
   const [availableIntegrations, setAvailableIntegrations] = useState([]);
   const [selectedIntegrations, setSelectedIntegrations] = useState([]);
   
@@ -49,6 +52,22 @@ function CourseManagement() {
     fetchCourse();
   }, [courseId]);
 
+  // Modal scroll management
+  useEffect(() => {
+    const isAnyModalOpen = showEditModal || showDeleteConfirm || showAddIntegrationModal || showLeaveModal || showTransferModal;
+    
+    if (isAnyModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showEditModal, showDeleteConfirm, showAddIntegrationModal, showLeaveModal, showTransferModal]);
+
   const fetchMemberDetails = async (memberIds, token) => {
     console.log('CourseManagement: Fetching member details for:', memberIds);
     try {
@@ -65,13 +84,23 @@ function CourseManagement() {
             }
           });
           
+          console.log(`CourseManagement: Response status for ${memberId}: ${response.status}`);
+          
           if (response.ok) {
             const userData = await response.json();
             console.log(`CourseManagement: Received user data for ${memberId}:`, userData);
-            memberDetailsMap[memberId] = userData.data?.user || { displayName: 'Unknown User' };
+            
+            // Check if we have the expected data structure
+            if (userData.success && userData.data && userData.data.user) {
+              memberDetailsMap[memberId] = userData.data.user;
+              console.log(`CourseManagement: Successfully stored user data for ${memberId}:`, userData.data.user);
+            } else {
+              console.warn(`CourseManagement: Unexpected user data structure for ${memberId}:`, userData);
+              memberDetailsMap[memberId] = { displayName: `User ${memberId.slice(-6)}` };
+            }
           } else {
-            console.warn(`CourseManagement: Failed to fetch user details for ${memberId}, status: ${response.status}`);
-            // If user details can't be fetched, use a fallback
+            const errorText = await response.text();
+            console.warn(`CourseManagement: Failed to fetch user details for ${memberId}, status: ${response.status}, error: ${errorText}`);
             memberDetailsMap[memberId] = { displayName: `User ${memberId.slice(-6)}` };
           }
         } catch (err) {
@@ -390,6 +419,69 @@ function CourseManagement() {
     }
   };
 
+  const leaveCourse = async (newOwnerId = null) => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${courseId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ newOwnerId })
+      });
+
+      if (response.ok) {
+        navigate('/courses');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to leave course');
+      }
+    } catch (err) {
+      setError('Error leaving course');
+    }
+  };
+
+  const transferOwnership = async () => {
+    if (!selectedNewOwner) {
+      setError('Please select a new owner');
+      return;
+    }
+
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${courseId}/transfer-ownership`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ newOwnerId: selectedNewOwner })
+      });
+
+      if (response.ok) {
+        setShowTransferModal(false);
+        setSelectedNewOwner('');
+        fetchCourse(); // Refresh course data
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to transfer ownership');
+      }
+    } catch (err) {
+      setError('Error transferring ownership');
+    }
+  };
+
+  const handleLeaveCourse = () => {
+    if (isCreator) {
+      // Creator needs to transfer ownership first
+      setShowTransferModal(true);
+    } else {
+      // Regular member can leave directly
+      setShowLeaveModal(true);
+    }
+  };
+
   const copyJoinCode = (joinCode) => {
     navigator.clipboard.writeText(joinCode);
   };
@@ -498,6 +590,14 @@ function CourseManagement() {
                 Edit Course
               </button>
             )}
+            
+            <button
+              onClick={handleLeaveCourse}
+              className="action-btn danger"
+            >
+              <TrashIcon className="w-4 h-4" />
+              {isCreator ? 'Transfer & Leave' : 'Leave Course'}
+            </button>
           </div>
         </div>
       </div>
@@ -582,15 +682,58 @@ function CourseManagement() {
                     <div className="stat-label">Total Members</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-value">{course.assignments?.length || 0}</div>
-                    <div className="stat-label">Assignments</div>
+                    <div className="stat-value">
+                      {(() => {
+                        // Count assignments from user aggregated data
+                        let totalAssignments = 0;
+                        if (course.userAggregatedData) {
+                          Object.values(course.userAggregatedData).forEach(userData => {
+                            if (userData.assignments) {
+                              totalAssignments += userData.assignments.length;
+                            }
+                          });
+                        }
+                        // Also count regular course assignments if they exist
+                        if (course.assignments) {
+                          totalAssignments += course.assignments.length;
+                        }
+                        return totalAssignments;
+                      })()}
+                    </div>
+                    <div className="stat-label">Total Assignments</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-value">{Object.keys(course.integrations || {}).length}</div>
-                    <div className="stat-label">Integrations</div>
+                    <div className="stat-value">
+                      {(() => {
+                        // Count user-specific linked integrations
+                        let totalIntegrations = 0;
+                        if (course.userLinkedIntegrations) {
+                          Object.values(course.userLinkedIntegrations).forEach(userIntegrations => {
+                            totalIntegrations += userIntegrations.length;
+                          });
+                        }
+                        return totalIntegrations;
+                      })()}
+                    </div>
+                    <div className="stat-label">Linked Integrations</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-value">{course.analytics?.totalIntegrations || 0}</div>
+                    <div className="stat-value">
+                      {(() => {
+                        // Count active integrations
+                        let activeIntegrations = 0;
+                        if (course.userLinkedIntegrations) {
+                          Object.values(course.userLinkedIntegrations).forEach(userIntegrations => {
+                            userIntegrations.forEach(integration => {
+                              if (integration.isActive !== false) {
+                                activeIntegrations++;
+                              }
+                            });
+                          });
+                        }
+                        return activeIntegrations;
+                      })()}
+                    </div>
                     <div className="stat-label">Active Integrations</div>
                   </div>
                 </div>
@@ -1021,8 +1164,106 @@ function CourseManagement() {
           </div>
         </div>
       )}
+      
+      {/* Leave Course Modal */}
+      {showLeaveModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Leave Course</h2>
+              <button onClick={() => setShowLeaveModal(false)} className="modal-close">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="warning-content">
+                <ExclamationTriangleIcon className="warning-icon" />
+                <h3>Are you sure you want to leave this course?</h3>
+                <p>You will lose access to all course content, assignments, and materials.</p>
+                <p><strong>Course:</strong> {course.name} ({course.code})</p>
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  onClick={() => setShowLeaveModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => leaveCourse()}
+                  className="danger-btn"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                  Leave Course
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Ownership Modal */}
+      {showTransferModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Transfer Ownership & Leave</h2>
+              <button onClick={() => setShowTransferModal(false)} className="modal-close">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="warning-content">
+                <ExclamationTriangleIcon className="warning-icon" />
+                <h3>Transfer ownership before leaving</h3>
+                <p>As the course creator, you must transfer ownership to another member before leaving.</p>
+                <p>You will become an admin after transferring ownership.</p>
+              </div>
+              
+              <div className="form-group">
+                <label>Select New Owner *</label>
+                <select
+                  value={selectedNewOwner}
+                  onChange={(e) => setSelectedNewOwner(e.target.value)}
+                  required
+                >
+                  <option value="">Choose a member...</option>
+                  {course?.members?.filter(memberId => memberId !== currentUser?.uid).map(memberId => (
+                    <option key={memberId} value={memberId}>
+                      {memberDetails[memberId]?.displayName || `User ${memberId.slice(-6)}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  onClick={() => setShowTransferModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    transferOwnership();
+                    leaveCourse(selectedNewOwner);
+                  }}
+                  className="danger-btn"
+                  disabled={!selectedNewOwner}
+                >
+                  <TrashIcon className="w-4 h-4" />
+                  Transfer & Leave
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default CourseManagement; 
+export default CourseManagement;

@@ -37,6 +37,22 @@ const InteractiveActivities = () => {
     fetchData();
   }, []);
 
+  // Modal scroll management
+  useEffect(() => {
+    const isAnyModalOpen = showCreateModal || showJoinModal;
+    
+    if (isAnyModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showCreateModal, showJoinModal]);
+
   const fetchData = async () => {
     try {
       if (!currentUser) return;
@@ -192,7 +208,7 @@ const InteractiveActivities = () => {
           <div className="modal-header">
             <h2 className="modal-title">Create Interactive Learning Activity</h2>
             <button onClick={() => setShowCreateModal(false)} className="modal-close">
-              <XMarkIcon className="w-5 h-5" />
+              <XMarkIcon className="close-icon" />
             </button>
           </div>
           
@@ -406,7 +422,7 @@ const InteractiveActivities = () => {
           <div className="modal-header">
             <h2 className="modal-title">Join Learning Activity</h2>
             <button onClick={() => setShowJoinModal(false)} className="modal-close">
-              <XMarkIcon className="w-5 h-5" />
+              <XMarkIcon className="close-icon" />
             </button>
           </div>
           
@@ -637,4 +653,4 @@ const InteractiveActivities = () => {
   );
 };
 
-export default InteractiveActivities; 
+export default InteractiveActivities;

@@ -554,8 +554,9 @@ class CourseController {
     try {
       const { courseId } = req.params;
       const userId = req.user.uid;
+      const { newOwnerId } = req.body; // Optional: for ownership transfer
 
-      await Course.leaveCourse(courseId, userId);
+      await Course.leaveCourse(courseId, userId, newOwnerId);
 
       res.json({
         success: true,
@@ -563,7 +564,56 @@ class CourseController {
       });
     } catch (error) {
       console.error('Error leaving course:', error);
-      res.status(500).json({
+      
+      let statusCode = 500;
+      if (error.message.includes('must transfer ownership')) {
+        statusCode = 400;
+      } else if (error.message.includes('not found')) {
+        statusCode = 404;
+      }
+      
+      res.status(statusCode).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Transfer course ownership
+   */
+  static async transferOwnership(req, res) {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user.uid;
+      const { newOwnerId } = req.body;
+
+      if (!newOwnerId) {
+        return res.status(400).json({
+          success: false,
+          message: 'New owner ID is required'
+        });
+      }
+
+      await Course.transferOwnership(courseId, userId, newOwnerId);
+
+      res.json({
+        success: true,
+        message: 'Course ownership transferred successfully'
+      });
+    } catch (error) {
+      console.error('Error transferring ownership:', error);
+      
+      let statusCode = 500;
+      if (error.message.includes('Only the course creator')) {
+        statusCode = 403;
+      } else if (error.message.includes('not found')) {
+        statusCode = 404;
+      } else if (error.message.includes('must be a member')) {
+        statusCode = 400;
+      }
+      
+      res.status(statusCode).json({
         success: false,
         message: error.message
       });

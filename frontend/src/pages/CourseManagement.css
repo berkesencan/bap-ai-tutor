@@ -191,6 +191,17 @@
   transform: translateY(-1px);
 }
 
+.action-btn.danger {
+  background: #dc2626;
+  color: white;
+  border: 1px solid #dc2626;
+}
+
+.action-btn.danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
 /* Navigation Tabs */
 .course-nav {
   background: white;
@@ -783,22 +794,27 @@
 }
 
 .danger-btn {
+  background: #dc2626;
+  color: white;
+  border: 1px solid #dc2626;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .danger-btn:hover {
   background: #b91c1c;
-  transform: translateY(-1px);
+  border-color: #b91c1c;
+}
+
+.danger-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Modal Styles */
@@ -950,19 +966,20 @@
 
 .warning-content {
   text-align: center;
+  padding: 1rem;
 }
 
 .warning-icon {
   width: 3rem;
   height: 3rem;
-  color: #dc2626;
+  color: #f59e0b;
   margin: 0 auto 1rem;
 }
 
 .warning-content h3 {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #dc2626;
+  color: #f59e0b;
   margin-bottom: 1rem;
 }
 

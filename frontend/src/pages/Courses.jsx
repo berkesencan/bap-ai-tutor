@@ -214,6 +214,13 @@ function Courses() {
 
   const joinPublicCourse = async (courseId) => {
     try {
+      // Check if user is already enrolled
+      const existingCourse = courses.find(c => c.id === courseId);
+      if (existingCourse) {
+        setError('You are already enrolled in this course');
+        return;
+      }
+
       const token = await currentUser.getIdToken();
       const response = await fetch('/api/courses/join', {
         method: 'POST',
@@ -231,6 +238,7 @@ function Courses() {
         if (refreshResponse.success && refreshResponse.data && refreshResponse.data.courses) {
           setCourses(refreshResponse.data.courses);
         }
+        setError(null); // Clear any previous errors
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to join course');
@@ -692,6 +700,22 @@ function Courses() {
     
     return [];
   };
+
+  // Modal scroll management
+  useEffect(() => {
+    const isAnyModalOpen = showCreateModal || showJoinModal || showAddIntegrationModal || showMergeModal || showDeleteWarningModal;
+    
+    if (isAnyModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showCreateModal, showJoinModal, showAddIntegrationModal, showMergeModal, showDeleteWarningModal]);
 
   if (loading) {
     return (
@@ -1221,6 +1245,7 @@ function Courses() {
           publicCourses={publicCourses}
           onSearchPublicCourses={searchPublicCourses}
           onJoinPublicCourse={joinPublicCourse}
+          userCourses={courses}
         />
       )}
 
@@ -1402,7 +1427,8 @@ const JoinCourseModal = ({
   setSearchQuery,
   publicCourses,
   onSearchPublicCourses,
-  onJoinPublicCourse
+  onJoinPublicCourse,
+  userCourses = [] // Add userCourses as a prop
 }) => {
   useEffect(() => {
     if (activeTab === 'discover') {
@@ -1488,24 +1514,30 @@ const JoinCourseModal = ({
                   <p>No public courses found. Try adjusting your search.</p>
                 </div>
               ) : (
-                publicCourses.map(course => (
-                  <div key={course.id} className="public-course-item">
-                    <div className="course-info">
-                      <h4>{course.code} - {course.name}</h4>
-                      <p>{course.description}</p>
-                      <div className="course-meta">
-                        <span>👥 {course.memberCount || 0} members</span>
-                        {course.institution && <span>🏫 {course.institution}</span>}
+                publicCourses.map(course => {
+                  const isEnrolled = userCourses?.some(c => c.id === course.id);
+                  
+                  return (
+                    <div key={course.id} className="public-course-item">
+                      <div className="course-info">
+                        <h4>{course.code} - {course.name}</h4>
+                        <p>{course.description}</p>
+                        <div className="course-meta">
+                          <span>👥 {course.memberCount || 0} members</span>
+                          {course.institution && <span>🏫 {course.institution}</span>}
+                          {isEnrolled && <span className="enrolled-badge">✅ Enrolled</span>}
+                        </div>
                       </div>
+                      <button
+                        onClick={() => onJoinPublicCourse(course.id)}
+                        className={`btn-primary ${isEnrolled ? 'disabled' : ''}`}
+                        disabled={isEnrolled}
+                      >
+                        {isEnrolled ? 'Enrolled' : 'Join'}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => onJoinPublicCourse(course.id)}
-                      className="btn-primary"
-                    >
-                      Join
-                    </button>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -1528,31 +1560,47 @@ const AddIntegrationModal = ({ availableIntegrations, selectedIntegrations, setS
         </div>
         
         <div className="integration-list">
-          {availableIntegrations.map(integration => (
-            <div key={integration.id} className="integration-item">
-              <input
-                type="checkbox"
-                checked={selectedIntegrations.includes(integration.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedIntegrations([...selectedIntegrations, integration.id]);
-                  } else {
-                    setSelectedIntegrations(selectedIntegrations.filter(id => id !== integration.id));
-                  }
-                }}
-              />
-              <span>{integration.name}</span>
+          {availableIntegrations.length === 0 ? (
+            <div className="empty-integrations">
+              <div className="empty-icon">🔗</div>
+              <h3>No Integrations Available</h3>
+              <p>You need to import courses from external platforms first.</p>
+              <p>Go to the main courses page and click "Import from Platform" to connect your Gradescope, Canvas, or other course accounts.</p>
             </div>
-          ))}
+          ) : (
+            availableIntegrations.map(integration => (
+              <div key={integration.id} className="integration-item">
+                <input
+                  type="checkbox"
+                  checked={selectedIntegrations.includes(integration.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedIntegrations([...selectedIntegrations, integration.id]);
+                    } else {
+                      setSelectedIntegrations(selectedIntegrations.filter(id => id !== integration.id));
+                    }
+                  }}
+                />
+                <span>{integration.name}</span>
+              </div>
+            ))
+          )}
         </div>
         
         <div className="modal-actions">
           <button type="button" onClick={onClose} className="btn-secondary">
             Cancel
           </button>
-          <button type="button" onClick={onLinkIntegrations} className="btn-primary">
-            Link Integrations
-          </button>
+          {availableIntegrations.length > 0 && (
+            <button 
+              type="button" 
+              onClick={onLinkIntegrations} 
+              className="btn-primary"
+              disabled={selectedIntegrations.length === 0}
+            >
+              Link Integrations
+            </button>
+          )}
         </div>
       </div>
     </div>

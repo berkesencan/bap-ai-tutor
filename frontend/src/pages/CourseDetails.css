@@ -523,9 +523,14 @@
   transform: translateY(-2px);
 }
 
-.action-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+.action-button.danger {
+  background: #dc2626;
+  color: white;
+  border: 1px solid #dc2626;
+}
+
+.action-button.danger:hover {
+  background: #b91c1c;
 }
 
 /* Loading and Error States */
@@ -810,4 +815,35 @@
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
+}
+
+.warning-content {
+  text-align: center;
+  padding: 1rem;
+}
+
+.warning-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #f59e0b;
+  margin: 0 auto 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
 } 

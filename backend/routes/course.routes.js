@@ -20,6 +20,7 @@ router.get('/:courseId', CourseController.getCourseById);
 router.put('/:courseId', CourseController.updateCourse);
 router.delete('/:courseId', CourseController.deleteCourse);
 router.post('/:courseId/leave', CourseController.leaveCourse);
+router.post('/:courseId/transfer-ownership', CourseController.transferOwnership);
 
 // Member management routes
 router.put('/:courseId/members/:memberId/role', CourseController.updateMemberRole);

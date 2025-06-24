@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   BookOpenIcon,
@@ -12,18 +12,24 @@ import {
   LinkIcon,
   ArrowLeftIcon,
   ClipboardDocumentListIcon,
-  XMarkIcon
+  XMarkIcon,
+  ExclamationTriangleIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import './CourseDetails.css';
 
 const CourseDetails = () => {
   const { courseId } = useParams();
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [memberDetails, setMemberDetails] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddIntegrationModal, setShowAddIntegrationModal] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [selectedNewOwner, setSelectedNewOwner] = useState('');
   const [availableIntegrations, setAvailableIntegrations] = useState([]);
   const [selectedIntegrations, setSelectedIntegrations] = useState([]);
 
@@ -295,8 +301,73 @@ const CourseDetails = () => {
 
   // Check if current user can manage integrations (creator or admin)
   const canManageIntegrations = () => {
-    const userRole = getUserRole(course);
+    const userRole = course?.memberRoles?.[currentUser?.uid];
     return userRole === 'creator' || userRole === 'admin';
+  };
+
+  const leaveCourse = async (newOwnerId = null) => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${courseId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ newOwnerId })
+      });
+
+      if (response.ok) {
+        navigate('/courses');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to leave course');
+      }
+    } catch (err) {
+      setError('Error leaving course');
+    }
+  };
+
+  const transferOwnership = async () => {
+    if (!selectedNewOwner) {
+      setError('Please select a new owner');
+      return;
+    }
+
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/courses/${courseId}/transfer-ownership`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ newOwnerId: selectedNewOwner })
+      });
+
+      if (response.ok) {
+        setShowTransferModal(false);
+        setSelectedNewOwner('');
+        // Refresh course data
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to transfer ownership');
+      }
+    } catch (err) {
+      setError('Error transferring ownership');
+    }
+  };
+
+  const handleLeaveCourse = () => {
+    const isCreator = course?.createdBy === currentUser?.uid;
+    if (isCreator) {
+      // Creator needs to transfer ownership first
+      setShowTransferModal(true);
+    } else {
+      // Regular member can leave directly
+      setShowLeaveModal(true);
+    }
   };
 
   if (loading) {
@@ -625,6 +696,13 @@ const CourseDetails = () => {
                 <UserGroupIcon className="action-icon" />
                 Interactive Activities
               </Link>
+              <button
+                onClick={handleLeaveCourse}
+                className="action-button danger"
+              >
+                <TrashIcon className="action-icon" />
+                {course?.createdBy === currentUser?.uid ? 'Transfer & Leave' : 'Leave Course'}
+              </button>
             </div>
           </div>
         </div>
@@ -701,6 +779,104 @@ const CourseDetails = () => {
                     Link {selectedIntegrations.length} Integration{selectedIntegrations.length !== 1 ? 's' : ''}
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leave Course Modal */}
+      {showLeaveModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Leave Course</h2>
+              <button onClick={() => setShowLeaveModal(false)} className="modal-close">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="warning-content">
+                <ExclamationTriangleIcon className="warning-icon" />
+                <h3>Are you sure you want to leave this course?</h3>
+                <p>You will lose access to all course content, assignments, and materials.</p>
+                <p><strong>Course:</strong> {course.name} ({course.code})</p>
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  onClick={() => setShowLeaveModal(false)}
+                  className="action-button secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => leaveCourse()}
+                  className="action-button danger"
+                >
+                  <TrashIcon className="action-icon" />
+                  Leave Course
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Ownership Modal */}
+      {showTransferModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Transfer Ownership & Leave</h2>
+              <button onClick={() => setShowTransferModal(false)} className="modal-close">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="warning-content">
+                <ExclamationTriangleIcon className="warning-icon" />
+                <h3>Transfer ownership before leaving</h3>
+                <p>As the course creator, you must transfer ownership to another member before leaving.</p>
+                <p>You will become an admin after transferring ownership.</p>
+              </div>
+              
+              <div className="form-group">
+                <label>Select New Owner *</label>
+                <select
+                  value={selectedNewOwner}
+                  onChange={(e) => setSelectedNewOwner(e.target.value)}
+                  required
+                >
+                  <option value="">Choose a member...</option>
+                  {course?.members?.filter(memberId => memberId !== currentUser?.uid).map(memberId => (
+                    <option key={memberId} value={memberId}>
+                      {memberDetails[memberId]?.displayName || `User ${memberId.slice(-6)}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  onClick={() => setShowTransferModal(false)}
+                  className="action-button secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    transferOwnership();
+                    leaveCourse(selectedNewOwner);
+                  }}
+                  className="action-button danger"
+                  disabled={!selectedNewOwner}
+                >
+                  <TrashIcon className="action-icon" />
+                  Transfer & Leave
+                </button>
               </div>
             </div>
           </div>
