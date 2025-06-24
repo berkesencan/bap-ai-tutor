@@ -1411,7 +1411,10 @@ const CreateCourseModal = ({ createForm, setCreateForm, onSubmit, onClose }) => 
               />
               Make course publicly discoverable
             </label>
-            <small className="form-hint">Other users can find and join this course without a direct link</small>
+            <small className="form-hint">
+              Other users can find and join this course without a direct link.
+              {createForm.settings.publiclyJoinable && ' Public courses cannot have passwords.'}
+            </small>
           </div>
           
           {!createForm.settings.publiclyJoinable && (

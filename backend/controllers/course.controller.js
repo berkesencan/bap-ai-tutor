@@ -410,6 +410,14 @@ class CourseController {
         });
       }
 
+      // Validate that publicly joinable courses don't have passwords
+      if (courseData.settings?.publiclyJoinable && courseData.joinPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Publicly discoverable courses cannot have passwords'
+        });
+      }
+
       const course = await Course.create(courseData, userId);
       
       console.log('Course created successfully:', JSON.stringify(course, null, 2));
@@ -641,6 +649,14 @@ class CourseController {
       const { courseId } = req.params;
       const userId = req.user.uid;
       const updateData = req.body;
+
+      // Validate that publicly joinable courses don't have passwords
+      if (updateData.settings?.publiclyJoinable && updateData.joinPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Publicly discoverable courses cannot have passwords'
+        });
+      }
 
       const updatedCourse = await Course.update(courseId, userId, updateData);
 

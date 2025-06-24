@@ -493,6 +493,11 @@ class Course {
         throw new Error('Only the course creator can update course settings');
       }
       
+      // If making course publicly joinable, clear the password
+      if (updateData.settings?.publiclyJoinable) {
+        updateData.joinPassword = null;
+      }
+      
       const updateDoc = {
         ...updateData,
         updatedAt: new Date(),
