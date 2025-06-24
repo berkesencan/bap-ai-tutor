@@ -16,11 +16,24 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Get the ID token
-        const token = await user.getIdToken();
-        // Set the token in axios defaults
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        setCurrentUser(user);
+        try {
+          // Get the ID token
+          const token = await user.getIdToken();
+          // Set the token in axios defaults
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
+          // Call backend to ensure user exists in Firestore
+          try {
+            await axios.post('/api/auth/login', { idToken: token });
+          } catch (error) {
+            console.error('Error creating/updating user in Firestore:', error);
+          }
+          
+          setCurrentUser(user);
+        } catch (error) {
+          console.error('Error getting ID token:', error);
+          setCurrentUser(user); // Still set the user even if backend call fails
+        }
       } else {
         delete axios.defaults.headers.common['Authorization'];
         setCurrentUser(null);
@@ -36,6 +49,14 @@ export const AuthProvider = ({ children }) => {
       const result = await signInWithPopup(auth, googleProvider);
       const token = await result.user.getIdToken();
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      // Call backend to create/update user in Firestore
+      try {
+        await axios.post('/api/auth/login', { idToken: token });
+      } catch (error) {
+        console.error('Error creating/updating user in Firestore:', error);
+      }
+      
       return result;
     } catch (error) {
       console.error('Error signing in with Google:', error);
