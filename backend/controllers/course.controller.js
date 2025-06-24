@@ -506,6 +506,12 @@ class CourseController {
       const userId = req.user.uid;
       const { joinCode, password } = req.body;
 
+      console.log('Join course attempt:', {
+        userId,
+        joinCode,
+        hasPassword: !!password
+      });
+
       if (!joinCode) {
         return res.status(400).json({
           success: false,
@@ -515,6 +521,13 @@ class CourseController {
 
       // Find course by join code
       const course = await Course.getByJoinCode(joinCode);
+      console.log('Course found by join code:', {
+        found: !!course,
+        courseId: course?.id,
+        courseName: course?.name,
+        joinCode: course?.joinCode
+      });
+      
       if (!course) {
         return res.status(404).json({
           success: false,

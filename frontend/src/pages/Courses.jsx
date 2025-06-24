@@ -221,6 +221,25 @@ function Courses() {
         return;
       }
 
+      // Find the course in publicCourses to get its joinCode
+      const publicCourse = publicCourses.find(c => c.id === courseId);
+      if (!publicCourse) {
+        setError('Course not found');
+        return;
+      }
+
+      console.log('Joining public course:', {
+        courseId,
+        courseName: publicCourse.name,
+        joinCode: publicCourse.joinCode,
+        hasJoinCode: !!publicCourse.joinCode
+      });
+
+      if (!publicCourse.joinCode) {
+        setError('Course does not have a valid join code');
+        return;
+      }
+
       const token = await currentUser.getIdToken();
       const response = await fetch('/api/courses/join', {
         method: 'POST',
@@ -228,7 +247,7 @@ function Courses() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ joinCode: courseId })
+        body: JSON.stringify({ joinCode: publicCourse.joinCode })
       });
 
       if (response.ok) {
@@ -1376,30 +1395,37 @@ const CreateCourseModal = ({ createForm, setCreateForm, onSubmit, onClose }) => 
           </div>
           
           <div className="form-group">
-            <label>Join Password (Optional)</label>
-            <input
-              type="password"
-              value={createForm.joinPassword}
-              onChange={(e) => setCreateForm({...createForm, joinPassword: e.target.value})}
-              placeholder="Leave blank for no password"
-            />
-            <small className="form-hint">Students will need this password to join your course</small>
-          </div>
-          
-          <div className="form-group">
             <label className="checkbox-label">
               <input
                 type="checkbox"
                 checked={createForm.settings.publiclyJoinable}
-                onChange={(e) => setCreateForm({
-                  ...createForm,
-                  settings: {...createForm.settings, publiclyJoinable: e.target.checked}
-                })}
+                onChange={(e) => {
+                  const isPublic = e.target.checked;
+                  setCreateForm({
+                    ...createForm,
+                    settings: {...createForm.settings, publiclyJoinable: isPublic},
+                    // Clear password if making course public
+                    joinPassword: isPublic ? '' : createForm.joinPassword
+                  });
+                }}
               />
               Make course publicly discoverable
             </label>
             <small className="form-hint">Other users can find and join this course without a direct link</small>
           </div>
+          
+          {!createForm.settings.publiclyJoinable && (
+            <div className="form-group">
+              <label>Join Password (Optional)</label>
+              <input
+                type="password"
+                value={createForm.joinPassword}
+                onChange={(e) => setCreateForm({...createForm, joinPassword: e.target.value})}
+                placeholder="Leave blank for no password"
+              />
+              <small className="form-hint">Students will need this password to join your course</small>
+            </div>
+          )}
           
           <div className="modal-actions">
             <button type="button" onClick={onClose} className="btn-secondary">

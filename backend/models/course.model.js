@@ -126,14 +126,29 @@ class Course {
    */
   static async getByJoinCode(joinCode) {
     try {
+      console.log('Searching for course with join code:', joinCode.toUpperCase());
+      
       const snapshot = await db.collection('courses')
         .where('joinCode', '==', joinCode.toUpperCase())
         .where('isActive', '==', true)
         .limit(1)
         .get();
       
+      console.log('Join code search result:', {
+        empty: snapshot.empty,
+        size: snapshot.size
+      });
+      
       if (snapshot.empty) return null;
-      return snapshot.docs[0].data();
+      
+      const courseData = snapshot.docs[0].data();
+      console.log('Found course:', {
+        id: courseData.id,
+        name: courseData.name,
+        joinCode: courseData.joinCode
+      });
+      
+      return courseData;
     } catch (error) {
       console.error('Error getting course by join code:', error);
       throw error;
@@ -668,6 +683,14 @@ class Course {
             const publicCourse = { ...course };
             delete publicCourse.integrations;
             delete publicCourse.joinPassword;
+            
+            console.log('Adding public course:', {
+              id: publicCourse.id,
+              name: publicCourse.name,
+              joinCode: publicCourse.joinCode,
+              hasJoinCode: !!publicCourse.joinCode
+            });
+            
             courses.push(publicCourse);
           }
         }
