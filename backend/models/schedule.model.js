@@ -136,80 +136,366 @@ class Schedule {
   }
 
   /**
-   * Get comprehensive calendar data including events and assignments
+   * Get comprehensive calendar data including events and assignments (OPTIMIZED)
    * @param {string} userId - User ID
    * @param {string} startDate - Start date (optional)
    * @param {string} endDate - End date (optional)
    * @returns {Promise<Object>} - Calendar data with events and assignments
    */
-  static async getCalendarData(userId, startDate, endDate) {
+  static async getCalendarDataOptimized(userId, startDate, endDate) {
     try {
-      // Get custom events (simplified query without date filtering for now)
-      let eventQuery = db.collection('calendar_events').where('userId', '==', userId);
-      const eventSnapshot = await eventQuery.get();
-      const events = eventSnapshot.docs.map(doc => doc.data());
+      console.log(`[Calendar] Loading optimized calendar data for user ${userId}`);
       
-      // Get assignments from assignments collection (simplified query)
+      // Helper function to convert dates to ISO strings
+      const convertToISOString = (date) => {
+        if (!date) return null;
+        
+        if (typeof date.toDate === 'function') {
+          return date.toDate().toISOString();
+        } else if (date instanceof Date) {
+          return date.toISOString();
+        } else if (typeof date === 'string') {
+          try {
+            return new Date(date).toISOString();
+          } catch (e) {
+            console.warn(`[Calendar] Invalid date format: ${date}`);
+            return null;
+          }
+        }
+        return null;
+      };
+
+      // 1. Get custom events (simplified query to avoid composite index)
+      let eventQuery = db.collection('calendar_events').where('userId', '==', userId);
+      
+      // Don't add date filtering to avoid composite index requirement
+      // We'll filter in memory instead
+      
+      const eventSnapshot = await eventQuery.get();
+      
+      // Filter events by date range in memory
+      const events = eventSnapshot.docs
+        .map(doc => doc.data())
+        .filter(event => {
+          if (!startDate || !endDate) return true;
+          
+          const eventStart = new Date(event.start);
+          const rangeStart = new Date(startDate);
+          const rangeEnd = new Date(endDate);
+          
+          return eventStart >= rangeStart && eventStart <= rangeEnd;
+        });
+        
+      console.log(`[Calendar] Found ${events.length} custom events (filtered from ${eventSnapshot.size} total)`);
+
+      // 2. Get assignments (simplified query to avoid composite index)
       let assignmentQuery = db.collection('assignments').where('userId', '==', userId);
+      
+      // Don't add date filtering to avoid composite index requirement
+      // We'll filter in memory instead
+      
       const assignmentSnapshot = await assignmentQuery.get();
-      const assignments = assignmentSnapshot.docs.map(doc => {
+      console.log(`[Calendar] Found ${assignmentSnapshot.size} regular assignments (before date filtering)`);
+
+      // 3. Get ONLY user's courses (more efficient than Course.getByUserId)
+      const userCoursesQuery = db.collection('courses').where('members', 'array-contains', userId);
+      const userCoursesSnapshot = await userCoursesQuery.get();
+      const userCourses = userCoursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log(`[Calendar] Found ${userCourses.length} courses for user`);
+
+      // Create course lookup map for efficiency
+      const courseMap = new Map();
+      userCourses.forEach(course => {
+        courseMap.set(course.id, course);
+      });
+
+      // 4. Process regular assignments (with more lenient date filtering)
+      let assignments = assignmentSnapshot.docs.map(doc => {
         const data = doc.data();
+        const dueDate = convertToISOString(data.dueDate);
+        if (!dueDate) return null;
+        
+        // Only filter if we have BOTH start and end dates AND they're reasonable
+        // This prevents filtering out all assignments when looking at current empty month
+        if (startDate && endDate) {
+          const assignmentDate = new Date(dueDate);
+          const rangeStart = new Date(startDate);
+          const rangeEnd = new Date(endDate);
+          
+          // Only filter if the date range is less than 1 year (to avoid filtering historical data)
+          const rangeSpanMs = rangeEnd.getTime() - rangeStart.getTime();
+          const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+          
+          if (rangeSpanMs < oneYearMs) {
+            // Expand the range by 6 months on each side for more inclusive results
+            const expandedStart = new Date(rangeStart.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
+            const expandedEnd = new Date(rangeEnd.getTime() + (6 * 30 * 24 * 60 * 60 * 1000));
+            
+            if (assignmentDate < expandedStart || assignmentDate > expandedEnd) return null;
+          }
+        }
+        
+        const course = courseMap.get(data.courseId);
+        
         return {
           id: data.id,
           title: data.title,
-          start: data.dueDate,
-          end: data.dueDate,
+          start: dueDate,
+          end: dueDate,
           allDay: false,
-          color: '#dc2626', // Red for assignments
+          color: data.platform || data.source ? this.getAssignmentColor(data.platform || data.source) : '#dc2626',
           type: 'assignment',
           courseId: data.courseId,
           assignmentId: data.id,
-          description: `Assignment due: ${data.title}`,
+          description: `Assignment due: ${data.title}${course ? ` (${course.name})` : ''}`,
           location: '',
           userId: data.userId,
+          fromIntegration: !!(data.platform || data.source),
+          courseName: course?.name || 'Unknown Course',
+          platform: data.platform || data.source || 'bap',
         };
-      });
+      }).filter(assignment => assignment !== null);
       
-      // Filter by date range in memory if dates are provided
-      let filteredEvents = events;
-      let filteredAssignments = assignments;
-      
-      if (startDate || endDate) {
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
+      console.log(`[Calendar] Processed ${assignments.length} regular assignments (after date filtering)`);
+
+      // 5. Process integration assignments (only from courses that have them)
+      const coursesWithIntegrations = userCourses.filter(course => 
+        (course.userLinkedIntegrations && course.userLinkedIntegrations[userId]) ||
+        (course.linkedIntegrations && course.linkedIntegrations.length > 0) ||
+        (course.integrations && course.integrations[userId])
+      );
+
+      console.log(`[Calendar] Processing ${coursesWithIntegrations.length} courses with integrations`);
+
+      for (const course of coursesWithIntegrations) {
+        // User-specific linked integrations
+        if (course.userLinkedIntegrations && course.userLinkedIntegrations[userId]) {
+          const userAggregatedData = course.userAggregatedData?.[userId];
+          if (userAggregatedData && userAggregatedData.assignments) {
+            const integrationAssignments = userAggregatedData.assignments
+              .map(assignment => {
+                const dueDate = convertToISOString(assignment.dueDate);
+                if (!dueDate) return null;
+                
+                // Use same lenient filtering logic as regular assignments
+                if (startDate && endDate) {
+                  const assignmentDate = new Date(dueDate);
+                  const rangeStart = new Date(startDate);
+                  const rangeEnd = new Date(endDate);
+                  
+                  const rangeSpanMs = rangeEnd.getTime() - rangeStart.getTime();
+                  const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+                  
+                  if (rangeSpanMs < oneYearMs) {
+                    const expandedStart = new Date(rangeStart.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
+                    const expandedEnd = new Date(rangeEnd.getTime() + (6 * 30 * 24 * 60 * 60 * 1000));
+                    
+                    if (assignmentDate < expandedStart || assignmentDate > expandedEnd) return null;
+                  }
+                }
+                
+                return {
+                  id: `integration-${assignment.id || assignment.externalId}`,
+                  title: assignment.title,
+                  start: dueDate,
+                  end: dueDate,
+                  allDay: false,
+                  color: this.getAssignmentColor(assignment.source || assignment.platform),
+                  type: 'assignment',
+                  courseId: assignment.courseId,
+                  assignmentId: assignment.id || assignment.externalId,
+                  description: `Assignment due: ${assignment.title} (${assignment.courseName || course.name})`,
+                  location: '',
+                  userId: userId,
+                  fromIntegration: true,
+                  courseName: assignment.courseName || course.name,
+                  platform: assignment.source || assignment.platform || 'unknown'
+                };
+              })
+              .filter(assignment => assignment !== null);
+            
+            assignments = assignments.concat(integrationAssignments);
+            console.log(`[Calendar] Added ${integrationAssignments.length} assignments from user-specific integrations for course "${course.name}"`);
+          }
+        }
         
-        if (start || end) {
-          filteredEvents = events.filter(event => {
-            const eventDate = new Date(event.start);
-            if (start && eventDate < start) return false;
-            if (end && eventDate > end) return false;
-            return true;
-          });
+        // Legacy linked integrations
+        else if (course.linkedIntegrations && course.linkedIntegrations.length > 0) {
+          const legacyAssignments = (course.assignments || [])
+            .map(assignment => {
+              const dueDate = convertToISOString(assignment.dueDate);
+              if (!dueDate) return null;
+              
+              // Use same lenient filtering logic
+              if (startDate && endDate) {
+                const assignmentDate = new Date(dueDate);
+                const rangeStart = new Date(startDate);
+                const rangeEnd = new Date(endDate);
+                
+                const rangeSpanMs = rangeEnd.getTime() - rangeStart.getTime();
+                const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+                
+                if (rangeSpanMs < oneYearMs) {
+                  const expandedStart = new Date(rangeStart.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
+                  const expandedEnd = new Date(rangeEnd.getTime() + (6 * 30 * 24 * 60 * 60 * 1000));
+                  
+                  if (assignmentDate < expandedStart || assignmentDate > expandedEnd) return null;
+                }
+              }
+              
+              return {
+                id: `legacy-${assignment.id || assignment.externalId}`,
+                title: assignment.title,
+                start: dueDate,
+                end: dueDate,
+                allDay: false,
+                color: this.getAssignmentColor(assignment.source || assignment.platform),
+                type: 'assignment',
+                courseId: assignment.courseId,
+                assignmentId: assignment.id || assignment.externalId,
+                description: `Assignment due: ${assignment.title} (${assignment.courseName || course.name})`,
+                location: '',
+                userId: userId,
+                fromIntegration: true,
+                courseName: assignment.courseName || course.name,
+                platform: assignment.source || assignment.platform || 'unknown'
+              };
+            })
+            .filter(assignment => assignment !== null);
           
-          filteredAssignments = assignments.filter(assignment => {
-            const assignmentDate = new Date(assignment.start);
-            if (start && assignmentDate < start) return false;
-            if (end && assignmentDate > end) return false;
-            return true;
+          assignments = assignments.concat(legacyAssignments);
+          console.log(`[Calendar] Added ${legacyAssignments.length} assignments from legacy integrations for course "${course.name}"`);
+        }
+        
+        // Old format integrations
+        else if (course.integrations && course.integrations[userId]) {
+          Object.values(course.integrations[userId]).forEach(integration => {
+            if (integration.isActive && integration.assignments) {
+              const oldFormatAssignments = integration.assignments
+                .map(assignment => {
+                  const dueDate = convertToISOString(assignment.dueDate);
+                  if (!dueDate) return null;
+                  
+                  // Use same lenient filtering logic
+                  if (startDate && endDate) {
+                    const assignmentDate = new Date(dueDate);
+                    const rangeStart = new Date(startDate);
+                    const rangeEnd = new Date(endDate);
+                    
+                    const rangeSpanMs = rangeEnd.getTime() - rangeStart.getTime();
+                    const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+                    
+                    if (rangeSpanMs < oneYearMs) {
+                      const expandedStart = new Date(rangeStart.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
+                      const expandedEnd = new Date(rangeEnd.getTime() + (6 * 30 * 24 * 60 * 60 * 1000));
+                      
+                      if (assignmentDate < expandedStart || assignmentDate > expandedEnd) return null;
+                    }
+                  }
+                  
+                  return {
+                    id: `old-integration-${assignment.id || assignment.externalId}`,
+                    title: assignment.title,
+                    start: dueDate,
+                    end: dueDate,
+                    allDay: false,
+                    color: this.getAssignmentColor(integration.platform),
+                    type: 'assignment',
+                    courseId: assignment.courseId,
+                    assignmentId: assignment.id || assignment.externalId,
+                    description: `Assignment due: ${assignment.title} (${course.name})`,
+                    location: '',
+                    userId: userId,
+                    fromIntegration: true,
+                    courseName: course.name,
+                    platform: integration.platform || 'unknown'
+                  };
+                })
+                .filter(assignment => assignment !== null);
+              
+              assignments = assignments.concat(oldFormatAssignments);
+              console.log(`[Calendar] Added ${oldFormatAssignments.length} assignments from old format integration "${integration.platform || 'unknown'}" for course "${course.name}"`);
+            }
           });
         }
       }
+
+      // 6. Deduplicate assignments
+      const deduplicatedAssignments = this.deduplicateAssignments(assignments);
       
-      // Combine events and assignments
-      const allEvents = [...filteredEvents, ...filteredAssignments];
+      // 7. Combine events and assignments
+      const allEvents = [...events, ...deduplicatedAssignments];
+      
+      console.log(`[Calendar] Final result: ${events.length} events + ${deduplicatedAssignments.length} assignments = ${allEvents.length} total calendar items`);
       
       return {
         events: allEvents,
         summary: {
-          totalEvents: filteredEvents.length,
-          totalAssignments: filteredAssignments.length,
+          totalEvents: events.length,
+          totalAssignments: deduplicatedAssignments.length,
           upcomingCount: allEvents.filter(event => new Date(event.start) > new Date()).length,
         }
       };
     } catch (error) {
-      console.error('Error getting calendar data:', error);
-      throw error;
+      console.error('Error getting optimized calendar data:', error);
+      
+      // Return graceful fallback instead of throwing
+      return {
+        events: [],
+        summary: {
+          totalEvents: 0,
+          totalAssignments: 0,
+          upcomingCount: 0,
+        },
+        error: 'Failed to load calendar data. Please try again later.'
+      };
     }
+  }
+
+  /**
+   * Deduplicate assignments for calendar display
+   * @param {Array} assignments - Array of assignments
+   * @returns {Array} - Deduplicated assignments
+   */
+  static deduplicateAssignments(assignments) {
+    const deduplicated = [];
+    const seen = new Map();
+
+    console.log(`[Calendar] Deduplicating ${assignments.length} assignments`);
+
+    assignments.forEach(assignment => {
+      // Use title (for calendar) or name (for assignments) and dueDate as key
+      const title = assignment.title || assignment.name;
+      const dueDate = assignment.start || assignment.dueDate;
+      const key = `${title?.toLowerCase()}_${dueDate}`;
+      
+      if (!seen.has(key)) {
+        seen.set(key, assignment);
+        deduplicated.push({
+          ...assignment,
+          duplicates: []
+        });
+      } else {
+        // Add as duplicate - check if we already have this assignment
+        const existingIndex = deduplicated.findIndex(a => {
+          const existingTitle = a.title || a.name;
+          const existingDueDate = a.start || a.dueDate;
+          return existingTitle?.toLowerCase() === title?.toLowerCase() && 
+                 existingDueDate === dueDate;
+        });
+        
+        if (existingIndex >= 0) {
+          deduplicated[existingIndex].duplicates.push({
+            sourceUserId: assignment.userId,
+            sourcePlatform: assignment.platform,
+            originalData: assignment
+          });
+        }
+      }
+    });
+
+    console.log(`[Calendar] Deduplicated to ${deduplicated.length} unique assignments`);
+    return deduplicated;
   }
 
   /**
@@ -591,6 +877,25 @@ class Schedule {
       console.error('Error deleting schedule:', error);
       throw error;
     }
+  }
+
+  /**
+   * Get assignment color based on platform
+   * @param {string} platform - Platform name
+   * @returns {string} - Color hex code
+   */
+  static getAssignmentColor(platform) {
+    const platformColors = {
+      gradescope: '#4f46e5',    // Indigo - matches frontend
+      canvas: '#e11d48',        // Rose - matches frontend
+      blackboard: '#1f2937',    // Gray - matches frontend
+      brightspace: '#f59e0b',   // Amber - matches frontend
+      moodle: '#059669'         // Emerald - matches frontend
+    };
+    
+    // Normalize platform name to lowercase for comparison
+    const normalizedPlatform = platform?.toLowerCase();
+    return platformColors[normalizedPlatform] || '#dc2626'; // Default red for unknown platforms
   }
 }
 

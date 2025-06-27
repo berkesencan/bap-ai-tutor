@@ -77,7 +77,7 @@ class ScheduleController {
   }
 
   /**
-   * Get calendar data including events and assignments
+   * Get calendar data including events and assignments (OPTIMIZED)
    * @param {Request} req - Express request object
    * @param {Response} res - Express response object
    * @param {NextFunction} next - Express next function
@@ -85,16 +85,71 @@ class ScheduleController {
   static async getCalendarData(req, res, next) {
     try {
       const userId = req.user.uid;
-      const { startDate, endDate } = req.query;
+      let { startDate, endDate } = req.query;
       
-      const calendarData = await Schedule.getCalendarData(userId, startDate, endDate);
+      // If no date range provided, default to current month to reduce reads
+      if (!startDate && !endDate) {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        // Get start of current month
+        startDate = new Date(currentYear, currentMonth, 1).toISOString();
+        // Get end of current month
+        endDate = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
+        
+        console.log(`[Calendar] No date range provided, defaulting to current month: ${startDate} to ${endDate}`);
+      }
+      
+      // If only one date provided, create a reasonable range
+      if (startDate && !endDate) {
+        const start = new Date(startDate);
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + 1); // Add 1 month
+        endDate = end.toISOString();
+      } else if (!startDate && endDate) {
+        const end = new Date(endDate);
+        const start = new Date(end);
+        start.setMonth(start.getMonth() - 1); // Subtract 1 month
+        startDate = start.toISOString();
+      }
+      
+      console.log(`[Calendar] Fetching calendar data for date range: ${startDate} to ${endDate}`);
+      
+      const calendarData = await Schedule.getCalendarDataOptimized(userId, startDate, endDate);
+      
+      // Handle graceful error case
+      if (calendarData.error) {
+        return res.status(200).json({
+          success: false,
+          error: calendarData.error,
+          data: {
+            events: [],
+            summary: calendarData.summary
+          }
+        });
+      }
       
       res.status(200).json({
         success: true,
         data: calendarData,
       });
     } catch (error) {
-      next(error);
+      console.error('Controller error getting calendar data:', error);
+      
+      // Return graceful error response instead of throwing
+      res.status(200).json({
+        success: false,
+        error: 'Failed to load calendar data. Please try again later.',
+        data: {
+          events: [],
+          summary: {
+            totalEvents: 0,
+            totalAssignments: 0,
+            upcomingCount: 0,
+          }
+        }
+      });
     }
   }
 

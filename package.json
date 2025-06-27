@@ -6,6 +6,8 @@
     "@fullcalendar/list": "^6.1.17",
     "@fullcalendar/multimonth": "^6.1.17",
     "@fullcalendar/react": "^6.1.17",
-    "@fullcalendar/timegrid": "^6.1.17"
+    "@fullcalendar/timegrid": "^6.1.17",
+    "date-fns": "^4.1.0",
+    "react-big-calendar": "^1.19.4"
   }
 }

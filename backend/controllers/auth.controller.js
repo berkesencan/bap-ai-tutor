@@ -34,7 +34,7 @@ class AuthController {
       const token = jwt.sign(
         { uid: userRecord.uid },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
       
       res.status(201).json({
@@ -79,7 +79,7 @@ class AuthController {
       const token = jwt.sign(
         { uid: decodedToken.uid },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
       
       res.status(200).json({
