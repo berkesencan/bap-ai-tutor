@@ -56,6 +56,7 @@ const Calendar = () => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
   const [dayLoading, setDayLoading] = useState(false); // Separate loading state for day popups
+  const [cameFromDayModal, setCameFromDayModal] = useState(false); // Track if assignment modal was opened from day modal
   
   // Event form state
   const [eventForm, setEventForm] = useState({
@@ -1253,6 +1254,7 @@ const Calendar = () => {
         courseId: event.courseId,
         color: event.color
       });
+      setCameFromDayModal(false); // Reset flag since this is from regular calendar view
       setShowAssignmentModal(true);
       return;
     }
@@ -1490,8 +1492,20 @@ const Calendar = () => {
       courseId: assignment.courseId,
       color: assignment.color
     });
+    setCameFromDayModal(true); // Set flag to indicate we came from day modal
     setShowDayModal(false);
     setShowAssignmentModal(true);
+  };
+
+  // Handle assignment modal close with smart navigation
+  const handleAssignmentModalClose = () => {
+    setShowAssignmentModal(false);
+    setCameFromDayModal(false); // Reset the flag
+    
+    // If we came from day modal and we're in year view, return to day modal
+    if (cameFromDayModal && currentView === 'year' && selectedDay) {
+      setShowDayModal(true);
+    }
   };
 
   if (loading && events.length === 0) {
@@ -2164,100 +2178,102 @@ const Calendar = () => {
       {showAssignmentModal && selectedAssignment && (
         <div className="modal-overlay" onClick={() => setShowAssignmentModal(false)}>
           <div className="modal-content assignment-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="assignment-header">
-                <div className="assignment-platform" style={{ backgroundColor: selectedAssignment.color }}>
-                  <span className="platform-icon">
-                    {selectedAssignment.platform === 'gradescope' && '🎓'}
-                    {selectedAssignment.platform === 'canvas' && '🎨'}
-                    {selectedAssignment.platform === 'blackboard' && '📚'}
-                    {selectedAssignment.platform === 'brightspace' && '💡'}
-                    {selectedAssignment.platform === 'moodle' && '📖'}
-                    {selectedAssignment.platform === 'bap' && '📚'}
-                    {!['gradescope', 'canvas', 'blackboard', 'brightspace', 'moodle', 'bap'].includes(selectedAssignment.platform) && '🔗'}
-                  </span>
-                  <span className="platform-name">
-                    {selectedAssignment.platform === 'bap' ? 'BAP' : 
-                     selectedAssignment.platform.charAt(0).toUpperCase() + selectedAssignment.platform.slice(1)}
-                  </span>
-                </div>
-                <button 
-                  className="modal-close"
-                  onClick={() => setShowAssignmentModal(false)}
-                >
-                  ×
-                </button>
+            {/* Header with platform badge and title */}
+            <div className="assignment-modal-header">
+              <div className="assignment-platform-badge" style={{ backgroundColor: selectedAssignment.color }}>
+                <span className="platform-icon">
+                  {selectedAssignment.platform === 'gradescope' && '🎓'}
+                  {selectedAssignment.platform === 'canvas' && '🎨'}
+                  {selectedAssignment.platform === 'blackboard' && '📚'}
+                  {selectedAssignment.platform === 'brightspace' && '💡'}
+                  {selectedAssignment.platform === 'moodle' && '📖'}
+                  {selectedAssignment.platform === 'bap' && '📚'}
+                  {!['gradescope', 'canvas', 'blackboard', 'brightspace', 'moodle', 'bap'].includes(selectedAssignment.platform) && '🔗'}
+                </span>
+                <span className="platform-name">
+                  {selectedAssignment.platform === 'bap' ? 'BAP' : 
+                   selectedAssignment.platform.charAt(0).toUpperCase() + selectedAssignment.platform.slice(1)}
+                </span>
               </div>
-              <h3 className="assignment-title">{selectedAssignment.title}</h3>
+              <h2 className="assignment-modal-title">{selectedAssignment.title}</h2>
             </div>
             
-            <div className="assignment-details">
-              <div className="detail-row">
-                <div className="detail-label">
-                  <span className="detail-icon">📚</span>
-                  Course
-                </div>
-                <div className="detail-value">
-                  {selectedAssignment.courseName}
-                </div>
-              </div>
-              
-              <div className="detail-row">
-                <div className="detail-label">
-                  <span className="detail-icon">⏰</span>
-                  Due Date
-                </div>
-                <div className="detail-value">
-                  {new Date(selectedAssignment.dueDate).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit'
-                  })}
-                </div>
-              </div>
-              
-              {selectedAssignment.description && (
-                <div className="detail-row">
-                  <div className="detail-label">
-                    <span className="detail-icon">📝</span>
-                    Description
+            {/* Assignment details */}
+            <div className="assignment-modal-body">
+              <div className="assignment-detail-grid">
+                <div className="detail-item">
+                  <div className="detail-icon-wrapper">
+                    <span className="detail-icon">📚</span>
                   </div>
-                  <div className="detail-value">
-                    {selectedAssignment.description}
+                  <div className="detail-content">
+                    <div className="detail-label">Course</div>
+                    <div className="detail-value">{selectedAssignment.courseName}</div>
                   </div>
                 </div>
-              )}
-              
-              <div className="detail-row">
-                <div className="detail-label">
-                  <span className="detail-icon">🔗</span>
-                  Source
+                
+                <div className="detail-item">
+                  <div className="detail-icon-wrapper">
+                    <span className="detail-icon">⏰</span>
+                  </div>
+                  <div className="detail-content">
+                    <div className="detail-label">Due Date</div>
+                    <div className="detail-value">
+                      {new Date(selectedAssignment.dueDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
                 </div>
-                <div className="detail-value">
-                  {selectedAssignment.fromIntegration ? 'Imported from ' + 
-                    (selectedAssignment.platform === 'bap' ? 'BAP' : 
-                     selectedAssignment.platform.charAt(0).toUpperCase() + selectedAssignment.platform.slice(1)) : 
-                    'Created in BAP'}
+                
+                {selectedAssignment.description && (
+                  <div className="detail-item">
+                    <div className="detail-icon-wrapper">
+                      <span className="detail-icon">📝</span>
+                    </div>
+                    <div className="detail-content">
+                      <div className="detail-label">Description</div>
+                      <div className="detail-value">{selectedAssignment.description}</div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="detail-item">
+                  <div className="detail-icon-wrapper">
+                    <span className="detail-icon">🔗</span>
+                  </div>
+                  <div className="detail-content">
+                    <div className="detail-label">Source</div>
+                    <div className="detail-value">
+                      {selectedAssignment.fromIntegration ? 'Imported from ' + 
+                        (selectedAssignment.platform === 'bap' ? 'BAP' : 
+                         selectedAssignment.platform.charAt(0).toUpperCase() + selectedAssignment.platform.slice(1)) : 
+                        'Created in BAP'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
             
-            <div className="modal-actions">
+            {/* Footer with actions */}
+            <div className="assignment-modal-footer">
               {selectedAssignment.platform === 'gradescope' && selectedAssignment.assignmentId && (
                 <button
-                  className="action-button primary"
+                  className="assignment-action-button primary"
                   onClick={() => window.open(`https://www.gradescope.com/courses/${selectedAssignment.courseId}/assignments/${selectedAssignment.assignmentId}`, '_blank')}
                 >
-                  🎓 View on Gradescope
+                  <span className="button-icon">🎓</span>
+                  View on Gradescope
                 </button>
               )}
               
               <button
-                className="action-button secondary"
-                onClick={() => setShowAssignmentModal(false)}
+                className="assignment-action-button secondary"
+                onClick={handleAssignmentModalClose}
               >
                 Close
               </button>

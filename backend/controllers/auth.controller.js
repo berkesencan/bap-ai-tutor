@@ -30,11 +30,26 @@ class AuthController {
         displayName: userRecord.displayName,
       });
       
-      // Generate JWT token
+      // Generate JWT token with robust expiresIn handling
+      let expiresIn = '7d'; // Default fallback
+      
+      if (process.env.JWT_EXPIRES_IN && typeof process.env.JWT_EXPIRES_IN === 'string') {
+        const rawValue = process.env.JWT_EXPIRES_IN.trim();
+        // Extract only the time part if there are multiple values concatenated
+        const timeMatch = rawValue.match(/^(\d+[dhms])/);
+        if (timeMatch) {
+          expiresIn = timeMatch[1];
+        } else if (/^(\d+)$/.test(rawValue)) {
+          // If it's just a number, use it as seconds
+          expiresIn = rawValue;
+        }
+        // Otherwise, use default '7d'
+      }
+                       
       const token = jwt.sign(
         { uid: userRecord.uid },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        { expiresIn }
       );
       
       res.status(201).json({
@@ -75,11 +90,26 @@ class AuthController {
         });
       }
       
-      // Generate JWT token
+      // Generate JWT token with robust expiresIn handling
+      let expiresIn = '7d'; // Default fallback
+      
+      if (process.env.JWT_EXPIRES_IN && typeof process.env.JWT_EXPIRES_IN === 'string') {
+        const rawValue = process.env.JWT_EXPIRES_IN.trim();
+        // Extract only the time part if there are multiple values concatenated
+        const timeMatch = rawValue.match(/^(\d+[dhms])/);
+        if (timeMatch) {
+          expiresIn = timeMatch[1];
+        } else if (/^(\d+)$/.test(rawValue)) {
+          // If it's just a number, use it as seconds
+          expiresIn = rawValue;
+        }
+        // Otherwise, use default '7d'
+      }
+                       
       const token = jwt.sign(
         { uid: decodedToken.uid },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        { expiresIn }
       );
       
       res.status(200).json({
