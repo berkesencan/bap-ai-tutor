@@ -910,112 +910,59 @@ async getCourses() {
 
       // DEBUG: Log assignment page HTML
       const pageTitle = $('title').text();
+      console.log('ASSIGNMENT PAGE HTML:', $.html().substring(0, 1000));
       console.log('PAGE TITLE:', pageTitle);
-      // Reduced debug logging for efficiency
-      if (process.env.NODE_ENV === 'development') {
-        console.log('ASSIGNMENT PAGE HTML (first 200 chars):', $.html().substring(0, 200));
+
+      // Check if we're being redirected to a submission page
+      if (pageTitle.includes('View Submission') || assignmentUrl !== response.request.res.responseUrl) {
+        console.log('Detected redirect to submission page, trying to get back to assignment');
+        
+        // Try to go back to the assignment overview page
+        const overviewUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}`;
+        response = await this.session.get(overviewUrl, {
+          headers: {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          }
+        });
+        $ = cheerio.load(response.data);
+        console.log('ASSIGNMENT OVERVIEW PAGE TITLE:', $('title').text());
       }
 
       // Try to find the assignment PDF link (problem statement)
       let pdfUrl = null;
       
-      // PRIORITY METHOD 1: Try submission PDF URL pattern first (most successful)
-      // This is the pattern that works most often based on logs
-      if (pageTitle.includes('View Submission') || assignmentUrl !== response.request.res.responseUrl) {
-        console.log('On submission page or redirected, trying submission PDF patterns first');
+      // Method 1: Look for "Download PDF" or similar links
+      $('a').each((i, elem) => {
+        const href = $(elem).attr('href');
+        const text = $(elem).text().toLowerCase().trim();
         
-        // Extract submission ID from the page URL or HTML
-        let submissionId = null;
-        const responseUrl = response.request?.res?.responseUrl || response.config?.url || '';
-        const submissionMatch = responseUrl.match(/\/submissions\/(\d+)/);
-        if (submissionMatch) {
-          submissionId = submissionMatch[1];
-        } else {
-          // Try to find submission ID in the HTML
-          const scriptTags = $('script').toArray();
-          for (const script of scriptTags) {
-            const html = $(script).html();
-            if (html && html.includes('window.gon')) {
-              const match = html.match(/"id":"?(\d+)"?/);
-              if (match) {
-                submissionId = match[1];
-                break;
-              }
-            }
-          }
-        }
-
-        if (submissionId) {
-          const submissionPdfUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}.pdf`;
-          console.log(`Trying submission PDF URL: ${submissionPdfUrl}`);
-          try {
-            const testResponse = await this.session.get(submissionPdfUrl, { responseType: 'arraybuffer' });
-            if (testResponse.status === 200) {
-              const buffer = Buffer.from(testResponse.data);
-              const contentType = testResponse.headers['content-type'] || '';
-              const isPDF = contentType.includes('application/pdf') || 
-                           buffer.toString('ascii', 0, 4).includes('%PDF') ||
-                           buffer.toString('ascii', 0, 5) === '%PDF-';
-              
-              if (isPDF) {
-                pdfUrl = submissionPdfUrl;
-                console.log(`✅ SUCCESS: Found submission PDF at: ${submissionPdfUrl}`);
-              }
-            }
-          } catch (e) {
-            console.log(`Submission PDF URL failed: ${e.message}`);
-          }
-        }
-        
-        // Also look for submission PDF links in the HTML if direct URL didn't work
-        if (!pdfUrl) {
-          $('a').each((i, elem) => {
-            const href = $(elem).attr('href');
-            const text = $(elem).text().toLowerCase().trim();
-            
-            if (href && (href.includes('.pdf') || text.includes('pdf') || text.includes('download'))) {
-              pdfUrl = href.startsWith('http') ? href : `https://www.gradescope.com${href}`;
-              console.log(`Found submission PDF link: "${text}" -> ${pdfUrl}`);
-              return false; // Break out of each loop
-            }
-          });
-        }
-      }
-      
-      // PRIORITY METHOD 2: Look for "Download PDF" or similar links on the page
-      if (!pdfUrl) {
-        $('a').each((i, elem) => {
-          const href = $(elem).attr('href');
-          const text = $(elem).text().toLowerCase().trim();
+        if (href && (
+          text.includes('download') || 
+          text.includes('pdf') || 
+          text.includes('problem') ||
+          text.includes('statement') ||
+          text.includes('handout') ||
+          text.includes('outline') ||
+          text.includes('template') ||
+          href.includes('.pdf')
+        )) {
+          // Ensure the URL is properly formatted for PDF download
+          let fullUrl = href.startsWith('http') ? href : `https://www.gradescope.com${href}`;
           
-          if (href && (
-            text.includes('download') || 
-            text.includes('pdf') || 
-            text.includes('problem') ||
-            text.includes('statement') ||
-            text.includes('handout') ||
-            text.includes('outline') ||
-            text.includes('template') ||
-            href.includes('.pdf')
-          )) {
-            // Ensure the URL is properly formatted for PDF download
-            let fullUrl = href.startsWith('http') ? href : `https://www.gradescope.com${href}`;
-            
-            // If the URL doesn't end with .pdf but contains .pdf, it might need formatting
-            if (fullUrl.includes('.pdf') && !fullUrl.endsWith('.pdf')) {
-              // Try adding .pdf to the end
-              const pdfIndex = fullUrl.indexOf('.pdf');
-              fullUrl = fullUrl.substring(0, pdfIndex + 4);
-            }
-            
-            pdfUrl = fullUrl;
-            console.log(`Found PDF link: "${text}" -> ${pdfUrl}`);
-            return false; // Break out of each loop
+          // If the URL doesn't end with .pdf but contains .pdf, it might need formatting
+          if (fullUrl.includes('.pdf') && !fullUrl.endsWith('.pdf')) {
+            // Try adding .pdf to the end
+            const pdfIndex = fullUrl.indexOf('.pdf');
+            fullUrl = fullUrl.substring(0, pdfIndex + 4);
           }
-        });
-      }
+          
+          pdfUrl = fullUrl;
+          console.log(`Found PDF link: "${text}" -> ${pdfUrl}`);
+          return false; // Break out of each loop
+        }
+      });
 
-      // PRIORITY METHOD 3: Look for direct PDF links in the assignment content
+      // Method 2: Look for direct PDF links in the assignment content
       if (!pdfUrl) {
         $('iframe, embed, object').each((i, elem) => {
           const src = $(elem).attr('src');
@@ -1027,7 +974,7 @@ async getCourses() {
         });
       }
 
-      // PRIORITY METHOD 4: Look for links in the assignment description/content area
+      // Method 2.5: Look for links in the assignment description/content area
       if (!pdfUrl) {
         $('.assignment-description, .content, .description, .assignment-content').find('a').each((i, elem) => {
           const href = $(elem).attr('href');
@@ -1039,20 +986,17 @@ async getCourses() {
         });
       }
 
-      // FALLBACK METHOD: Try common Gradescope PDF URL patterns (least efficient, try last)
+      // Method 3: Try the assignment outline/template URL pattern
       if (!pdfUrl) {
-        console.log('⚠️  Falling back to trying common URL patterns (this may be slow)...');
-        // Common Gradescope PDF URL patterns - reordered by likelihood of success
+        // Common Gradescope PDF URL patterns - try both with and without .pdf extension
         const possibleUrls = [
-          // Most likely to work first
-          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/problem.pdf`,
           `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/outline.pdf`,
           `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/template.pdf`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/problem.pdf`,
           `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}.pdf`,
-          // Without .pdf extension (less likely)
-          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/problem`,
           `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/outline`,
-          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/template`
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/template`,
+          `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/problem`
         ];
 
         for (const url of possibleUrls) {
@@ -1081,36 +1025,84 @@ async getCourses() {
         }
       }
 
+      // Method 4: If we're on a submission page, try to find the submission PDF
+      if (!pdfUrl && pageTitle.includes('View Submission')) {
+        console.log('On submission page, looking for submission PDF links');
+        
+        // Look for submission PDF links
+        $('a').each((i, elem) => {
+          const href = $(elem).attr('href');
+          const text = $(elem).text().toLowerCase().trim();
+          
+          if (href && (href.includes('.pdf') || text.includes('pdf') || text.includes('download'))) {
+            pdfUrl = href.startsWith('http') ? href : `https://www.gradescope.com${href}`;
+            console.log(`Found submission PDF link: "${text}" -> ${pdfUrl}`);
+            return false; // Break out of each loop
+          }
+        });
+        
+        // Also try direct submission PDF URL patterns
+        if (!pdfUrl) {
+          // Extract submission ID from the page
+          let submissionId = null;
+          const responseUrl = response.request?.res?.responseUrl || response.config?.url || '';
+          const submissionMatch = responseUrl.match(/\/submissions\/(\d+)/);
+          if (submissionMatch) {
+            submissionId = submissionMatch[1];
+          } else {
+            // Try to find submission ID in the HTML
+        const scriptTags = $('script').toArray();
+        for (const script of scriptTags) {
+          const html = $(script).html();
+          if (html && html.includes('window.gon')) {
+                const match = html.match(/"id":"?(\d+)"?/);
+            if (match) {
+              submissionId = match[1];
+              break;
+            }
+          }
+        }
+      }
+
+          if (submissionId) {
+            const submissionPdfUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}.pdf`;
+            console.log(`Trying submission PDF URL: ${submissionPdfUrl}`);
+            pdfUrl = submissionPdfUrl;
+          }
+        }
+      }
+
       if (!pdfUrl) {
         throw new Error('Could not find assignment PDF. This assignment may not have a downloadable PDF or may require submission to view.');
       }
 
-      console.log(`🚀 DOWNLOADING PDF FROM: ${pdfUrl}`);
-      
+             console.log(`Downloading PDF from: ${pdfUrl}`);
       // Download the PDF
-      const fileResponse = await this.session.get(pdfUrl, { responseType: 'arraybuffer' });
-      
-      // Check if it's actually a PDF by looking at content-type and magic bytes
-      const buffer = Buffer.from(fileResponse.data);
-      const contentType = fileResponse.headers['content-type'] || '';
-      
-      console.log(`✅ PDF DOWNLOAD SUCCESS: ${buffer.length} bytes, Content-Type: ${contentType}`);
-      
-      // Check if it's a PDF using multiple methods
-      const isPDF = contentType.includes('application/pdf') || 
-                    buffer.toString('ascii', 0, 4).includes('%PDF') ||
-                    buffer.toString('ascii', 0, 5) === '%PDF-';
-      
-      if (!isPDF) {
-        // If it's HTML, it might be an error page or redirect
-        if (contentType.includes('text/html') || buffer.toString('ascii', 0, 15).includes('<!DOCTYPE html>')) {
-          throw new Error('The assignment PDF is not available. This may be a programming assignment or the PDF may require submission access.');
-        } else {
-          throw new Error(`Downloaded file is not a valid PDF. Content-Type: ${contentType}`);
-        }
-      }
-      
-      return buffer;
+       const fileResponse = await this.session.get(pdfUrl, { responseType: 'arraybuffer' });
+       
+       // Check if it's actually a PDF by looking at content-type and magic bytes
+       const buffer = Buffer.from(fileResponse.data);
+       const contentType = fileResponse.headers['content-type'] || '';
+       
+       console.log(`Response content-type: ${contentType}`);
+       console.log(`Response size: ${buffer.length} bytes`);
+       console.log(`First 20 bytes: ${buffer.toString('ascii', 0, Math.min(20, buffer.length))}`);
+       
+       // Check if it's a PDF using multiple methods
+       const isPDF = contentType.includes('application/pdf') || 
+                     buffer.toString('ascii', 0, 4).includes('%PDF') ||
+                     buffer.toString('ascii', 0, 5) === '%PDF-';
+       
+       if (!isPDF) {
+         // If it's HTML, it might be an error page or redirect
+         if (contentType.includes('text/html') || buffer.toString('ascii', 0, 15).includes('<!DOCTYPE html>')) {
+           throw new Error('The assignment PDF is not available. This may be a programming assignment or the PDF may require submission access.');
+         } else {
+           throw new Error(`Downloaded file is not a valid PDF. Content-Type: ${contentType}`);
+         }
+       }
+       
+       return buffer;
     } catch (error) {
       console.error('Error getting assignment PDF:', error);
       throw error;
