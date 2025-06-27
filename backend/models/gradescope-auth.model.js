@@ -117,8 +117,11 @@ class GradescopeAuth {
     try {
       const authRef = db.collection('gradescope_auth').doc(userId);
       
+      // Encrypt session data before storing
+      const encryptedSessionData = this.encrypt(JSON.stringify(sessionData));
+      
       await authRef.update({
-        sessionData: JSON.stringify(sessionData),
+        sessionData: encryptedSessionData,
         updatedAt: new Date()
       });
     } catch (error) {
@@ -141,7 +144,9 @@ class GradescopeAuth {
         return null;
       }
       
-      return JSON.parse(authDoc.data().sessionData);
+      // Decrypt session data
+      const decryptedSessionData = this.decrypt(authDoc.data().sessionData);
+      return JSON.parse(decryptedSessionData);
     } catch (error) {
       console.error('Error getting session data:', error);
       return null;
@@ -235,40 +240,112 @@ class GradescopeAuth {
   }
 
   /**
-   * Encrypt a string
+   * Encrypt a string using AES-256-CBC with random salt and IV
    * @param {string} text - Text to encrypt
-   * @returns {string} - Encrypted text
+   * @returns {string} - Encrypted text in format: salt:iv:encrypted
    */
   static encrypt(text) {
+    // Require encryption key to be set
+    if (!process.env.ENCRYPTION_KEY) {
+      throw new Error('ENCRYPTION_KEY environment variable is required for security');
+    }
+    
+    if (!text || typeof text !== 'string') {
+      throw new Error('Text to encrypt must be a non-empty string');
+    }
+    
     const algorithm = 'aes-256-cbc';
-    const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-key', 'salt', 32);
+    
+    // Generate random salt and IV for each encryption
+    const salt = crypto.randomBytes(16);
     const iv = crypto.randomBytes(16);
     
+    // Derive key from password and salt
+    const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, salt, 32);
+    
+    // Encrypt the text
     const cipher = crypto.createCipheriv(algorithm, key, iv);
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     
-    return iv.toString('hex') + ':' + encrypted;
+    // Return salt:iv:encrypted format
+    return salt.toString('hex') + ':' + iv.toString('hex') + ':' + encrypted;
   }
 
   /**
-   * Decrypt a string
-   * @param {string} encryptedText - Encrypted text
+   * Decrypt a string using AES-256-CBC
+   * @param {string} encryptedText - Encrypted text in format: salt:iv:encrypted
    * @returns {string} - Decrypted text
    */
   static decrypt(encryptedText) {
+    // Require encryption key to be set
+    if (!process.env.ENCRYPTION_KEY) {
+      throw new Error('ENCRYPTION_KEY environment variable is required for security');
+    }
+    
+    if (!encryptedText || typeof encryptedText !== 'string') {
+      throw new Error('Encrypted text must be a non-empty string');
+    }
+    
     const algorithm = 'aes-256-cbc';
-    const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-key', 'salt', 32);
     
-    const textParts = encryptedText.split(':');
-    const iv = Buffer.from(textParts.shift(), 'hex');
-    const encrypted = textParts.join(':');
-    
-    const decipher = crypto.createDecipheriv(algorithm, key, iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return decrypted;
+    try {
+      // Parse the encrypted data
+      const textParts = encryptedText.split(':');
+      if (textParts.length !== 3) {
+        throw new Error('Invalid encrypted data format');
+      }
+      
+      const salt = Buffer.from(textParts[0], 'hex');
+      const iv = Buffer.from(textParts[1], 'hex');
+      const encrypted = textParts[2];
+      
+      // Derive the same key using the stored salt
+      const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, salt, 32);
+      
+      // Decrypt the text
+      const decipher = crypto.createDecipheriv(algorithm, key, iv);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      console.error('Decryption failed:', error.message);
+      throw new Error('Failed to decrypt data - data may be corrupted or key may be incorrect');
+    }
+  }
+
+  /**
+   * Clean up old authentication records (data retention policy)
+   * @param {number} daysOld - Delete records older than this many days (default: 90)
+   * @returns {Promise<number>} - Number of records deleted
+   */
+  static async cleanupOldRecords(daysOld = 90) {
+    try {
+      const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+      
+      const oldRecords = await db.collection('gradescope_auth')
+        .where('updatedAt', '<', cutoffDate)
+        .get();
+      
+      let deletedCount = 0;
+      const batch = db.batch();
+      
+      oldRecords.forEach(doc => {
+        batch.delete(doc.ref);
+        deletedCount++;
+      });
+      
+      if (deletedCount > 0) {
+        await batch.commit();
+        console.log(`Cleaned up ${deletedCount} old authentication records`);
+      }
+      
+      return deletedCount;
+    } catch (error) {
+      console.error('Error cleaning up old records:', error);
+      throw error;
+    }
   }
 }
 

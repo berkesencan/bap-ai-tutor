@@ -89,6 +89,9 @@ const Connect = () => {
 
       console.log('Login response:', response);
 
+      // Clear password from memory immediately after use for security
+      setGradescopePassword('');
+
       if (response.success) {
         console.log('Successfully connected to Gradescope');
         markAuthenticated();
@@ -112,6 +115,9 @@ const Connect = () => {
       }
     } catch (error) {
       console.error('Error connecting to Gradescope:', error);
+      
+      // Clear password from memory even on error for security
+      setGradescopePassword('');
       
       if (error.response) {
         console.error('Error response:', error.response);
