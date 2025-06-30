@@ -44,42 +44,4 @@ router.delete('/:courseId/unlink-integration/:integrationId', CourseController.u
 router.post('/merge-integrations', CourseController.mergeIntegrationsIntoCourse);
 router.delete('/integration/:courseId', CourseController.deleteIntegrationCourse);
 
-// Get course materials for activities
-router.get('/:courseId/materials', async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    const userId = req.user.uid;
-
-    // Check if user has access to this course
-    const courseRef = db.collection('courses').doc(courseId);
-    const courseDoc = await courseRef.get();
-    
-    if (!courseDoc.exists) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
-
-    const courseData = courseDoc.data();
-    const userRole = courseData.members?.[userId]?.role;
-    
-    if (!userRole) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    // Get course materials
-    const materialsSnapshot = await courseRef.collection('materials').get();
-    const materials = materialsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    res.json({
-      success: true,
-      data: { materials }
-    });
-  } catch (error) {
-    console.error('Error fetching course materials:', error);
-    res.status(500).json({ error: 'Failed to fetch course materials' });
-  }
-});
-
 module.exports = router; 
