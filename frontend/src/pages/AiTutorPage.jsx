@@ -694,102 +694,47 @@ Generate ${questionsForm.count} high-quality practice questions now:`;
     }
     
     // Create a grading prompt that includes point-based scoring
-    let gradingPrompt = `GRADING TASK - POINT-BASED SCORING WITH CORRECT ANSWER
+    let gradingPrompt = `GRADING TASK - CONSISTENT POINT-BASED SCORING
 
 QUESTION: ${questionText}
 MAXIMUM POINTS: ${maxPoints}
 
-PART 1: SOLUTION
-Solve this question and determine the correct answer.
+🚨 MANDATORY GRADING PROTOCOL - FOLLOW EXACTLY 🚨
 
-PART 2: USER'S ANSWER
-User submitted: "${answerText}"
+STEP 1: SOLVE THE QUESTION FIRST
+Determine the correct answer for this question.
 
-PART 3: POINT-BASED EVALUATION
-Grade the user's answer and assign points out of ${maxPoints}.
+STEP 2: ANALYZE STUDENT ANSWER
+Student submitted: "${answerText}"
 
-CRITICAL GRADING LOGIC:
-1. FIRST: Compare the student's answer to your intended correct answer
-2. SECOND: ONLY if the student addresses ALL THREE COMPONENTS (performance impact, strategies, AND challenges), then check if they match your correct answer for full points
-3. THIRD: If they don't address all three components, identify what the question is asking for (main components)
-4. FOURTH: Check if the student addressed EACH component of the question
-5. FIFTH: Evaluate the quality of each component they addressed
+STEP 3: CONSISTENCY CHECK (CRITICAL)
+- Does the student answer match the quality/content of your correct answer? 
+- If YES → Give FULL POINTS (${maxPoints}/${maxPoints}) immediately
+- If NO → Continue to component analysis
 
-ABSOLUTE PRIORITY RULE - OVERRIDE ALL OTHER LOGIC:
-ONLY give full points if the student's answer covers ALL THREE COMPONENTS: (1) how load balancing affects performance, (2) strategies for load balancing, AND (3) challenges in dynamic balancing.
-If the student misses ANY of these three components, you MUST use component-based scoring instead.
-The logic consistency check ONLY applies when all three components are addressed.
+STEP 4: COMPONENT ANALYSIS
+Break down the question into its main components and evaluate each:
+- Rate each component: EXCELLENT=full points, GOOD=most points, WEAK=some points, MISSING=no points
+- Add up component scores for total
 
-COMPONENT-BASED SCORING (Only use if answer doesn't match correct answer):
-- If student answers ALL components well = FULL POINTS (${maxPoints}/${maxPoints})
-- If student answers ALL components but some are weak = HIGH POINTS (${Math.floor(maxPoints*0.9)}/${maxPoints})
-- If student answers MOST components well = GOOD POINTS (${Math.floor(maxPoints*0.7)}/${maxPoints})
-- If student answers SOME components well = PARTIAL POINTS (${Math.floor(maxPoints*0.5)}/${maxPoints})
-- If student answers FEW components or shows minimal understanding = LOW POINTS (${Math.floor(maxPoints*0.3)}/${maxPoints})
-- If student answers ONE component correctly = MINIMAL POINTS (${Math.floor(maxPoints*0.2)}/${maxPoints})
-- If student shows basic awareness but no real understanding = VERY LOW POINTS (${Math.floor(maxPoints*0.1)}/${maxPoints})
-- If student is completely off-topic or wrong = ZERO POINTS (0/${maxPoints})
+STEP 5: FINAL SCORE CALCULATION
+- Same answer quality = Same score (be consistent!)
+- Don't overthink - grade like a fair teacher
+- If student demonstrates understanding of key concepts = high score
 
-FAIR PARTIAL CREDIT GUIDELINES:
-- Give credit for ANY correct understanding, even if incomplete
-- If student correctly identifies the main concept, give at least 20% of points
-- If student addresses 1 out of 3 components well, give around 30-40% of points
-- If student addresses 2 out of 3 components well, give around 70-80% of points
-- Don't give zero points unless the answer is completely wrong or off-topic
-- Reward partial understanding - education is about building knowledge
-
-WHEN TO GIVE FULL POINTS (${maxPoints}/${maxPoints}) - BE FAIR:
-- Student explains what the question asks about (main concept)
-- Student addresses ALL parts mentioned in the question
-- Student shows understanding of each component
-- Quality is good even if not perfect
-- All major components are covered correctly
-- Answer demonstrates clear understanding and knowledge
-- Answer would receive an A on a real exam
-- DO NOT require perfection or excessive detail for full points
-
-GRADING GUIDELINES:
-- PRIORITIZE understanding over perfection
-- Reward students who demonstrate knowledge of key concepts
-- Similar quality answers MUST receive similar scores
-- If in doubt between two scores, choose the HIGHER one
-- BUT: Missing major components = automatic point deduction
-- DO NOT be nitpicky about minor details or asking for "more examples" when understanding is clear
-- If a student covers all components well, give FULL POINTS even if more detail could be added
-- Remember: This is testing understanding, not asking for textbook-level detail
-
-CRITICAL LOGIC CONSISTENCY CHECK:
-If the student's answer matches or is very similar to what you would provide as the correct answer, you MUST give FULL POINTS. It is illogical to mark down an answer that you yourself would give as correct.
-
-MANDATORY LOGIC CHECK - FOLLOW THIS EXACTLY:
-1. Before assigning points, compare the student's answer to your intended correct answer
-2. If they cover the same key concepts (even with different wording), give FULL POINTS
-3. If the student's answer is what you would consider a "correct answer", give FULL POINTS
-4. DO NOT penalize students for giving answers that match your own correct response
-5. It is ILLOGICAL to mark down an answer that you yourself consider correct
-
-CRITICAL REQUIREMENT: ALWAYS provide a SHORT, concise correct answer (2-3 sentences max) in your feedback to help students learn.
-
-CORRECT ANSWER FORMAT:
-- Keep the correct answer CONSISTENT and STANDARD
-- Focus on the core concepts that directly answer the question
-- Use clear, straightforward language
-- Do NOT vary the correct answer based on the student's response
-- Provide the SAME correct answer framework regardless of student performance
-- Use this STANDARD FORMAT: "Load balancing [main concept]. Strategies include [static examples] and [dynamic examples]. Dynamic balancing faces challenges like [key challenges]."
+ABSOLUTE REQUIREMENTS:
+1. SAME ANSWER MUST GET SAME SCORE every time
+2. If answer matches your correct answer quality → FULL POINTS
+3. Be consistent with your own grading logic
+4. Don't penalize for minor details if core understanding is correct
 
 Your response MUST be in this exact format:
 POINTS: X/${maxPoints}
-FEEDBACK: [Brief explanation focusing on what the student understood correctly] 
+FEEDBACK: [Brief explanation of what was correct and what could be improved]
 
-CORRECT ANSWER: [Provide a SHORT, concise, CONSISTENT correct answer - keep it brief and focused. Answer should be the same core response regardless of student's answer quality]
+CORRECT ANSWER: [Provide the correct answer - keep it concise and consistent]
 
 Where X is the points earned (0 to ${maxPoints}).
-
-SCORING EXAMPLES:
-- Student covers all key components correctly → ${maxPoints}/${maxPoints} points
-- Student covers most key components correctly → ${Math.floor(maxPoints*0.9)}/${maxPoints} points  
-- Student shows good understanding but misses major components → ${Math.floor(maxPoints*0.7)}/${maxPoints} points
 
 YOUR RESPONSE:`;
 
@@ -1068,102 +1013,47 @@ YOUR RESPONSE:`;
     }
     
     // Create grading prompt with point-based scoring (same as practice questions)
-    let gradingPrompt = `GRADING TASK - POINT-BASED SCORING WITH CORRECT ANSWER
+    let gradingPrompt = `GRADING TASK - CONSISTENT POINT-BASED SCORING
 
 QUESTION: ${questionText}
 MAXIMUM POINTS: ${maxPoints}
 
-PART 1: SOLUTION
-Solve this question and determine the correct answer.
+🚨 MANDATORY GRADING PROTOCOL - FOLLOW EXACTLY 🚨
 
-PART 2: USER'S ANSWER
-User submitted: "${answerText}"
+STEP 1: SOLVE THE QUESTION FIRST
+Determine the correct answer for this question.
 
-PART 3: POINT-BASED EVALUATION
-Grade the user's answer and assign points out of ${maxPoints}.
+STEP 2: ANALYZE STUDENT ANSWER
+Student submitted: "${answerText}"
 
-CRITICAL GRADING LOGIC:
-1. FIRST: Compare the student's answer to your intended correct answer
-2. SECOND: ONLY if the student addresses ALL THREE COMPONENTS (performance impact, strategies, AND challenges), then check if they match your correct answer for full points
-3. THIRD: If they don't address all three components, identify what the question is asking for (main components)
-4. FOURTH: Check if the student addressed EACH component of the question
-5. FIFTH: Evaluate the quality of each component they addressed
+STEP 3: CONSISTENCY CHECK (CRITICAL)
+- Does the student answer match the quality/content of your correct answer? 
+- If YES → Give FULL POINTS (${maxPoints}/${maxPoints}) immediately
+- If NO → Continue to component analysis
 
-ABSOLUTE PRIORITY RULE - OVERRIDE ALL OTHER LOGIC:
-ONLY give full points if the student's answer covers ALL THREE COMPONENTS: (1) how load balancing affects performance, (2) strategies for load balancing, AND (3) challenges in dynamic balancing.
-If the student misses ANY of these three components, you MUST use component-based scoring instead.
-The logic consistency check ONLY applies when all three components are addressed.
+STEP 4: COMPONENT ANALYSIS
+Break down the question into its main components and evaluate each:
+- Rate each component: EXCELLENT=full points, GOOD=most points, WEAK=some points, MISSING=no points
+- Add up component scores for total
 
-COMPONENT-BASED SCORING (Only use if answer doesn't match correct answer):
-- If student answers ALL components well = FULL POINTS (${maxPoints}/${maxPoints})
-- If student answers ALL components but some are weak = HIGH POINTS (${Math.floor(maxPoints*0.9)}/${maxPoints})
-- If student answers MOST components well = GOOD POINTS (${Math.floor(maxPoints*0.7)}/${maxPoints})
-- If student answers SOME components well = PARTIAL POINTS (${Math.floor(maxPoints*0.5)}/${maxPoints})
-- If student answers FEW components or shows minimal understanding = LOW POINTS (${Math.floor(maxPoints*0.3)}/${maxPoints})
-- If student answers ONE component correctly = MINIMAL POINTS (${Math.floor(maxPoints*0.2)}/${maxPoints})
-- If student shows basic awareness but no real understanding = VERY LOW POINTS (${Math.floor(maxPoints*0.1)}/${maxPoints})
-- If student is completely off-topic or wrong = ZERO POINTS (0/${maxPoints})
+STEP 5: FINAL SCORE CALCULATION
+- Same answer quality = Same score (be consistent!)
+- Don't overthink - grade like a fair teacher
+- If student demonstrates understanding of key concepts = high score
 
-FAIR PARTIAL CREDIT GUIDELINES:
-- Give credit for ANY correct understanding, even if incomplete
-- If student correctly identifies the main concept, give at least 20% of points
-- If student addresses 1 out of 3 components well, give around 30-40% of points
-- If student addresses 2 out of 3 components well, give around 70-80% of points
-- Don't give zero points unless the answer is completely wrong or off-topic
-- Reward partial understanding - education is about building knowledge
-
-WHEN TO GIVE FULL POINTS (${maxPoints}/${maxPoints}) - BE FAIR:
-- Student explains what the question asks about (main concept)
-- Student addresses ALL parts mentioned in the question
-- Student shows understanding of each component
-- Quality is good even if not perfect
-- All major components are covered correctly
-- Answer demonstrates clear understanding and knowledge
-- Answer would receive an A on a real exam
-- DO NOT require perfection or excessive detail for full points
-
-GRADING GUIDELINES:
-- PRIORITIZE understanding over perfection
-- Reward students who demonstrate knowledge of key concepts
-- Similar quality answers MUST receive similar scores
-- If in doubt between two scores, choose the HIGHER one
-- BUT: Missing major components = automatic point deduction
-- DO NOT be nitpicky about minor details or asking for "more examples" when understanding is clear
-- If a student covers all components well, give FULL POINTS even if more detail could be added
-- Remember: This is testing understanding, not asking for textbook-level detail
-
-CRITICAL LOGIC CONSISTENCY CHECK:
-If the student's answer matches or is very similar to what you would provide as the correct answer, you MUST give FULL POINTS. It is illogical to mark down an answer that you yourself would give as correct.
-
-MANDATORY LOGIC CHECK - FOLLOW THIS EXACTLY:
-1. Before assigning points, compare the student's answer to your intended correct answer
-2. If they cover the same key concepts (even with different wording), give FULL POINTS
-3. If the student's answer is what you would consider a "correct answer", give FULL POINTS
-4. DO NOT penalize students for giving answers that match your own correct response
-5. It is ILLOGICAL to mark down an answer that you yourself consider correct
-
-CRITICAL REQUIREMENT: ALWAYS provide a SHORT, concise correct answer (2-3 sentences max) in your feedback to help students learn.
-
-CORRECT ANSWER FORMAT:
-- Keep the correct answer CONSISTENT and STANDARD
-- Focus on the core concepts that directly answer the question
-- Use clear, straightforward language
-- Do NOT vary the correct answer based on the student's response
-- Provide the SAME correct answer framework regardless of student performance
-- Use this STANDARD FORMAT: "Load balancing [main concept]. Strategies include [static examples] and [dynamic examples]. Dynamic balancing faces challenges like [key challenges]."
+ABSOLUTE REQUIREMENTS:
+1. SAME ANSWER MUST GET SAME SCORE every time
+2. If answer matches your correct answer quality → FULL POINTS
+3. Be consistent with your own grading logic
+4. Don't penalize for minor details if core understanding is correct
 
 Your response MUST be in this exact format:
 POINTS: X/${maxPoints}
-FEEDBACK: [Brief explanation focusing on what the student understood correctly] 
+FEEDBACK: [Brief explanation of what was correct and what could be improved]
 
-CORRECT ANSWER: [Provide a SHORT, concise, CONSISTENT correct answer - keep it brief and focused. Answer should be the same core response regardless of student's answer quality]
+CORRECT ANSWER: [Provide the correct answer - keep it concise and consistent]
 
 Where X is the points earned (0 to ${maxPoints}).
-
-SCORING EXAMPLES:
-- Student covers all key components correctly → ${maxPoints}/${maxPoints} points
-- Student covers most key components correctly → ${Math.floor(maxPoints*0.9)}/${maxPoints} points  
-- Student shows good understanding but misses major components → ${Math.floor(maxPoints*0.7)}/${maxPoints} points
 
 YOUR RESPONSE:`;
 

@@ -230,33 +230,11 @@ STEP 2: Then, generate additional questions based on the PDF content to reach th
 6. Number each question clearly: 1., 2., 3., etc.
 7. Each question should be substantial and test understanding
 
-DIAGRAM GENERATION CAPABILITIES:
-When questions require visual elements like DAGs, graphs, trees, or network diagrams:
-- Create ASCII art diagrams using characters like |, -, +, /, \\, etc.
-- For complex diagrams, use Mermaid syntax in code blocks
-- Example ASCII DAG:
-  \`\`\`
-  Task A
-     |
-  Task B -----> Task D
-     |            |
-  Task C --------->+
-  \`\`\`
-- Example Mermaid DAG:
-  \`\`\`mermaid
-  graph TD
-      A[Task A] --> B[Task B]
-      A --> C[Task C] 
-      B --> D[Task D]
-      C --> D
-  \`\`\`
 
 QUESTION FORMAT:
 1. [First question - from custom instructions if provided, otherwise from PDF content]
-   [Include ASCII diagram or Mermaid block if needed]
 
 2. [Second question - continue pattern]
-   [Include diagrams as needed]
 
 3. [Third question - continue pattern]
 
@@ -268,8 +246,6 @@ IMPORTANT:
 - Cover different topics/sections from the PDF material
 - Make questions appropriate for ${difficulty} difficulty level
 - Subject context: ${subject}
-- CRITICAL: Generate exactly ${numQuestions} questions - count them!
-- Use ASCII art or Mermaid diagrams when questions involve visual concepts
 
 Analyze the PDF content and generate ${numQuestions} questions (prioritizing custom instructions):`;
 
@@ -292,33 +268,11 @@ ${instructions}
 
 IMPORTANT: If the instructions contain specific questions, you MUST include those exact questions in your response. If the instructions ask for specific topics or question types, prioritize those requirements.
 
-` : ''}DIAGRAM GENERATION CAPABILITIES:
-When questions require visual elements like DAGs, graphs, trees, or network diagrams:
-- Create ASCII art diagrams using characters like |, -, +, /, \\, etc.
-- For complex diagrams, use Mermaid syntax in code blocks
-- Example ASCII DAG:
-  \`\`\`
-  Task A
-     |
-  Task B -----> Task D
-     |            |
-  Task C --------->+
-  \`\`\`
-- Example Mermaid DAG:
-  \`\`\`mermaid
-  graph TD
-      A[Task A] --> B[Task B]
-      A --> C[Task C] 
-      B --> D[Task D]
-      C --> D
-  \`\`\`
+` : ''}REQUIRED FORMAT - Follow this EXACTLY:
 
-REQUIRED FORMAT - Follow this EXACTLY:
 1. [Write a complete question here about ${subject}]
-   [Include ASCII diagram or Mermaid block if needed]
 
 2. [Write another complete question here about ${subject}]
-   [Include diagrams as needed]
 
 3. [Write another complete question here about ${subject}]
 
@@ -330,8 +284,6 @@ SPECIFICATIONS:
 - Total questions needed: ${numQuestions}
 - Each question must be complete and standalone
 - Each question must be substantial (at least 2-3 sentences)
-- CRITICAL: Generate exactly ${numQuestions} questions - count them!
-- Use ASCII art or Mermaid diagrams when questions involve visual concepts
 ${instructions ? `- PRIORITY: Follow the custom instructions above` : ''}
 
 START GENERATING ${numQuestions} QUESTIONS NOW:
