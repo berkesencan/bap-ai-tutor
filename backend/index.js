@@ -37,6 +37,38 @@ app.use('/api/auth', authRoutes);
 // Create a test route for Gemini API without authentication
 app.use('/api/test-ai', require('./routes/ai.routes'));
 
+// Unprotected PDF download route
+app.get('/api/ai/download-pdf/:filename', require('./controllers/ai.controller').downloadPDF);
+
+// Unprotected practice exam generation route
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: function (req, file, cb) {
+    if (file.mimetype !== 'application/pdf') {
+      return cb(new Error('Only PDF files are allowed'));
+    }
+    cb(null, true);
+  }
+});
+
+app.post('/api/ai/practice-exam', upload.single('pdf'), require('./controllers/ai.controller').generatePracticeExam);
+
+// Test form parsing (unprotected for debugging)
+app.post('/api/ai/test-form', upload.single('pdf'), require('./controllers/ai.controller').testFormParsing);
+
 // Protected routes with auth middleware
 app.use('/api/assignments', authMiddleware, assignmentRoutes);
 app.use('/api/schedules', authMiddleware, scheduleRoutes);

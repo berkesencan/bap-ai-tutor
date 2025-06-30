@@ -126,6 +126,21 @@ router.post('/process-pdf-with-message', upload.single('pdf'), async (req, res) 
   }
 });
 
+// Test Gemini 1.5 Flash API endpoint
+router.post('/test-gemini', AIController.testGemini);
+
+// Test form parsing (for debugging)
+router.post('/test-form', upload.single('pdf'), AIController.testFormParsing);
+
+// Generate practice exam
+router.post('/practice-exam', upload.single('pdf'), AIController.generatePracticeExam);
+
+// Download PDF
+router.get('/download-pdf/:filename', AIController.downloadPDF);
+
+// AI Tutor routes (using existing methods)
+router.post('/generate-questions', auth, AIController.generatePracticeQuestions);
+
 // Generate study plan
 router.post('/study-plan', AIController.generateStudyPlan);
 
@@ -143,12 +158,6 @@ router.get('/classrooms', AIController.getAvailableClassrooms);
 
 // Get integrated materials for a classroom or course
 router.get('/materials/:contextId', AIController.getIntegratedMaterials);
-
-// Test Gemini 1.5 Flash API endpoint
-router.post('/test-gemini', AIController.testGemini);
-
-// AI Tutor routes (using existing methods)
-router.post('/generate-questions', auth, AIController.generatePracticeQuestions);
 
 // Interactive Activities routes
 router.post('/activities', auth, AIController.createActivity);

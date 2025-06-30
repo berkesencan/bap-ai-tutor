@@ -1,6 +1,7 @@
 const { handleError } = require('../middleware/error.middleware');
 const GeminiService = require('../services/gemini.service');
 const aiService = require('../services/ai.service');
+const PDFService = require('../services/pdf.service');
 const admin = require('firebase-admin');
 const db = admin.firestore();
 
@@ -745,6 +746,376 @@ Format as JSON with simulation setup and analysis framework.`;
 
     const response = await GeminiService.generateContent(prompt);
     return JSON.parse(response);
+  }
+
+  /**
+   * Test endpoint to debug form parsing
+   * @route POST /api/ai/test-form
+   */
+  static async testFormParsing(req, res) {
+    try {
+      console.log('=== TEST FORM PARSING ===');
+      console.log('Request body:', req.body);
+      console.log('Request file:', req.file);
+      
+      let { questionPoints } = req.body;
+      console.log('Raw questionPoints:', questionPoints, typeof questionPoints);
+      
+      // Parse questionPoints if it's a JSON string
+      if (typeof questionPoints === 'string') {
+        try {
+          questionPoints = JSON.parse(questionPoints);
+          console.log('Parsed questionPoints:', questionPoints);
+        } catch (parseError) {
+          console.error('Error parsing questionPoints JSON:', parseError);
+          questionPoints = null;
+        }
+      }
+      
+      res.json({
+        success: true,
+        data: {
+          body: req.body,
+          questionPoints: questionPoints,
+          parsedCorrectly: Array.isArray(questionPoints)
+        }
+      });
+    } catch (error) {
+      console.error('Test form parsing error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Generate a practice exam using Gemini
+   * @route POST /api/ai/practice-exam
+   */
+  static async generatePracticeExam(req, res) {
+    try {
+      const { subject, numQuestions, difficulty, instructions, generatePDF } = req.body;
+      let { questionPoints } = req.body;
+      const pdfFile = req.file;
+      
+      // Parse questionPoints if it's a JSON string
+      if (typeof questionPoints === 'string') {
+        try {
+          questionPoints = JSON.parse(questionPoints);
+        } catch (parseError) {
+          console.error('Error parsing questionPoints JSON:', parseError);
+          questionPoints = null;
+        }
+      }
+      
+      // CRITICAL: Always ensure we have questionPoints - generate if not provided
+      const numQuestionsInt = numQuestions ? parseInt(numQuestions) : 10;
+      if (!questionPoints || !Array.isArray(questionPoints) || questionPoints.length !== numQuestionsInt) {
+        console.log('=== GENERATING POINTS ON BACKEND (FALLBACK) ===');
+        questionPoints = AIController.generatePointDistribution(numQuestionsInt);
+        console.log('Generated fallback points:', questionPoints);
+      }
+      
+      console.log('=== PRACTICE EXAM GENERATION START ===');
+      console.log('Request body:', { subject, numQuestions, difficulty, instructions, generatePDF, questionPoints });
+      console.log('Uploaded file:', pdfFile ? { 
+        filename: pdfFile.filename, 
+        originalname: pdfFile.originalname, 
+        size: pdfFile.size,
+        path: pdfFile.path 
+      } : 'No file uploaded');
+      
+      if (!subject) {
+        return res.status(400).json({ success: false, message: 'Missing required field: subject' });
+      }
+      
+      // STEP 1: Generate interactive questions 
+      console.log('=== GENERATING INTERACTIVE QUESTIONS ===');
+      let interactiveResult;
+      
+      if (pdfFile && pdfFile.path) {
+        // If PDF is uploaded, generate questions based on PDF CONTENT
+        console.log('=== USING PDF CONTENT FOR QUESTION GENERATION ===');
+        console.log('PDF file:', pdfFile.originalname, 'Size:', pdfFile.size);
+        
+        interactiveResult = await GeminiService.generatePracticeExam({
+          subject,
+          numQuestions: numQuestionsInt,
+          difficulty: difficulty || 'medium',
+          instructions: instructions || '',
+          pdfPath: pdfFile.path // Use PDF content to generate questions
+        });
+      } else {
+        // No PDF uploaded, generate general questions about the subject
+        console.log('=== GENERATING GENERAL QUESTIONS (NO PDF) ===');
+        
+        interactiveResult = await GeminiService.generatePracticeExam({
+          subject,
+          numQuestions: numQuestionsInt,
+          difficulty: difficulty || 'medium',
+          instructions: instructions || '',
+          pdfPath: null // No PDF, generate general questions
+        });
+      }
+      
+      console.log('=== INTERACTIVE QUESTIONS GENERATED ===');
+      console.log('Result type:', typeof interactiveResult);
+      console.log('Result keys:', Object.keys(interactiveResult));
+      console.log('Text length:', interactiveResult.text ? interactiveResult.text.length : 'No text');
+      console.log('Text preview:', interactiveResult.text ? interactiveResult.text.substring(0, 200) + '...' : 'No text');
+      
+      // If result is a string, wrap it in { text: ... }
+      if (typeof interactiveResult === 'string') {
+        interactiveResult = { text: interactiveResult };
+      }
+
+      // CRITICAL: Always add questionPoints to response for frontend interactive grading
+      interactiveResult.questionPoints = questionPoints;
+      console.log('=== ADDED POINTS TO RESPONSE FOR FRONTEND ===');
+      console.log('Points that will be sent to frontend:', questionPoints);
+
+      // STEP 2: Generate PDF with template formatting if requested
+      if (generatePDF === 'true' || generatePDF === true) {
+        console.log('=== PDF GENERATION REQUESTED ===');
+        console.log('Question points for PDF:', questionPoints);
+        
+        let pdfContent = interactiveResult.text;
+        
+        // If we have a PDF template, generate formatted content for PDF
+        if (pdfFile && pdfFile.path) {
+          console.log('=== GENERATING PDF-FORMATTED CONTENT WITH TEMPLATE ===');
+          console.log('Template file path:', pdfFile.path);
+          console.log('Interactive questions to format:', interactiveResult.text.substring(0, 200) + '...');
+          console.log('Question points to include:', questionPoints);
+          
+          try {
+            const pdfFormattedResult = await GeminiService.generateFormattedExamFromTemplate({
+              subject,
+              numQuestions: numQuestionsInt,
+              difficulty: difficulty || 'medium',
+              instructions: instructions || '',
+              pdfPath: pdfFile.path,
+              interactiveQuestions: interactiveResult.text,
+              questionPoints: questionPoints // Pass points to formatting
+            });
+            
+            console.log('=== TEMPLATE FORMATTING RESULT ===');
+            console.log('Result type:', typeof pdfFormattedResult);
+            console.log('Result keys:', Object.keys(pdfFormattedResult || {}));
+            console.log('Has text:', !!pdfFormattedResult?.text);
+            console.log('Text length:', pdfFormattedResult?.text?.length || 0);
+            console.log('Full formatted content:', pdfFormattedResult?.text || 'NO CONTENT');
+            
+            if (pdfFormattedResult && pdfFormattedResult.text) {
+              pdfContent = pdfFormattedResult.text;
+              console.log('=== USING TEMPLATE-FORMATTED CONTENT ===');
+              console.log('Template content preview:', pdfContent.substring(0, 500) + '...');
+            } else {
+              console.log('=== TEMPLATE FORMATTING FAILED - NO TEXT RETURNED ===');
+            }
+          } catch (pdfFormatError) {
+            console.error('=== ERROR GENERATING PDF-FORMATTED CONTENT ===');
+            console.error('PDF Format Error details:', pdfFormatError);
+            console.error('PDF Format Error message:', pdfFormatError.message);
+            console.error('PDF Format Error stack:', pdfFormatError.stack);
+            // Fall back to using interactive content for PDF
+            console.log('Falling back to interactive content for PDF');
+          }
+        } else {
+          console.log('=== NO TEMPLATE PROVIDED - USING CLEAN QUESTIONS ===');
+        }
+        
+        // CRITICAL: ALWAYS add points to PDF content (whether template or not)
+        if (pdfContent === interactiveResult.text) {
+          // If we're using the clean interactive content (no template or template failed), add points
+          console.log('=== ADDING POINTS TO CLEAN QUESTIONS FOR PDF ===');
+          pdfContent = AIController.addPointsToQuestions(interactiveResult.text, questionPoints);
+          console.log('PDF content with points length:', pdfContent.length);
+          console.log('PDF content with points preview:', pdfContent.substring(0, 200) + '...');
+        } else {
+          // Template was used - points should already be included by the template formatting
+          console.log('=== USING TEMPLATE-FORMATTED CONTENT (POINTS INCLUDED) ===');
+        }
+        
+        try {
+          console.log('Starting PDF generation with PDFService...');
+          console.log('Content to PDF service - type:', typeof pdfContent);
+          console.log('Content to PDF service - length:', pdfContent ? pdfContent.length : 'No content');
+          console.log('Content to PDF service - preview:', pdfContent ? pdfContent.substring(0, 100) + '...' : 'No content');
+          console.log('Subject:', subject);
+          console.log('Options:', { 
+            difficulty: difficulty || 'medium',
+            instructions: instructions || '',
+            numQuestions: numQuestionsInt,
+            questionPoints: questionPoints
+          });
+          
+          const pdfBuffer = await PDFService.generateExamPDF(
+            pdfContent, 
+            subject, 
+            { 
+              difficulty: difficulty || 'medium',
+              instructions: instructions || '',
+              numQuestions: numQuestionsInt,
+              questionPoints: questionPoints
+            }
+          );
+          
+          console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
+          
+          // Save PDF temporarily
+          const filename = `practice-exam-${subject.replace(/\s+/g, '-')}-${Date.now()}.pdf`;
+          console.log('Saving PDF with filename:', filename);
+          const pdfPath = await PDFService.savePDFToFile(pdfBuffer, filename);
+          console.log('PDF saved to:', pdfPath);
+          
+          interactiveResult.pdfDownloadUrl = `/api/ai/download-pdf/${filename}`;
+          interactiveResult.pdfGenerated = true;
+          
+          console.log('=== PDF GENERATION SUCCESSFUL ===');
+        } catch (pdfError) {
+          console.error('=== PDF GENERATION ERROR ===');
+          console.error('PDF Error details:', pdfError);
+          console.error('PDF Error message:', pdfError.message);
+          console.error('PDF Error stack:', pdfError.stack);
+          interactiveResult.pdfError = `Failed to generate PDF: ${pdfError.message}`;
+        }
+      }
+
+      // Clean up uploaded file if present
+      if (pdfFile) {
+        console.log('Cleaning up uploaded file:', pdfFile.path);
+        const fs = require('fs').promises;
+        await fs.unlink(pdfFile.path);
+      }
+      
+      console.log('=== SENDING RESPONSE ===');
+      console.log('Final result keys:', Object.keys(interactiveResult));
+      console.log('Final questionPoints in response:', interactiveResult.questionPoints);
+      res.json({ success: true, data: interactiveResult });
+    } catch (error) {
+      console.error('=== GENERAL ERROR ===');
+      console.error('Error details:', error);
+      handleError(error, res);
+    }
+  }
+
+  /**
+   * Helper function to generate point distribution (same logic as frontend)
+   */
+  static generatePointDistribution(numQuestions, totalPoints = 100) {
+    if (numQuestions <= 0) return [];
+    if (numQuestions === 1) return [totalPoints];
+    
+    // Generate random weights for each question
+    const weights = [];
+    for (let i = 0; i < numQuestions; i++) {
+      weights.push(Math.random() * 0.5 + 0.5); // Random between 0.5 and 1.0
+    }
+    
+    // Calculate total weight
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    
+    // Convert weights to points and ensure they sum to totalPoints
+    let points = weights.map(weight => Math.round((weight / totalWeight) * totalPoints));
+    
+    // Adjust for rounding errors
+    const currentTotal = points.reduce((sum, p) => sum + p, 0);
+    const difference = totalPoints - currentTotal;
+    
+    if (difference !== 0) {
+      // Add/subtract the difference to/from the largest point value
+      const maxIndex = points.indexOf(Math.max(...points));
+      points[maxIndex] += difference;
+    }
+    
+    // Ensure no question has less than 5 points or more than 40 points
+    points = points.map(p => Math.max(5, Math.min(40, p)));
+    
+    // Final adjustment to maintain total
+    const finalTotal = points.reduce((sum, p) => sum + p, 0);
+    const finalDifference = totalPoints - finalTotal;
+    if (finalDifference !== 0) {
+      const adjustIndex = points.indexOf(Math.max(...points));
+      points[adjustIndex] += finalDifference;
+    }
+    
+    return points;
+  }
+
+  /**
+   * Helper function to add point values to clean questions
+   */
+  static addPointsToQuestions(questionsText, questionPoints) {
+    if (!questionPoints || questionPoints.length === 0) {
+      return questionsText;
+    }
+    
+    const lines = questionsText.split('\n');
+    const result = [];
+    let questionIndex = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Check if this line starts a new question
+      const questionMatch = line.match(/^(\d+)\.\s*(.*)/);
+      if (questionMatch && questionIndex < questionPoints.length) {
+        const questionNum = questionMatch[1];
+        const questionText = questionMatch[2];
+        const points = questionPoints[questionIndex];
+        
+        // Add the question with points
+        result.push(`${questionNum}. ${questionText} [${points} points]`);
+        questionIndex++;
+      } else {
+        // Keep the line as is
+        result.push(line);
+      }
+    }
+    
+    return result.join('\n');
+  }
+
+  /**
+   * Download generated PDF
+   * @route GET /api/ai/download-pdf/:filename
+   */
+  static async downloadPDF(req, res) {
+    try {
+      const { filename } = req.params;
+      const path = require('path');
+      const fs = require('fs').promises;
+      
+      // Validate filename to prevent directory traversal
+      if (!filename || filename.includes('..') || !filename.endsWith('.pdf')) {
+        return res.status(400).json({ error: 'Invalid filename' });
+      }
+      
+      const filePath = path.join(__dirname, '../uploads', filename);
+      
+      // Check if file exists
+      try {
+        await fs.access(filePath);
+      } catch (error) {
+        return res.status(404).json({ error: 'PDF file not found' });
+      }
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      
+      // Stream the file
+      const fileBuffer = await fs.readFile(filePath);
+      res.send(fileBuffer);
+      
+      // Clean up the file after a delay (optional)
+      setTimeout(async () => {
+        await PDFService.cleanupPDF(filePath);
+      }, 60000); // Delete after 1 minute
+      
+    } catch (error) {
+      console.error('PDF download error:', error);
+      res.status(500).json({ error: 'Failed to download PDF' });
+    }
   }
 }
 

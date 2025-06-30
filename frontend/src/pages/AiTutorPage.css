@@ -640,24 +640,34 @@
 }
 
 .feedback-card.incorrect {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  background: #fef2f2;
   border-color: #ef4444;
 }
 
+.feedback-card.partial {
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
 .feedback-header {
-  padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  border-bottom: 1px solid;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .feedback-card.correct .feedback-header {
-  border-color: #a7f3d0;
+  border-color: #d1fae5;
 }
 
 .feedback-card.incorrect .feedback-header {
-  border-color: #fca5a5;
+  border-color: #fecaca;
+}
+
+.feedback-card.partial .feedback-header {
+  border-color: #fde68a;
 }
 
 .feedback-icon {
@@ -676,6 +686,10 @@
 
 .feedback-card.incorrect .feedback-title {
   color: #991b1b;
+}
+
+.feedback-card.partial .feedback-title {
+  color: #b45309;
 }
 
 .feedback-content {
@@ -698,6 +712,10 @@
   color: #991b1b;
 }
 
+.feedback-card.partial .feedback-text {
+  color: #b45309;
+}
+
 .feedback-actions {
   padding: 1rem 1.5rem;
   border-top: 1px solid;
@@ -709,6 +727,10 @@
 
 .feedback-card.incorrect .feedback-actions {
   border-color: #fca5a5;
+}
+
+.feedback-card.partial .feedback-actions {
+  border-color: #fde68a;
 }
 
 .feedback-action-btn {

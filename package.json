@@ -6,6 +6,11 @@
     "@fullcalendar/list": "^6.1.17",
     "@fullcalendar/multimonth": "^6.1.17",
     "@fullcalendar/react": "^6.1.17",
-    "@fullcalendar/timegrid": "^6.1.17"
+    "@fullcalendar/timegrid": "^6.1.17",
+    "canvas": "^3.1.2",
+    "chart.js": "^4.5.0",
+    "chartjs-node-canvas": "^5.0.0",
+    "d3": "^7.9.0",
+    "jsdom": "^26.1.0"
   }
 }
