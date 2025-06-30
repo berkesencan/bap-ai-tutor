@@ -483,4 +483,73 @@ export const deleteSchedule = async (scheduleId) => {
   }
 };
 
+// Upload and process a Practice Exam request
+export const processPracticeExam = async (form) => {
+  try {
+    console.log('=== PROCESSING PRACTICE EXAM ===');
+    console.log('Form data:', form);
+    
+    const formData = new FormData();
+    formData.append('subject', form.subject);
+    formData.append('numQuestions', form.numQuestions);
+    formData.append('difficulty', form.difficulty);
+    formData.append('generatePDF', form.generatePDF);
+    if (form.instructions) formData.append('instructions', form.instructions);
+    if (form.pdf) formData.append('pdf', form.pdf);
+    
+    // Add question points as JSON string
+    if (form.questionPoints && Array.isArray(form.questionPoints)) {
+      formData.append('questionPoints', JSON.stringify(form.questionPoints));
+      console.log('Added questionPoints to form data:', form.questionPoints);
+    }
+    
+    console.log('FormData entries:');
+    for (let [key, value] of formData.entries()) {
+      if (key === 'pdf') {
+        console.log(`${key}: [File object]`);
+      } else {
+        console.log(`${key}:`, value);
+      }
+    }
+    
+    // Use testApiClient since the route is unprotected
+    const response = await testApiClient.post('/ai/practice-exam', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    console.log('=== API RESPONSE RECEIVED ===');
+    console.log('Response data:', response.data);
+    
+    return response.data;
+  } catch (error) {
+    console.log('=== API ERROR ===');
+    console.error('Error details:', error);
+    return handleApiError(error);
+  }
+};
+
+// Download PDF file
+export const downloadPDF = async (filename) => {
+  try {
+    console.log('=== DOWNLOADING PDF ===');
+    console.log('Filename:', filename);
+    
+    // Use testApiClient since the download route is unprotected
+    const response = await testApiClient.get(`/ai/download-pdf/${filename}`, {
+      responseType: 'blob',
+    });
+    
+    console.log('=== PDF DOWNLOAD RESPONSE ===');
+    console.log('Response received, blob size:', response.data.size);
+    
+    return response.data; // Returns blob
+  } catch (error) {
+    console.log('=== PDF DOWNLOAD ERROR ===');
+    console.error('Download error:', error);
+    return handleApiError(error);
+  }
+};
+
 export default apiClient; 

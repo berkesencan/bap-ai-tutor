@@ -197,22 +197,240 @@ Provide a day-by-day breakdown with specific tasks, estimated times, and suggest
     return this.processPDF(pdfPath, prompt);
   }
 
-  static async testGemini(prompt) {
+  /**
+   * Generate a practice exam based on an uploaded PDF and/or form data
+   * @param {object} options - { subject, numQuestions, difficulty, instructions, pdfPath }
+   * @returns {Promise<object>} - { text, usageMetadata }
+   */
+  static async generatePracticeExam({ subject, numQuestions = 10, difficulty = 'medium', instructions = '', pdfPath = null }) {
     try {
-      const result = await this.generateContent(prompt, 'gemini-1.5-flash');
-      return {
-        success: true,
-        data: {
-          response: result.text,
-          usage: result.usageMetadata
-        }
-      };
+      let prompt = '';
+      
+      if (pdfPath && pdfPath.trim()) {
+        // If PDF is provided, extract content and generate questions based on the material
+        console.log('=== GENERATING QUESTIONS FROM PDF CONTENT ===');
+        console.log('PDF path:', pdfPath, 'Size:', require('fs').statSync(pdfPath).size);
+        
+        prompt = `TASK: Generate practice questions based on the content of this uploaded PDF document.
+
+${instructions ? `🚨 ABSOLUTE PRIORITY INSTRUCTIONS - MUST FOLLOW FIRST 🚨
+${instructions}
+
+CRITICAL REQUIREMENT: If the instructions above contain any specific questions, you MUST include those EXACT questions word-for-word in your response. These custom questions take ABSOLUTE PRIORITY over everything else.
+
+STEP 1: First, include any specific questions from the instructions above
+STEP 2: Then, generate additional questions based on the PDF content to reach the total of ${numQuestions} questions
+
+` : ''}CRITICAL REQUIREMENTS:
+1. READ AND ANALYZE the uploaded PDF content carefully
+2. Generate EXACTLY ${numQuestions} questions total (count them carefully!)
+3. If custom instructions contain specific questions, include those FIRST, then fill remaining slots
+4. Questions should cover the key concepts, topics, and material from the PDF
+5. Use the same difficulty level and style as the examples in the PDF (if any)
+6. Number each question clearly: 1., 2., 3., etc.
+7. Each question should be substantial and test understanding
+
+DIAGRAM GENERATION CAPABILITIES:
+When questions require visual elements like DAGs, graphs, trees, or network diagrams:
+- Create ASCII art diagrams using characters like |, -, +, /, \\, etc.
+- For complex diagrams, use Mermaid syntax in code blocks
+- Example ASCII DAG:
+  \`\`\`
+  Task A
+     |
+  Task B -----> Task D
+     |            |
+  Task C --------->+
+  \`\`\`
+- Example Mermaid DAG:
+  \`\`\`mermaid
+  graph TD
+      A[Task A] --> B[Task B]
+      A --> C[Task C] 
+      B --> D[Task D]
+      C --> D
+  \`\`\`
+
+QUESTION FORMAT:
+1. [First question - from custom instructions if provided, otherwise from PDF content]
+   [Include ASCII diagram or Mermaid block if needed]
+
+2. [Second question - continue pattern]
+   [Include diagrams as needed]
+
+3. [Third question - continue pattern]
+
+Continue for ALL ${numQuestions} questions - DO NOT STOP EARLY!
+
+IMPORTANT:
+- ABSOLUTE PRIORITY: Include any specific questions from custom instructions
+- Base remaining questions on the ACTUAL CONTENT of the uploaded PDF
+- Cover different topics/sections from the PDF material
+- Make questions appropriate for ${difficulty} difficulty level
+- Subject context: ${subject}
+- CRITICAL: Generate exactly ${numQuestions} questions - count them!
+- Use ASCII art or Mermaid diagrams when questions involve visual concepts
+
+Analyze the PDF content and generate ${numQuestions} questions (prioritizing custom instructions):`;
+
+        // Use processPDF to read and analyze the PDF content
+        return this.processPDF(pdfPath, prompt);
+      } else {
+        // Generate without PDF - create general questions about the subject
+        console.log('=== GENERATING GENERAL QUESTIONS (NO PDF) ===');
+        prompt = `IMPORTANT: You must generate EXACTLY ${numQuestions} individual questions. Do NOT create sections, parts, or categories.
+
+FORBIDDEN FORMATS:
+- DO NOT write "Section 1", "Section 2", etc.
+- DO NOT write "Part A", "Part B", etc. 
+- DO NOT create multiple choice sections
+- DO NOT create short answer sections
+- DO NOT group questions by type
+
+${instructions ? `CRITICAL CUSTOM INSTRUCTIONS - MUST FOLLOW:
+${instructions}
+
+IMPORTANT: If the instructions contain specific questions, you MUST include those exact questions in your response. If the instructions ask for specific topics or question types, prioritize those requirements.
+
+` : ''}DIAGRAM GENERATION CAPABILITIES:
+When questions require visual elements like DAGs, graphs, trees, or network diagrams:
+- Create ASCII art diagrams using characters like |, -, +, /, \\, etc.
+- For complex diagrams, use Mermaid syntax in code blocks
+- Example ASCII DAG:
+  \`\`\`
+  Task A
+     |
+  Task B -----> Task D
+     |            |
+  Task C --------->+
+  \`\`\`
+- Example Mermaid DAG:
+  \`\`\`mermaid
+  graph TD
+      A[Task A] --> B[Task B]
+      A --> C[Task C] 
+      B --> D[Task D]
+      C --> D
+  \`\`\`
+
+REQUIRED FORMAT - Follow this EXACTLY:
+1. [Write a complete question here about ${subject}]
+   [Include ASCII diagram or Mermaid block if needed]
+
+2. [Write another complete question here about ${subject}]
+   [Include diagrams as needed]
+
+3. [Write another complete question here about ${subject}]
+
+Continue numbering up to ${numQuestions} - GENERATE ALL ${numQuestions} QUESTIONS!
+
+SPECIFICATIONS:
+- Subject: ${subject}
+- Difficulty: ${difficulty}
+- Total questions needed: ${numQuestions}
+- Each question must be complete and standalone
+- Each question must be substantial (at least 2-3 sentences)
+- CRITICAL: Generate exactly ${numQuestions} questions - count them!
+- Use ASCII art or Mermaid diagrams when questions involve visual concepts
+${instructions ? `- PRIORITY: Follow the custom instructions above` : ''}
+
+START GENERATING ${numQuestions} QUESTIONS NOW:
+
+1.`;
+
+        return this._generateWithUsage(prompt, 'gemini-1.5-flash');
+      }
     } catch (error) {
-      console.error('Error in testGemini:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      console.error('Error generating practice exam:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate formatted exam content that matches an uploaded PDF template
+   * @param {object} options - { subject, numQuestions, difficulty, instructions, pdfPath, interactiveQuestions, questionPoints }
+   * @returns {Promise<object>} - { text, usageMetadata }
+   */
+  static async generateFormattedExamFromTemplate({ subject, numQuestions = 10, difficulty = 'medium', instructions = '', pdfPath, interactiveQuestions, questionPoints = [] }) {
+    try {
+      console.log('=== GEMINI TEMPLATE FORMATTING START ===');
+      console.log('PDF path:', pdfPath);
+      console.log('Subject:', subject);
+      console.log('Num questions:', numQuestions);
+      console.log('Question points:', questionPoints);
+      console.log('Interactive questions length:', interactiveQuestions?.length);
+      console.log('Interactive questions preview:', interactiveQuestions?.substring(0, 200));
+      
+      let pointsInstructions = '';
+      if (questionPoints && questionPoints.length > 0) {
+        pointsInstructions = `\n\nCRITICAL POINT VALUES - MUST INCLUDE:
+Each question must include its point value in the same format as the template:
+${questionPoints.map((points, index) => `Question ${index + 1}: ${points} points`).join('\n')}
+
+Look at how the template shows point values and use the EXACT same format (e.g., "[25 points]", "(35 pts)", "40 points", etc.).`;
+      }
+      
+      const prompt = `TASK: Create a practice exam that EXACTLY matches the format, style, and structure of the uploaded PDF template.
+
+STEP 1: ANALYZE THE TEMPLATE
+Carefully examine the uploaded PDF template and note:
+- The exact header format (course code, title, date, etc.)
+- How the title and subtitle are formatted
+- How "Total: X points" is displayed
+- Any "Important Notes" sections and their formatting
+- How questions are numbered and formatted
+- How point values are shown for each question
+- Any special formatting, boxes, or layout elements
+- Font styles, spacing, and alignment
+
+STEP 2: USE THESE CLEAN QUESTIONS AS CONTENT
+${interactiveQuestions}
+
+STEP 3: REFORMAT TO MATCH TEMPLATE EXACTLY
+Create a new exam that:
+1. Uses the EXACT same header structure as the template
+2. Copies the course information format (adjust for "${subject}")
+3. Includes the same "Important Notes" section if present
+4. Uses the same question numbering style
+5. Integrates the point values in the same format as template
+6. Maintains the same professional layout and spacing
+7. Includes any honor code boxes or special sections from template
+
+STEP 4: ENSURE CONSISTENCY
+- Keep all ${numQuestions} questions
+- Use the provided question content but format it to match template style
+- Make it look like it came from the same professor/institution as the template
+- Include ALL formatting elements from the original${pointsInstructions}
+
+REQUIREMENTS:
+- Subject: ${subject}
+- Difficulty: ${difficulty}
+- Total Questions: ${numQuestions}
+- Must look identical in style to the uploaded template
+${instructions ? `- Additional instructions: ${instructions}` : ''}
+
+Generate the complete formatted exam now, matching the template exactly:`;
+
+      console.log('=== SENDING PROMPT TO GEMINI ===');
+      console.log('Prompt length:', prompt.length);
+      console.log('About to call processPDF...');
+      
+      const result = await this.processPDF(pdfPath, prompt);
+      
+      console.log('=== GEMINI TEMPLATE FORMATTING RESULT ===');
+      console.log('Result type:', typeof result);
+      console.log('Result keys:', Object.keys(result || {}));
+      console.log('Has text:', !!result?.text);
+      console.log('Text length:', result?.text?.length || 0);
+      console.log('Result text preview:', result?.text?.substring(0, 500) || 'NO TEXT');
+      
+      return result;
+    } catch (error) {
+      console.error('=== ERROR IN GEMINI TEMPLATE FORMATTING ===');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      throw error;
     }
   }
 }
