@@ -26,7 +26,11 @@ export const AuthProvider = ({ children }) => {
           try {
             await axios.post('/api/auth/login', { idToken: token });
           } catch (error) {
-            console.error('Error creating/updating user in Firestore:', error);
+            // Only log detailed errors in development
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error creating/updating user in Firestore:', error);
+            }
+            // Don't prevent user login if backend sync fails
           }
           
           setCurrentUser(user);
@@ -54,7 +58,11 @@ export const AuthProvider = ({ children }) => {
       try {
         await axios.post('/api/auth/login', { idToken: token });
       } catch (error) {
-        console.error('Error creating/updating user in Firestore:', error);
+        // Only log detailed errors in development
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error creating/updating user in Firestore:', error);
+        }
+        // Don't prevent user login if backend sync fails
       }
       
       return result;

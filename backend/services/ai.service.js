@@ -75,7 +75,10 @@ async function answerQuestion(params) {
   let contextType = 'general';
   let contextId = courseId || classroomId;
   
-  console.log(`[AI Service] Answering question for user ${userId}, courseId: ${courseId}, classroomId: ${classroomId}`);
+  // Log in development only
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[AI Service] Answering question for user ${userId}, courseId: ${courseId}, classroomId: ${classroomId}`);
+  }
   
   // Handle course context (new priority)
   if (courseId) {
@@ -126,7 +129,10 @@ async function answerQuestion(params) {
     }
   }
   
-  console.log(`[AI Service] Context prepared: ${availableMaterials.length} materials, context type: ${contextType}`);
+  // Log in development only
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[AI Service] Context prepared: ${availableMaterials.length} materials, context type: ${contextType}`);
+  }
   
   // Use Gemini service for actual AI response
   const GeminiService = require('./gemini.service');

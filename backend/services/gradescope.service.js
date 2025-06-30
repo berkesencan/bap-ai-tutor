@@ -29,50 +29,120 @@ class GradescopeService {
    * Initialize service with stored credentials and session
    */
   async initialize() {
-    try {
+    if (process.env.NODE_ENV === 'development') {
       console.log(`Initializing Gradescope service for user ${this.userId}`);
-      
-      // Check if we need to re-authenticate
-      const needsReauth = await GradescopeAuth.needsReauth(this.userId);
-      
-      if (needsReauth) {
+    }
+    
+    // Load stored credentials and session data first
+    await this.loadStoredData();
+    
+    // Check if we need to re-authentication
+    if (!await this.isSessionValid()) {
+      if (process.env.NODE_ENV === 'development') {
         console.log(`User ${this.userId} needs re-authentication`);
-        return false;
       }
-
-      // Try to restore session from stored data
-      const sessionData = await GradescopeAuth.getSessionData(this.userId);
-      if (sessionData && sessionData.cookies) {
+      return false;
+    }
+    
+    // Restore session from stored data
+    if (this.sessionData && this.sessionData.cookies) {
+      if (process.env.NODE_ENV === 'development') {
         console.log(`Found stored session data for user ${this.userId}, restoring cookies...`);
-        // Restore cookies
-        for (const cookie of sessionData.cookies) {
-          await this.cookieJar.setCookie(cookie, 'https://www.gradescope.com');
-        }
       }
-
-      // Validate current session
-      const isValid = await this.validateSession();
-      if (isValid) {
-        this.isLoggedIn = true;
-        await GradescopeAuth.updateAuthStatus(this.userId, true);
-        console.log(`User ${this.userId} session restored successfully`);
-        return true;
+      
+      // Restore cookies
+      if (Array.isArray(this.sessionData.cookies)) {
+        // If cookies are stored as strings, restore them
+        for (const cookieStr of this.sessionData.cookies) {
+          try {
+            await this.cookieJar.setCookie(cookieStr, 'https://www.gradescope.com');
+          } catch (err) {
+            console.warn('Failed to restore cookie:', cookieStr, err.message);
+          }
+        }
       } else {
+        this.cookieJar = this.sessionData.cookies;
+      }
+      
+      // Update axios instance with restored cookies
+      this.session = wrapper(axios.create({
+        withCredentials: true,
+        maxRedirects: 5,
+        jar: this.cookieJar,
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      }));
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`User ${this.userId} session restored successfully`);
+      }
+      return true;
+    } else {
+      if (process.env.NODE_ENV === 'development') {
         console.log(`Restored session for user ${this.userId} is invalid, will attempt re-auth`);
       }
-
-      // If session is invalid, try to re-authenticate with stored credentials
-      const credentials = await GradescopeAuth.getCredentials(this.userId);
-      if (credentials && credentials.email && credentials.password) {
-        console.log(`Attempting automatic re-authentication for user ${this.userId}`);
-        return await this.login(credentials.email, credentials.password, false); // Don't store again
+    }
+    
+    // Try automatic re-authentication if credentials are stored
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Attempting automatic re-authentication for user ${this.userId}`);
+    }
+    
+    if (!this.credentials || !this.credentials.email || !this.credentials.password) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`No stored credentials found for user ${this.userId}, manual login required`);
       }
+      return false;
+    }
+    
+    return await this.login(this.credentials.email, this.credentials.password);
+  }
 
-      console.log(`No stored credentials found for user ${this.userId}, manual login required`);
+  /**
+   * Load stored credentials and session data
+   */
+  async loadStoredData() {
+    try {
+      // Load credentials
+      this.credentials = await GradescopeAuth.getCredentials(this.userId);
+      
+      // Load session data
+      this.sessionData = await GradescopeAuth.getSessionData(this.userId);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Loaded stored data for user ${this.userId}:`, {
+          hasCredentials: !!this.credentials,
+          hasSessionData: !!this.sessionData
+        });
+      }
+    } catch (error) {
+      console.error(`Error loading stored data for user ${this.userId}:`, error);
+      this.credentials = null;
+      this.sessionData = null;
+    }
+  }
+
+  /**
+   * Check if current session is valid
+   */
+  async isSessionValid() {
+    try {
+      // Check if we have basic auth data
+      const needsReauth = await GradescopeAuth.needsReauth(this.userId);
+      if (needsReauth) {
+        return false;
+      }
+      
+      // If we have session data, try to validate it
+      if (this.sessionData && this.sessionData.cookies) {
+        return await this.validateSession();
+      }
+      
       return false;
     } catch (error) {
-      console.error(`Error initializing Gradescope service for user ${this.userId}:`, error);
-      await GradescopeAuth.updateAuthStatus(this.userId, false, error.message);
+      console.error(`Error checking session validity for user ${this.userId}:`, error);
       return false;
     }
   }

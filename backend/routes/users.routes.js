@@ -2,6 +2,7 @@ const express = require('express');
 const { verifyToken } = require('../middleware/auth.middleware');
 const User = require('../models/user.model');
 const { auth } = require('../config/firebase');
+const admin = require('firebase-admin');
 
 const router = express.Router();
 
@@ -19,21 +20,23 @@ router.get('/:userId', async (req, res) => {
     let user = await User.getById(userId);
 
     if (!user) {
-      console.log(`User ${userId} not found in Firestore. Fetching from Firebase Auth.`);
-      try {
-        const userRecord = await auth.getUser(userId);
-        console.log(`User ${userId} found in Firebase Auth. Creating in Firestore.`);
-        
-        user = await User.create({
-          uid: userRecord.uid,
-          email: userRecord.email,
-          displayName: userRecord.displayName,
-          photoURL: userRecord.photoURL,
-        });
-      } catch (authError) {
-        console.error(`Failed to fetch user ${userId} from Firebase Auth.`, authError);
-        return res.status(404).json({ success: false, message: 'User not found' });
+      // Development logging only
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`User ${userId} not found in Firestore. Fetching from Firebase Auth.`);
       }
+      
+      const userRecord = await admin.auth().getUser(userId);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`User ${userId} found in Firebase Auth. Creating in Firestore.`);
+      }
+      
+      user = await User.create({
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName,
+        photoURL: userRecord.photoURL,
+      });
     }
 
     const safeUserData = {

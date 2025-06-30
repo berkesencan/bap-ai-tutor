@@ -156,12 +156,16 @@ class Course {
   }
   
   /**
-   * Get all courses for a user
+   * Get all courses for a user (OPTIMIZED with pagination)
    * @param {string} userId - User ID
+   * @param {number} limit - Maximum number of courses to return
+   * @param {number} offset - Number of courses to skip
    * @returns {Promise<Array>} - Array of course data
    */
-  static async getByUserId(userId) {
+  static async getByUserId(userId, limit = 20, offset = 0) {
     try {
+      console.log(`[Course Model] Getting courses for user ${userId} (limit: ${limit}, offset: ${offset})`);
+      
       // Simplified query to avoid composite index requirement
       const snapshot = await db.collection('courses')
         .where('members', 'array-contains', userId)
@@ -184,7 +188,12 @@ class Course {
         return dateB - dateA; // Descending order
       });
       
-      return courses;
+      // Apply pagination in memory
+      const paginatedCourses = courses.slice(offset, offset + limit);
+      
+      console.log(`[Course Model] Found ${paginatedCourses.length} courses for user ${userId} (total: ${courses.length})`);
+      
+      return paginatedCourses;
     } catch (error) {
       console.error('Error getting courses by user ID:', error);
       throw error;

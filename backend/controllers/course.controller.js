@@ -31,7 +31,7 @@ class CourseController {
   }
   
   /**
-   * Get all courses for the current user
+   * Get all courses for the current user (OPTIMIZED)
    * @param {Request} req - Express request object
    * @param {Response} res - Express response object
    * @param {NextFunction} next - Express next function
@@ -39,17 +39,35 @@ class CourseController {
   static async getAll(req, res, next) {
     try {
       const userId = req.user.uid;
+      const { limit = 20, offset = 0 } = req.query;
       
-      const courses = await Course.getByUserId(userId);
+      console.log(`[Course Controller] Getting courses for user ${userId} (limit: ${limit})`);
+      
+      const courses = await Course.getByUserId(userId, parseInt(limit), parseInt(offset));
+      
+      console.log(`[Course Controller] Found ${courses.length} courses for user`);
       
       res.status(200).json({
         success: true,
         data: {
           courses,
+          totalFound: courses.length,
+          hasMore: courses.length >= parseInt(limit)
         },
       });
     } catch (error) {
-      next(error);
+      console.error('Error getting courses by user ID:', error);
+      
+      // Return graceful error instead of crashing
+      res.status(200).json({
+        success: false,
+        error: 'Failed to load courses. Please try again later.',
+        data: {
+          courses: [],
+          totalFound: 0,
+          hasMore: false
+        }
+      });
     }
   }
   

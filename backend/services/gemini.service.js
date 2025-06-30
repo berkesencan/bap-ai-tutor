@@ -21,7 +21,10 @@ class GeminiService {
       const text = response.text();
       const usageMetadata = response.usageMetadata || null; // Get usage metadata if available
       
-      console.log(`Gemini Response (${modelName}) Usage:`, usageMetadata); // Log it on the backend
+      // Log usage in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Gemini Response (${modelName}) Usage:`, usageMetadata);
+      }
       
       return { text, usageMetadata }; // Return both
     } catch (error) {
@@ -60,7 +63,6 @@ class GeminiService {
    * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
    */
   static async testGeminiFlash(prompt) {
-    console.log('Testing Gemini 1.5 Flash with prompt:', prompt);
     // Use the internal method that returns metadata
     return this._generateWithUsage(prompt, 'gemini-1.5-flash'); 
   }
@@ -147,7 +149,12 @@ Provide a day-by-day breakdown with specific tasks, estimated times, and suggest
       const response = await result.response;
       const text = response.text();
       const usageMetadata = response.usageMetadata || null;
-      console.log(`Gemini PDF Processing Usage:`, usageMetadata);
+      
+      // Log usage in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Gemini PDF Processing Usage:`, usageMetadata);
+      }
+      
       return { text, usageMetadata };
     } catch (error) {
       console.error('Error processing PDF with Gemini:', error);

@@ -260,16 +260,20 @@ class Assignment {
       const response = await this.session.get(assignmentUrl);
       const $ = cheerio.load(response.data);
 
-      // After loading the assignment page
-      console.log('ASSIGNMENT PAGE HTML:', $.html().substring(0, 1000)); // First 1000 chars
-
+      // Development debugging only
+      if (process.env.NODE_ENV === 'development') {
+        console.log('ASSIGNMENT PAGE HTML:', $.html().substring(0, 1000)); // First 1000 chars
+      }
+      
       // 2. Find the submission details link
       let submissionLink = null;
       $('a').each((i, elem) => {
         const href = $(elem).attr('href');
         if (href && href.includes('/submissions/')) {
           submissionLink = href;
-          console.log('Found submission link:', submissionLink);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Found submission link:', submissionLink);
+          }
           return false;
         }
       });
@@ -284,8 +288,10 @@ class Assignment {
       const submissionResponse = await this.session.get(submissionLink);
       const $sub = cheerio.load(submissionResponse.data);
 
-      // After loading the submission page
-      console.log('SUBMISSION PAGE HTML:', $sub.html().substring(0, 1000)); // First 1000 chars
+      // Development debugging only
+      if (process.env.NODE_ENV === 'development') {
+        console.log('SUBMISSION PAGE HTML:', $sub.html().substring(0, 1000)); // First 1000 chars
+      }
 
       // 4. Find the Download Submission link (PDF or ZIP)
       let fileLink = null;
@@ -294,7 +300,9 @@ class Assignment {
         const text = $sub(elem).text().toLowerCase();
         if (text.includes('download submission') && href && (href.endsWith('.pdf') || href.endsWith('.zip'))) {
           fileLink = href;
-          console.log('Found file link:', fileLink);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Found file link:', fileLink);
+          }
           return false;
         }
       });
