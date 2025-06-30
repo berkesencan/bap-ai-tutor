@@ -694,91 +694,112 @@ Generate ${questionsForm.count} high-quality practice questions now:`;
     }
     
     // Create a grading prompt that includes point-based scoring
-    let gradingPrompt = `GRADING TASK - CONSISTENT POINT-BASED SCORING
+    let gradingPrompt = `GRADE THIS ANSWER - OBJECTIVE CHECKLIST
 
 QUESTION: ${questionText}
-MAXIMUM POINTS: ${maxPoints}
+STUDENT ANSWER: "${answerText}"
+MAX POINTS: ${maxPoints}
 
-🚨 MANDATORY GRADING PROTOCOL - FOLLOW EXACTLY 🚨
+OBJECTIVE GRADING CHECKLIST:
+1. First, identify what the question is asking for (list the main requirements)
+2. For each requirement, check if the student answer addresses it (YES/NO)
+3. Count how many requirements are addressed
+4. Use this EXACT scoring:
+   - Addresses ALL requirements = FULL POINTS (${maxPoints}/${maxPoints})
+   - Addresses 75%+ of requirements = 80% of max points
+   - Addresses 50%+ of requirements = 60% of max points  
+   - Addresses 25%+ of requirements = 30% of max points
+   - Addresses less than 25% = 0-10% of max points
 
-STEP 1: SOLVE THE QUESTION FIRST
-Determine the correct answer for this question.
+CRITICAL RULE: If the answer covers all the main topics asked, give FULL points. Don't deduct for style or extra detail.
 
-STEP 2: ANALYZE STUDENT ANSWER
-Student submitted: "${answerText}"
-
-STEP 3: CONSISTENCY CHECK (CRITICAL)
-- Does the student answer match the quality/content of your correct answer? 
-- If YES → Give FULL POINTS (${maxPoints}/${maxPoints}) immediately
-- If NO → Continue to component analysis
-
-STEP 4: COMPONENT ANALYSIS
-Break down the question into its main components and evaluate each:
-- Rate each component: EXCELLENT=full points, GOOD=most points, WEAK=some points, MISSING=no points
-- Add up component scores for total
-
-STEP 5: FINAL SCORE CALCULATION
-- Same answer quality = Same score (be consistent!)
-- Don't overthink - grade like a fair teacher
-- If student demonstrates understanding of key concepts = high score
-
-ABSOLUTE REQUIREMENTS:
-1. SAME ANSWER MUST GET SAME SCORE every time
-2. If answer matches your correct answer quality → FULL POINTS
-3. Be consistent with your own grading logic
-4. Don't penalize for minor details if core understanding is correct
-
-Your response MUST be in this exact format:
+RESPONSE FORMAT:
+REQUIREMENTS: [List what the question asks for]
+STUDENT COVERAGE: [Which requirements are met - YES/NO for each]
 POINTS: X/${maxPoints}
-FEEDBACK: [Brief explanation of what was correct and what could be improved]
+FEEDBACK: [Brief explanation]
+CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
 
-CORRECT ANSWER: [Provide the correct answer - keep it concise and consistent]
+    console.log(`Sending grading prompt for Q${index + 1} to testGemini:`, gradingPrompt);
 
-Where X is the points earned (0 to ${maxPoints}).
+    // Add retry logic with exponential backoff
+    let retryCount = 0;
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
 
-YOUR RESPONSE:`;
+    while (retryCount <= maxRetries) {
+      try {
+        const response = await testGemini(gradingPrompt);
+        console.log(`Grading API Response Q${index + 1} (attempt ${retryCount + 1}):`, response);
 
-    console.log(`Sending point-based grading prompt for Q${index + 1} to testGemini:`, gradingPrompt);
-
-    try {
-      const response = await testGemini(gradingPrompt);
-      console.log(`Grading API Response Q${index + 1}:`, response);
-
-      if (response.success) {
-         console.log("Raw feedback:", response.data.response);
-         
-         // Extract points from response
-         const pointsMatch = response.data.response.match(/POINTS:\s*(\d+)\/(\d+)/i);
-         const earnedPoints = pointsMatch ? parseInt(pointsMatch[1]) : 0;
-         
-         // Update scores
-         setUserScores(prev => ({ ...prev, [index]: earnedPoints }));
-         
-         // Update only the feedback for the specific answer
-         setUserAnswers(prev => ({ 
-           ...prev, 
-           [index]: { ...prev[index], feedback: response.data.response } 
-         }));
-      } else {
-         // Display error specifically for this question
-         setUserAnswers(prev => ({ 
-           ...prev, 
-           [index]: { ...prev[index], feedback: `Error grading: ${response.message || 'Unknown error'}` } 
-         }));
+        if (response.success && response.data && response.data.response) {
+           console.log("Raw feedback:", response.data.response);
+           
+           // Validate response format
+           if (!response.data.response.includes('POINTS:')) {
+             throw new Error('Invalid response format - missing POINTS section');
+           }
+           
+           // Extract points from response
+           const pointsMatch = response.data.response.match(/POINTS:\s*(\d+)\/(\d+)/i);
+           if (!pointsMatch) {
+             throw new Error('Could not extract points from response');
+           }
+           
+           const earnedPoints = parseInt(pointsMatch[1]);
+           if (isNaN(earnedPoints)) {
+             throw new Error('Invalid points value');
+           }
+           
+           // Update scores
+           setUserScores(prev => ({ ...prev, [index]: earnedPoints }));
+           
+           // Update only the feedback for the specific answer
+           setUserAnswers(prev => ({ 
+             ...prev, 
+             [index]: { ...prev[index], feedback: response.data.response } 
+           }));
+           
+           // Success - break out of retry loop
+           break;
+           
+        } else {
+           throw new Error(response.message || response.error || 'Invalid API response');
+        }
+      } catch (error) {
+        console.error(`Grading attempt ${retryCount + 1} failed:`, error);
+        
+        if (retryCount === maxRetries) {
+          // Final attempt failed - show user-friendly error
+          const errorMessage = error.message?.includes('fetch') || error.message?.includes('network') 
+            ? 'Network error - please check your connection and try again'
+            : error.message?.includes('timeout')
+            ? 'Request timed out - please try again'
+            : `Grading failed: ${error.message || 'Unknown error'}`;
+            
+          setUserAnswers(prev => ({ 
+            ...prev, 
+            [index]: { 
+              ...prev[index], 
+              feedback: `❌ Error: ${errorMessage}\n\nPlease try grading this answer again.` 
+            } 
+          }));
+        } else {
+          // Wait before retrying (exponential backoff)
+          const delay = baseDelay * Math.pow(2, retryCount);
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        retryCount++;
       }
-    } catch (error) {
-       setUserAnswers(prev => ({ 
-         ...prev, 
-         [index]: { ...prev[index], feedback: `Error: ${error.message}` } 
-       }));
-       console.error('Grading error:', error);
-    } finally {
-       // Set loading state for this specific answer back to false
-       setUserAnswers(prev => ({ 
-         ...prev, 
-         [index]: { ...prev[index], isGrading: false } 
-       }));
     }
+    
+    // Always clear loading state
+    setUserAnswers(prev => ({ 
+      ...prev, 
+      [index]: { ...prev[index], isGrading: false } 
+    }));
   };
 
   // Modify the handleDiscussInChat function to support question-specific content
@@ -1013,88 +1034,111 @@ YOUR RESPONSE:`;
     }
     
     // Create grading prompt with point-based scoring (same as practice questions)
-    let gradingPrompt = `GRADING TASK - CONSISTENT POINT-BASED SCORING
+    let gradingPrompt = `GRADE THIS ANSWER - OBJECTIVE CHECKLIST
 
 QUESTION: ${questionText}
-MAXIMUM POINTS: ${maxPoints}
+STUDENT ANSWER: "${answerText}"
+MAX POINTS: ${maxPoints}
 
-🚨 MANDATORY GRADING PROTOCOL - FOLLOW EXACTLY 🚨
+OBJECTIVE GRADING CHECKLIST:
+1. First, identify what the question is asking for (list the main requirements)
+2. For each requirement, check if the student answer addresses it (YES/NO)
+3. Count how many requirements are addressed
+4. Use this EXACT scoring:
+   - Addresses ALL requirements = FULL POINTS (${maxPoints}/${maxPoints})
+   - Addresses 75%+ of requirements = 80% of max points
+   - Addresses 50%+ of requirements = 60% of max points  
+   - Addresses 25%+ of requirements = 30% of max points
+   - Addresses less than 25% = 0-10% of max points
 
-STEP 1: SOLVE THE QUESTION FIRST
-Determine the correct answer for this question.
+CRITICAL RULE: If the answer covers all the main topics asked, give FULL points. Don't deduct for style or extra detail.
 
-STEP 2: ANALYZE STUDENT ANSWER
-Student submitted: "${answerText}"
-
-STEP 3: CONSISTENCY CHECK (CRITICAL)
-- Does the student answer match the quality/content of your correct answer? 
-- If YES → Give FULL POINTS (${maxPoints}/${maxPoints}) immediately
-- If NO → Continue to component analysis
-
-STEP 4: COMPONENT ANALYSIS
-Break down the question into its main components and evaluate each:
-- Rate each component: EXCELLENT=full points, GOOD=most points, WEAK=some points, MISSING=no points
-- Add up component scores for total
-
-STEP 5: FINAL SCORE CALCULATION
-- Same answer quality = Same score (be consistent!)
-- Don't overthink - grade like a fair teacher
-- If student demonstrates understanding of key concepts = high score
-
-ABSOLUTE REQUIREMENTS:
-1. SAME ANSWER MUST GET SAME SCORE every time
-2. If answer matches your correct answer quality → FULL POINTS
-3. Be consistent with your own grading logic
-4. Don't penalize for minor details if core understanding is correct
-
-Your response MUST be in this exact format:
+RESPONSE FORMAT:
+REQUIREMENTS: [List what the question asks for]
+STUDENT COVERAGE: [Which requirements are met - YES/NO for each]
 POINTS: X/${maxPoints}
-FEEDBACK: [Brief explanation of what was correct and what could be improved]
-
-CORRECT ANSWER: [Provide the correct answer - keep it concise and consistent]
-
-Where X is the points earned (0 to ${maxPoints}).
-
-YOUR RESPONSE:`;
+FEEDBACK: [Brief explanation]
+CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
 
     console.log(`Sending grading prompt for Practice Exam Q${index + 1} to testGemini:`, gradingPrompt);
 
-    try {
-      const response = await testGemini(gradingPrompt);
-      console.log(`Practice Exam Grading API Response Q${index + 1}:`, response);
+    // Add retry logic with exponential backoff
+    let retryCount = 0;
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
 
-      if (response.success) {
-         console.log("Raw feedback:", response.data.response);
-         
-         // Extract points from response
-         const pointsMatch = response.data.response.match(/POINTS:\s*(\d+)\/(\d+)/i);
-         const earnedPoints = pointsMatch ? parseInt(pointsMatch[1]) : 0;
-         
-         // Update scores
-         setPracticeExamScores(prev => ({ ...prev, [index]: earnedPoints }));
-         
-         setPracticeExamAnswers(prev => ({ 
-           ...prev, 
-           [index]: { ...prev[index], feedback: response.data.response } 
-         }));
-      } else {
-         setPracticeExamAnswers(prev => ({ 
-           ...prev, 
-           [index]: { ...prev[index], feedback: `Error grading: ${response.message || 'Unknown error'}` } 
-         }));
+    while (retryCount <= maxRetries) {
+      try {
+        const response = await testGemini(gradingPrompt);
+        console.log(`Practice Exam Grading API Response Q${index + 1} (attempt ${retryCount + 1}):`, response);
+
+        if (response.success && response.data && response.data.response) {
+           console.log("Raw feedback:", response.data.response);
+           
+           // Validate response format
+           if (!response.data.response.includes('POINTS:')) {
+             throw new Error('Invalid response format - missing POINTS section');
+           }
+           
+           // Extract points from response
+           const pointsMatch = response.data.response.match(/POINTS:\s*(\d+)\/(\d+)/i);
+           if (!pointsMatch) {
+             throw new Error('Could not extract points from response');
+           }
+           
+           const earnedPoints = parseInt(pointsMatch[1]);
+           if (isNaN(earnedPoints)) {
+             throw new Error('Invalid points value');
+           }
+           
+           // Update scores
+           setPracticeExamScores(prev => ({ ...prev, [index]: earnedPoints }));
+           
+           setPracticeExamAnswers(prev => ({ 
+             ...prev, 
+             [index]: { ...prev[index], feedback: response.data.response } 
+           }));
+           
+           // Success - break out of retry loop
+           break;
+           
+        } else {
+           throw new Error(response.message || response.error || 'Invalid API response');
+        }
+      } catch (error) {
+        console.error(`Practice Exam Grading attempt ${retryCount + 1} failed:`, error);
+        
+        if (retryCount === maxRetries) {
+          // Final attempt failed - show user-friendly error
+          const errorMessage = error.message?.includes('fetch') || error.message?.includes('network') 
+            ? 'Network error - please check your connection and try again'
+            : error.message?.includes('timeout')
+            ? 'Request timed out - please try again'
+            : `Grading failed: ${error.message || 'Unknown error'}`;
+            
+          setPracticeExamAnswers(prev => ({ 
+            ...prev, 
+            [index]: { 
+              ...prev[index], 
+              feedback: `❌ Error: ${errorMessage}\n\nPlease try grading this answer again.` 
+            } 
+          }));
+        } else {
+          // Wait before retrying (exponential backoff)
+          const delay = baseDelay * Math.pow(2, retryCount);
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        retryCount++;
       }
-    } catch (error) {
-       setPracticeExamAnswers(prev => ({ 
-         ...prev, 
-         [index]: { ...prev[index], feedback: `Error: ${error.message}` } 
-       }));
-       console.error('Practice Exam Grading error:', error);
-    } finally {
-       setPracticeExamAnswers(prev => ({ 
-         ...prev, 
-         [index]: { ...prev[index], isGrading: false } 
-       }));
     }
+    
+    // Always clear loading state
+    setPracticeExamAnswers(prev => ({ 
+      ...prev, 
+      [index]: { ...prev[index], isGrading: false } 
+    }));
   };
 
   return (
