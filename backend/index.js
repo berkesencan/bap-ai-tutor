@@ -115,6 +115,20 @@ app.post('/api/ai/practice-exam', upload.single('pdf'), require('./controllers/a
 // Test form parsing (unprotected for debugging)
 app.post('/api/ai/test-form', upload.single('pdf'), require('./controllers/ai.controller').testFormParsing);
 
+// Simple test endpoint to verify the practice exam route is working
+app.get('/api/ai/test-route', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Practice exam route is accessible',
+    timestamp: new Date().toISOString(),
+    routes: {
+      practiceExam: '/api/ai/practice-exam (POST with PDF upload)',
+      testForm: '/api/ai/test-form (POST with PDF upload)',
+      downloadPdf: '/api/ai/download-pdf/:filename (GET)'
+    }
+  });
+});
+
 // Protected routes with auth middleware
 app.use('/api/assignments', authMiddleware, assignmentRoutes);
 app.use('/api/schedules', authMiddleware, scheduleRoutes);

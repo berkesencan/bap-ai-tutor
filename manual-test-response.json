@@ -1,0 +1,122 @@
+{
+  "questions": "Q1) [a.] [5] What is the difference between a process and a thread? [b.] [5] Explain the concept of Amdahl's Law. [c.] [5] What is a race condition? Give a simple example. [d.] [5] Briefly explain the difference between cache coherence and memory consistency.\n\nQ2) [a.] [10] Explain how a deadlock can occur in a multithreaded program. [b.] [10] Describe two common methods for preventing deadlocks.\n\nQ3) [a.] [10] Explain the concept of load balancing in parallel computing. [b.] [10] Describe two strategies for achieving load balancing.\n\nQ4) [a.] [10] Explain the difference between OpenMP and MPI. When would you choose one over the other?\n\nQ5) [CODE SNIPPET] #include <omp.h> #include <stdio.h> int main() int i, n = 100; int a[n]; #pragma omp parallel for for (i = 0; i < n; i++) { a[i] = i * 2; #pragma omp parallel for for (i = 0; i < n; i++) printf(\"Thread %d: a[%d] = %d\", omp_get_thread_num(), i, a[i]); return 0; } [/CODE SNIPPET] [a.] [10] What is the output of this OpenMP code? Explain why. [b.] [5] How would you modify this code to ensure the output is ordered?\n\nQ6) Consider a parallel program that needs to compute the sum of 1,000,000 numbers. Assume each number is stored in an array. [a.] [10] Describe a simple parallel algorithm to compute this sum using a divide-and-conquer approach. [b.] [5] What are the potential bottlenecks in your algorithm, and how can you address them?\n\nQ7) [a.] [10] Describe the concept of a critical section in a parallel program. [b.] [5] Explain how mutexes can be used to protect a critical section.\n\nQ8) [CODE SNIPPET] int my_rank, x; MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); if (my_rank == 0) x = 10; MPI_Send(&x, 1, MPI_INT, 1, 0, MPI_COMM_WORLD); else if (my_rank == 1) MPI_Recv(&x, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); printf(\"Process 1 received: %d\", x); x = x * 2; MPI_Send(&x, 1, MPI_INT, 2, 0, MPI_COMM_WORLD); else if (my_rank == 2) MPI_Recv(&x, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); printf(\"Process 2 received: %d\", x); [/CODE SNIPPET] [a.] [10] What is the output of this MPI program? Explain your answer. [b.] [5] What would happen if we removed the `MPI_STATUS_IGNORE` in the `MPI_Recv` calls?\n\nQ9) [a.] [5] What is the difference between strong and weak scaling in parallel computing? [b.] [5] Explain how false sharing can negatively impact performance in a shared-memory system.\n\nQ10) [a.] [10] Describe the concept of data locality and its importance in parallel programming. [b.] [5] Explain how data partitioning strategies can improve data locality.",
+  "parsedQuestions": [
+    {
+      "id": 1,
+      "question": "Q1) [a.] [5] What is the difference between a process and a thread? [b.] [5] Explain the concept of Amdahl's Law. [c.] [5] What is a race condition? Give a simple example. [d.] [5] Briefly explain the difference between cache coherence and memory consistency.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q2) [a.] [10] Explain how a deadlock can occur in a multithreaded program. [b.] [10] Describe two common methods for preventing deadlocks.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q3) [a.] [10] Explain the concept of load balancing in parallel computing. [b.] [10] Describe two strategies for achieving load balancing.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q4) [a.] [10] Explain the difference between OpenMP and MPI. When would you choose one over the other?",
+      "points": 10
+    },
+    {
+      "id": 5,
+      "question": "Q5) [CODE SNIPPET] #include <omp.h> #include <stdio.h> int main() int i, n = 100; int a[n]; #pragma omp parallel for for (i = 0; i < n; i++) { a[i] = i * 2; #pragma omp parallel for for (i = 0; i < n; i++) printf(\"Thread %d: a[%d] = %d\", omp_get_thread_num(), i, a[i]); return 0; } [/CODE SNIPPET] [a.] [10] What is the output of this OpenMP code? Explain why. [b.] [5] How would you modify this code to ensure the output is ordered?",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q6) Consider a parallel program that needs to compute the sum of 1,000,000 numbers. Assume each number is stored in an array. [a.] [10] Describe a simple parallel algorithm to compute this sum using a divide-and-conquer approach. [b.] [5] What are the potential bottlenecks in your algorithm, and how can you address them?",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q7) [a.] [10] Describe the concept of a critical section in a parallel program. [b.] [5] Explain how mutexes can be used to protect a critical section.",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q8) [CODE SNIPPET] int my_rank, x; MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); if (my_rank == 0) x = 10; MPI_Send(&x, 1, MPI_INT, 1, 0, MPI_COMM_WORLD); else if (my_rank == 1) MPI_Recv(&x, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); printf(\"Process 1 received: %d\", x); x = x * 2; MPI_Send(&x, 1, MPI_INT, 2, 0, MPI_COMM_WORLD); else if (my_rank == 2) MPI_Recv(&x, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); printf(\"Process 2 received: %d\", x); [/CODE SNIPPET] [a.] [10] What is the output of this MPI program? Explain your answer. [b.] [5] What would happen if we removed the `MPI_STATUS_IGNORE` in the `MPI_Recv` calls?",
+      "points": 10
+    },
+    {
+      "id": 9,
+      "question": "Q9) [a.] [5] What is the difference between strong and weak scaling in parallel computing? [b.] [5] Explain how false sharing can negatively impact performance in a shared-memory system.",
+      "points": 10
+    },
+    {
+      "id": 10,
+      "question": "Q10) [a.] [10] Describe the concept of data locality and its importance in parallel programming. [b.] [5] Explain how data partitioning strategies can improve data locality.",
+      "points": 10
+    }
+  ],
+  "interactiveQuestions": [
+    {
+      "id": 1,
+      "question": "Q1) [a.] [5] What is the difference between a process and a thread? [b.] [5] Explain the concept of Amdahl's Law. [c.] [5] What is a race condition? Give a simple example. [d.] [5] Briefly explain the difference between cache coherence and memory consistency.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q2) [a.] [10] Explain how a deadlock can occur in a multithreaded program. [b.] [10] Describe two common methods for preventing deadlocks.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q3) [a.] [10] Explain the concept of load balancing in parallel computing. [b.] [10] Describe two strategies for achieving load balancing.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q4) [a.] [10] Explain the difference between OpenMP and MPI. When would you choose one over the other?",
+      "points": 10
+    },
+    {
+      "id": 5,
+      "question": "Q5) [CODE SNIPPET] #include <omp.h> #include <stdio.h> int main() int i, n = 100; int a[n]; #pragma omp parallel for for (i = 0; i < n; i++) { a[i] = i * 2; #pragma omp parallel for for (i = 0; i < n; i++) printf(\"Thread %d: a[%d] = %d\", omp_get_thread_num(), i, a[i]); return 0; } [/CODE SNIPPET] [a.] [10] What is the output of this OpenMP code? Explain why. [b.] [5] How would you modify this code to ensure the output is ordered?",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q6) Consider a parallel program that needs to compute the sum of 1,000,000 numbers. Assume each number is stored in an array. [a.] [10] Describe a simple parallel algorithm to compute this sum using a divide-and-conquer approach. [b.] [5] What are the potential bottlenecks in your algorithm, and how can you address them?",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q7) [a.] [10] Describe the concept of a critical section in a parallel program. [b.] [5] Explain how mutexes can be used to protect a critical section.",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q8) [CODE SNIPPET] int my_rank, x; MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); if (my_rank == 0) x = 10; MPI_Send(&x, 1, MPI_INT, 1, 0, MPI_COMM_WORLD); else if (my_rank == 1) MPI_Recv(&x, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); printf(\"Process 1 received: %d\", x); x = x * 2; MPI_Send(&x, 1, MPI_INT, 2, 0, MPI_COMM_WORLD); else if (my_rank == 2) MPI_Recv(&x, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); printf(\"Process 2 received: %d\", x); [/CODE SNIPPET] [a.] [10] What is the output of this MPI program? Explain your answer. [b.] [5] What would happen if we removed the `MPI_STATUS_IGNORE` in the `MPI_Recv` calls?",
+      "points": 10
+    },
+    {
+      "id": 9,
+      "question": "Q9) [a.] [5] What is the difference between strong and weak scaling in parallel computing? [b.] [5] Explain how false sharing can negatively impact performance in a shared-memory system.",
+      "points": 10
+    },
+    {
+      "id": 10,
+      "question": "Q10) [a.] [10] Describe the concept of data locality and its importance in parallel programming. [b.] [5] Explain how data partitioning strategies can improve data locality.",
+      "points": 10
+    }
+  ],
+  "questionPoints": [
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10
+  ],
+  "subject": "Parallel Computing",
+  "difficulty": "medium",
+  "pdfPath": "backend/uploads/simple-exam-1754524120181.pdf"
+}

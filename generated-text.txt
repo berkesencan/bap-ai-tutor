@@ -1,0 +1,111 @@
+CSCI-UA.0480-051: Parallel Computing
+Midterm Exam (Mar 14th, 2024)
+Total: 100 points
+Important Notes- READ BEFORE SOLVING THE
+EXAM
+• If you perceive any ambiguity in any of the questions, state your assumptions clearly and solve the
+problem based on your assumptions. We will grade
+both your solutions and your assumptions.
+• This exam is take-home.
+• The exam is posted on Brightspace, at the beginning of the March 14th lecture (2pm EST).
+• You have up to 24 hours to submit on Brightspace
+(i.e. till March 15th 2pm EST), in the same way
+as you submit an assignment. However, unlike assignments, you can only submit once.
+• Your answers must be very focused. You may be
+penalized for giving wrong answers and for putting
+irrelevant information in your answers.
+• Your answer sheet must be organized as follows:
+– The very first page of your answer must contain
+only:
+∗ Your Last Name
+∗ Your First Name
+∗ Your NetID
+∗ Copy and paste the honor code shown in the
+rectangle at the bottom of this page.
+– In your answer sheet, answer one problem per
+page. The exam has four main problems, each
+one must be answered in a separate page.
+1
+
+• This exam consists of 4 problems, with a total of
+100 points.
+• Your answers can be typed or written by hand
+(but with clear handwriting). It is up to you. But
+you must upload one pdf file containing all your
+answers.
+Honor code (copy and paste to the first page of your
+exam)
+• You may use the textbook, slides, the class recorded
+lectures, the information in the discussion forums
+of the class on Brightspace, and any notes you
+have. But you may not use the internet.
+• You may NOT use communication tools to collaborate with other humans. This includes but is not
+limited to Google-Chat, Messenger, E-mail, etc.
+• You cannot use LLMs such as chatGPT, Gemini,
+Bard, etc.
+• Do not try to search for answers on the internet,
+it will show in your answer, and you will earn an
+immediate grade of 0.
+• Anyone found sharing answers, communicating with
+another student, searching the internet, or using
+prohibited tools (as mentioned above) during the
+exam period will earn an immediate grade of 0.
+• “I understand the ground rules and agree to abide
+by them. I will not share answers or assist another
+student during this exam, nor will I seek assistance
+from another student or attempt to view their answers.”
+
+2
+
+Problem 1 [30 points] A parallel program uses
+MPI Send and MPI Recv to exchange data between two
+processes, P0 and P1. Process P0 sends a 10-element
+integer array data to P1 using MPI Send(&data, 10,
+MPI INT, 1, 100, MPI COMM WORLD);. Process P1
+receives the data using MPI Recv(&received data, 10,
+MPI INT, 0, 100, MPI COMM WORLD, &status);. If data
+initially contains the values {1, 2, 3, 4, 5, 6, 7, 8, 9,
+10}, and no errors occur:
+a) What are the contents of received data in P1
+after the communication?
+b) What is the purpose of the tag (100) in both
+MPI Send and MPI Recv? Explain its importance for
+reliable communication.
+
+3
+
+Problem 2 [35 points] Consider a shared-memory
+multiprocessor system with 4 cores. Three
+independent tasks, Task A, Task B, and Task C,
+have execution times of 20, 15, and 25 milliseconds,
+respectively. If each core can run one task at a time,
+and we assign one task per core, answer the
+following:
+a) What is the total execution time of these three
+tasks?
+b) Assume now that Task A can be split into 2
+sub-tasks (A1 and A2) each taking 10ms to execute.
+What is the minimum execution time if you divide
+Task A into subtasks and assign them across the
+cores? Show your task assignment and explain your
+reasoning.
+
+4
+
+Problem 3 [35 points] Suppose we have a 2-way
+hyperthreading core. We want to execute two
+threads, Thread X and Thread Y. Thread X
+performs 100 floating-point operations, and Thread
+Y performs 50 integer operations. Assuming that
+floating-point operations are twice as expensive (in
+terms of CPU cycles) as integer operations:
+a) Does this necessarily lead to load imbalance if we
+run both threads concurrently? Explain why or why
+not.
+b) How could you improve the performance by
+adjusting the workload if load imbalance exists?
+Describe a possible solution and explain the benefits.
+
+5
+
+

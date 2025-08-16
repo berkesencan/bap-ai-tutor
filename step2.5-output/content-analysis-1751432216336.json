@@ -1,0 +1,44 @@
+{
+  "subject": "parallel-computing",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": false,
+  "hasMathEquations": false,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": true,
+  "detectedElements": [
+    "Algorithm pseudocode"
+  ],
+  "codeLanguages": [],
+  "diagramTypes": [],
+  "tableStructures": [],
+  "mathNotations": [],
+  "contentTopics": [
+    "operating-systems (13 mentions)",
+    "parallel-computing (37 mentions)"
+  ],
+  "questionTypes": [
+    "theoretical (8 instances)",
+    "analytical (1 instances)",
+    "practical (5 instances)",
+    "problem-solving (2 instances)"
+  ],
+  "academicPatterns": [
+    "industry-practice (4 instances)"
+  ],
+  "technicalTerms": [
+    "CSCI",
+    "READ",
+    "BEFORE",
+    "SOLVING",
+    "EXAM",
+    "take-home",
+    "NetID",
+    "LLMs",
+    "four-way",
+    "CPUs"
+  ],
+  "complexityLevel": "basic"
+}

@@ -1,0 +1,122 @@
+{
+  "questions": "Q1) [(a)] [10] Explain the difference between strong scaling and weak scaling in parallel computing. Provide an example of a scenario where strong scaling would be more beneficial and another where weak scaling would be preferred. [(b)] [10] What are the primary challenges in achieving good scalability in parallel programs? Discuss at least three significant challenges and propose potential solutions for each.\n\nQ2) [(a)] [10] Describe Amdahl's Law and its implications for parallel program performance. How does the fraction of the program that cannot be parallelized affect the potential speedup? [(b)] [10] Explain Gustafson's Law and how it differs from Amdahl's Law. Under what conditions might Gustafson's Law be a more realistic model of parallel program behavior?\n\nQ3) Suppose we have a parallel algorithm that sorts an array of N integers. The algorithm divides the array into P equal-sized chunks, each processed by a separate processor. The sorting within each chunk is done using quicksort, which has an average-case time complexity of O(N log N). After the local sorts, a merging step combines the sorted chunks. Assume the merging step takes O(N log P) time. [(a)] [10] Derive the overall time complexity of this parallel sorting algorithm in terms of N and P. [(b)] [10] Analyze the scalability of this algorithm. Does it exhibit good strong scaling? What about weak scaling? Justify your answers.\n\nQ4) Consider a parallel program that performs matrix multiplication of two NxN matrices. The program uses a simple row-wise partitioning, where each processor is responsible for multiplying a subset of rows from the first matrix with the entire second matrix. [(a)] [10] Describe the communication pattern involved in this algorithm. What data needs to be communicated between processors, and when? [(b)] [10] Analyze the computational load balance for this algorithm. Is it perfectly balanced? If not, why not, and what could be done to improve the load balance?\n\nQ5) [(a)] [10] Explain the concept of a race condition in concurrent programming. Provide a simple code example demonstrating a race condition. [(b)] [10] Discuss several techniques or mechanisms for preventing race conditions in parallel programs, such as mutexes, semaphores, and atomic operations.\n\nQ6) Suppose we have a shared-memory multiprocessor system with four cores. We have two threads, Thread A and Thread B, both accessing and modifying a shared variable `count`. [CODE SNIPPET] // Thread A count++; // Thread B count--; [/CODE SNIPPET] [(a)] [10] Explain why this code might produce unexpected results. What kind of problem is this? [(b)] [10] How could you modify this code to ensure that the operations on `count` are atomic and produce the correct result? Explain how your solution avoids the problem in (a).\n\nQ7) [(a)] [5] What is a deadlock in concurrent programming? Provide an example scenario involving two threads. [(b)] [5] Explain how to prevent deadlocks using techniques such as resource ordering or deadlock detection.\n\nQ8) [(a)] [10] Explain the difference between OpenMP and MPI. When would you choose one over the other for a parallel programming task? [(b)] [10] Discuss the advantages and disadvantages of using OpenMP and MPI.\n\nQ9) Write a simple OpenMP code snippet that calculates the sum of the elements of a large array. Explain how the code works and identify the OpenMP directives used. [Assume the array is already allocated and initialized]. [(a)] [10] Provide the OpenMP code. [(b)] [10] Explain how to handle potential race conditions in this code.\n\nQ10) Write a simple MPI code snippet that calculates the average of a large array distributed across multiple processes. Explain how the code works and identify the MPI functions used. [Assume the array is already allocated and initialized on process 0]. [(a)] [10] Provide the MPI code. [(b)] [10] Explain how the code handles the distribution of data and the aggregation of results.",
+  "parsedQuestions": [
+    {
+      "id": 1,
+      "question": "Q1) [(a)] [10] Explain the difference between strong scaling and weak scaling in parallel computing. Provide an example of a scenario where strong scaling would be more beneficial and another where weak scaling would be preferred. [(b)] [10] What are the primary challenges in achieving good scalability in parallel programs? Discuss at least three significant challenges and propose potential solutions for each.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q2) [(a)] [10] Describe Amdahl's Law and its implications for parallel program performance. How does the fraction of the program that cannot be parallelized affect the potential speedup? [(b)] [10] Explain Gustafson's Law and how it differs from Amdahl's Law. Under what conditions might Gustafson's Law be a more realistic model of parallel program behavior?",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q3) Suppose we have a parallel algorithm that sorts an array of N integers. The algorithm divides the array into P equal-sized chunks, each processed by a separate processor. The sorting within each chunk is done using quicksort, which has an average-case time complexity of O(N log N). After the local sorts, a merging step combines the sorted chunks. Assume the merging step takes O(N log P) time. [(a)] [10] Derive the overall time complexity of this parallel sorting algorithm in terms of N and P. [(b)] [10] Analyze the scalability of this algorithm. Does it exhibit good strong scaling? What about weak scaling? Justify your answers.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q4) Consider a parallel program that performs matrix multiplication of two NxN matrices. The program uses a simple row-wise partitioning, where each processor is responsible for multiplying a subset of rows from the first matrix with the entire second matrix. [(a)] [10] Describe the communication pattern involved in this algorithm. What data needs to be communicated between processors, and when? [(b)] [10] Analyze the computational load balance for this algorithm. Is it perfectly balanced? If not, why not, and what could be done to improve the load balance?",
+      "points": 10
+    },
+    {
+      "id": 5,
+      "question": "Q5) [(a)] [10] Explain the concept of a race condition in concurrent programming. Provide a simple code example demonstrating a race condition. [(b)] [10] Discuss several techniques or mechanisms for preventing race conditions in parallel programs, such as mutexes, semaphores, and atomic operations.",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q6) Suppose we have a shared-memory multiprocessor system with four cores. We have two threads, Thread A and Thread B, both accessing and modifying a shared variable `count`. [CODE SNIPPET] // Thread A count++; // Thread B count--; [/CODE SNIPPET] [(a)] [10] Explain why this code might produce unexpected results. What kind of problem is this? [(b)] [10] How could you modify this code to ensure that the operations on `count` are atomic and produce the correct result? Explain how your solution avoids the problem in (a).",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q7) [(a)] [5] What is a deadlock in concurrent programming? Provide an example scenario involving two threads. [(b)] [5] Explain how to prevent deadlocks using techniques such as resource ordering or deadlock detection.",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q8) [(a)] [10] Explain the difference between OpenMP and MPI. When would you choose one over the other for a parallel programming task? [(b)] [10] Discuss the advantages and disadvantages of using OpenMP and MPI.",
+      "points": 10
+    },
+    {
+      "id": 9,
+      "question": "Q9) Write a simple OpenMP code snippet that calculates the sum of the elements of a large array. Explain how the code works and identify the OpenMP directives used. [Assume the array is already allocated and initialized]. [(a)] [10] Provide the OpenMP code. [(b)] [10] Explain how to handle potential race conditions in this code.",
+      "points": 10
+    },
+    {
+      "id": 10,
+      "question": "Q10) Write a simple MPI code snippet that calculates the average of a large array distributed across multiple processes. Explain how the code works and identify the MPI functions used. [Assume the array is already allocated and initialized on process 0]. [(a)] [10] Provide the MPI code. [(b)] [10] Explain how the code handles the distribution of data and the aggregation of results.",
+      "points": 10
+    }
+  ],
+  "interactiveQuestions": [
+    {
+      "id": 1,
+      "question": "Q1) [(a)] [10] Explain the difference between strong scaling and weak scaling in parallel computing. Provide an example of a scenario where strong scaling would be more beneficial and another where weak scaling would be preferred. [(b)] [10] What are the primary challenges in achieving good scalability in parallel programs? Discuss at least three significant challenges and propose potential solutions for each.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q2) [(a)] [10] Describe Amdahl's Law and its implications for parallel program performance. How does the fraction of the program that cannot be parallelized affect the potential speedup? [(b)] [10] Explain Gustafson's Law and how it differs from Amdahl's Law. Under what conditions might Gustafson's Law be a more realistic model of parallel program behavior?",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q3) Suppose we have a parallel algorithm that sorts an array of N integers. The algorithm divides the array into P equal-sized chunks, each processed by a separate processor. The sorting within each chunk is done using quicksort, which has an average-case time complexity of O(N log N). After the local sorts, a merging step combines the sorted chunks. Assume the merging step takes O(N log P) time. [(a)] [10] Derive the overall time complexity of this parallel sorting algorithm in terms of N and P. [(b)] [10] Analyze the scalability of this algorithm. Does it exhibit good strong scaling? What about weak scaling? Justify your answers.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q4) Consider a parallel program that performs matrix multiplication of two NxN matrices. The program uses a simple row-wise partitioning, where each processor is responsible for multiplying a subset of rows from the first matrix with the entire second matrix. [(a)] [10] Describe the communication pattern involved in this algorithm. What data needs to be communicated between processors, and when? [(b)] [10] Analyze the computational load balance for this algorithm. Is it perfectly balanced? If not, why not, and what could be done to improve the load balance?",
+      "points": 10
+    },
+    {
+      "id": 5,
+      "question": "Q5) [(a)] [10] Explain the concept of a race condition in concurrent programming. Provide a simple code example demonstrating a race condition. [(b)] [10] Discuss several techniques or mechanisms for preventing race conditions in parallel programs, such as mutexes, semaphores, and atomic operations.",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q6) Suppose we have a shared-memory multiprocessor system with four cores. We have two threads, Thread A and Thread B, both accessing and modifying a shared variable `count`. [CODE SNIPPET] // Thread A count++; // Thread B count--; [/CODE SNIPPET] [(a)] [10] Explain why this code might produce unexpected results. What kind of problem is this? [(b)] [10] How could you modify this code to ensure that the operations on `count` are atomic and produce the correct result? Explain how your solution avoids the problem in (a).",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q7) [(a)] [5] What is a deadlock in concurrent programming? Provide an example scenario involving two threads. [(b)] [5] Explain how to prevent deadlocks using techniques such as resource ordering or deadlock detection.",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q8) [(a)] [10] Explain the difference between OpenMP and MPI. When would you choose one over the other for a parallel programming task? [(b)] [10] Discuss the advantages and disadvantages of using OpenMP and MPI.",
+      "points": 10
+    },
+    {
+      "id": 9,
+      "question": "Q9) Write a simple OpenMP code snippet that calculates the sum of the elements of a large array. Explain how the code works and identify the OpenMP directives used. [Assume the array is already allocated and initialized]. [(a)] [10] Provide the OpenMP code. [(b)] [10] Explain how to handle potential race conditions in this code.",
+      "points": 10
+    },
+    {
+      "id": 10,
+      "question": "Q10) Write a simple MPI code snippet that calculates the average of a large array distributed across multiple processes. Explain how the code works and identify the MPI functions used. [Assume the array is already allocated and initialized on process 0]. [(a)] [10] Provide the MPI code. [(b)] [10] Explain how the code handles the distribution of data and the aggregation of results.",
+      "points": 10
+    }
+  ],
+  "questionPoints": [
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10
+  ],
+  "subject": "Parallel Computing",
+  "difficulty": "medium",
+  "pdfPath": "backend/uploads/simple-exam-1754523776640.pdf"
+}

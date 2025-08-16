@@ -514,7 +514,7 @@ export const processPracticeExam = async (form) => {
     formData.append('numQuestions', form.numQuestions);
     formData.append('difficulty', form.difficulty);
     formData.append('generatePDF', form.generatePDF);
-    if (form.instructions) formData.append('instructions', form.instructions);
+    formData.append('instructions', form.instructions || ''); // Always send instructions, even if empty
     if (form.pdf) formData.append('pdf', form.pdf);
     
     // Add question points as JSON string
@@ -537,6 +537,7 @@ export const processPracticeExam = async (form) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 60000, // 60 second timeout for practice exam generation
     });
     
     console.log('=== API RESPONSE RECEIVED ===');

@@ -478,6 +478,61 @@
   overflow: hidden;
 }
 
+/* Question Table Styles */
+.question-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.question-table thead {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.question-table th {
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.question-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #1f2937;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.question-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.question-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  .question-table {
+    font-size: 0.75rem;
+  }
+  
+  .question-table th,
+  .question-table td {
+    padding: 0.5rem 0.375rem;
+  }
+}
+
 .questions-header {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   padding: 2rem;
@@ -1061,4 +1116,85 @@
 .sidebar-button-container {
   display: flex;
   flex-direction: column;
+}
+
+/* Multiple Choice Options Styles */
+.multiple-choice-options {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.choice-option {
+  display: flex;
+  align-items: center;
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+.choice-option:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.choice-option input[type="radio"] {
+  margin-right: 0.75rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  accent-color: #10b981;
+}
+
+.choice-text {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.choice-option input[type="radio"]:checked + .choice-text {
+  font-weight: 600;
+  color: #10b981;
+}
+
+.choice-option:has(input[type="radio"]:checked) {
+  background-color: #ecfdf5;
+  border-color: #10b981;
+}
+
+/* Question Type Indicator */
+.question-type-indicator {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+/* Analyzing Questions Loading State */
+.analyzing-questions {
+  padding: 2rem;
+  text-align: center;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+/* Questions Feedback Section */
+.questions-feedback {
+  margin-top: 1rem;
+}
+
+.questions-feedback .feedback-card {
+  margin-bottom: 1rem;
 } 

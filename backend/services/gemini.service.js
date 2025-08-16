@@ -36,12 +36,12 @@ class GeminiService {
   // --- Public Methods Using _generateWithUsage --- //
 
   /**
-   * Generate simple content (backward compatible)
+   * Generate content using Gemini 1.5 Flash (changed from gemini-pro)
    * @param {string} prompt
    * @returns {Promise<string>} - The generated text only
    */
   static async generateContent(prompt) {
-    const { text } = await this._generateWithUsage(prompt, 'gemini-pro');
+    const { text } = await this._generateWithUsage(prompt, 'gemini-1.5-flash');
       return text;
   }
   
@@ -152,7 +152,7 @@ Provide a day-by-day breakdown with specific tasks, estimated times, and suggest
       
       // Log usage in development only
       if (process.env.NODE_ENV === 'development') {
-        console.log(`Gemini PDF Processing Usage:`, usageMetadata);
+      console.log(`Gemini PDF Processing Usage:`, usageMetadata);
       }
       
       return { text, usageMetadata };
@@ -211,7 +211,7 @@ Provide a day-by-day breakdown with specific tasks, estimated times, and suggest
         console.log('=== GENERATING QUESTIONS FROM PDF CONTENT ===');
         console.log('PDF path:', pdfPath, 'Size:', require('fs').statSync(pdfPath).size);
         
-        prompt = `TASK: Generate practice questions based on the content of this uploaded PDF document.
+        prompt = `TASK: Generate EXACTLY ${numQuestions} complete, self-contained practice questions based on the content of this uploaded PDF document.
 
 ${instructions ? `🚨 ABSOLUTE PRIORITY INSTRUCTIONS - MUST FOLLOW FIRST 🚨
 ${instructions}
@@ -221,47 +221,84 @@ CRITICAL REQUIREMENT: If the instructions above contain any specific questions, 
 STEP 1: First, include any specific questions from the instructions above
 STEP 2: Then, generate additional questions based on the PDF content to reach the total of ${numQuestions} questions
 
-` : ''}CRITICAL REQUIREMENTS:
+` : ''}CRITICAL SUCCESS REQUIREMENTS:
 1. READ AND ANALYZE the uploaded PDF content carefully
 2. Generate EXACTLY ${numQuestions} questions total (count them carefully!)
-3. If custom instructions contain specific questions, include those FIRST, then fill remaining slots
-4. Questions should cover the key concepts, topics, and material from the PDF
-5. Use the same difficulty level and style as the examples in the PDF (if any)
-6. Number each question clearly: 1., 2., 3., etc.
-7. Each question should be substantial and test understanding
+3. Each question MUST be COMPLETE and SELF-CONTAINED
+4. NEVER reference missing information, tables, or previous problems
+5. If you need data/tables/examples, INCLUDE them directly in the question
+6. Each question should provide ALL necessary information to answer it
+7. Number each question clearly: 1., 2., 3., etc.
+8. Questions should cover the key concepts from the PDF content
 
+FORBIDDEN PHRASES - NEVER USE THESE:
+❌ "Assume a table would be provided here"
+❌ "Similar to Problem X in the original exam"
+❌ "Refer to the table above"
+❌ "Based on the previous problem"
+❌ "Using the data from earlier"
+❌ "As shown in the figure"
 
-QUESTION FORMAT:
-1. [First question - from custom instructions if provided, otherwise from PDF content]
+REQUIRED APPROACH:
+✅ Include all necessary data directly in each question
+✅ Provide complete examples with actual numbers
+✅ Make each question standalone and answerable
+✅ Include tables as text when needed (use | for columns)
+✅ Create realistic scenarios with specific details
 
-2. [Second question - continue pattern]
+QUESTION FORMAT EXAMPLE:
+1. Consider the following parallel computing scenario: Tasks A, B, C, D have execution times of 10, 15, 8, 12 seconds respectively on CPU Type A, and 12, 10, 6, 15 seconds on CPU Type B. What is the minimum number of CPUs needed to achieve maximum speedup? Show your task assignment and calculate the speedup.
 
-3. [Third question - continue pattern]
-
-Continue for ALL ${numQuestions} questions - DO NOT STOP EARLY!
+VALIDATION CHECKLIST:
+□ Generated exactly ${numQuestions} questions
+□ Each question is numbered (1., 2., 3., etc.)
+□ Each question is complete and self-contained
+□ No references to missing information
+□ All necessary data included in each question
+□ Questions are appropriate for ${difficulty} difficulty level
+□ Subject context: ${subject}
 
 IMPORTANT:
 - ABSOLUTE PRIORITY: Include any specific questions from custom instructions
 - Base remaining questions on the ACTUAL CONTENT of the uploaded PDF
-- Cover different topics/sections from the PDF material
+- Every question must be complete with all necessary information included
 - Make questions appropriate for ${difficulty} difficulty level
 - Subject context: ${subject}
 
-Analyze the PDF content and generate ${numQuestions} questions (prioritizing custom instructions):`;
+Generate ${numQuestions} complete, self-contained questions now:`;
 
         // Use processPDF to read and analyze the PDF content
         return this.processPDF(pdfPath, prompt);
       } else {
         // Generate without PDF - create general questions about the subject
         console.log('=== GENERATING GENERAL QUESTIONS (NO PDF) ===');
-        prompt = `IMPORTANT: You must generate EXACTLY ${numQuestions} individual questions. Do NOT create sections, parts, or categories.
+        prompt = `TASK: Generate EXACTLY ${numQuestions} complete, self-contained questions about ${subject}.
+
+CRITICAL SUCCESS REQUIREMENTS:
+1. Generate EXACTLY ${numQuestions} questions (count carefully!)
+2. Number each question: 1., 2., 3., etc.
+3. Each question MUST be COMPLETE and SELF-CONTAINED
+4. Include all necessary data/examples directly in each question
+5. Make each question answerable without external references
 
 FORBIDDEN FORMATS:
-- DO NOT write "Section 1", "Section 2", etc.
-- DO NOT write "Part A", "Part B", etc. 
-- DO NOT create multiple choice sections
-- DO NOT create short answer sections
-- DO NOT group questions by type
+❌ DO NOT write "Section 1", "Section 2", etc.
+❌ DO NOT write "Part A", "Part B", etc. 
+❌ DO NOT create multiple choice sections
+❌ DO NOT create short answer sections
+❌ DO NOT group questions by type
+
+FORBIDDEN PHRASES:
+❌ NEVER reference missing information, tables, or previous problems
+❌ NEVER use phrases like "Assume a table would be provided"
+❌ NEVER say "Similar to previous problem" or "Based on earlier data"
+
+REQUIRED APPROACH:
+✅ Each question MUST be COMPLETE and SELF-CONTAINED
+✅ Include all necessary data/examples directly in each question
+✅ Provide specific numbers, scenarios, or examples
+✅ Make each question answerable without external references
+✅ Use tables with | separators when data is needed
 
 ${instructions ? `CRITICAL CUSTOM INSTRUCTIONS - MUST FOLLOW:
 ${instructions}
@@ -270,27 +307,71 @@ IMPORTANT: If the instructions contain specific questions, you MUST include thos
 
 ` : ''}REQUIRED FORMAT - Follow this EXACTLY:
 
-1. [Write a complete question here about ${subject}]
+1. [Write a complete, self-contained question with all necessary information about ${subject}]
 
-2. [Write another complete question here about ${subject}]
+2. [Write another complete, self-contained question with all necessary information about ${subject}]
 
-3. [Write another complete question here about ${subject}]
+3. [Write another complete, self-contained question with all necessary information about ${subject}]
 
 Continue numbering up to ${numQuestions} - GENERATE ALL ${numQuestions} QUESTIONS!
+
+EXAMPLE OF GOOD COMPLETE QUESTION:
+"A parallel system has 4 processors with the following characteristics: Processor 1 can execute 100 operations/second, Processor 2 can execute 150 operations/second, Processor 3 can execute 120 operations/second, and Processor 4 can execute 80 operations/second. If a task requires 1000 operations and can be perfectly parallelized, calculate the minimum execution time and explain your load balancing strategy."
+
+VALIDATION CHECKLIST:
+□ Generated exactly ${numQuestions} questions
+□ Each question is numbered (1., 2., 3., etc.)
+□ Each question is complete and self-contained
+□ No references to missing information
+□ All necessary data included in each question
+□ Questions are substantial (at least 2-3 sentences with specific details)
 
 SPECIFICATIONS:
 - Subject: ${subject}
 - Difficulty: ${difficulty}
 - Total questions needed: ${numQuestions}
-- Each question must be complete and standalone
-- Each question must be substantial (at least 2-3 sentences)
+- Each question must be complete and standalone with all necessary information
+- Each question must be substantial (at least 2-3 sentences with specific details)
 ${instructions ? `- PRIORITY: Follow the custom instructions above` : ''}
 
-START GENERATING ${numQuestions} QUESTIONS NOW:
+START GENERATING ${numQuestions} COMPLETE QUESTIONS NOW:
 
 1.`;
 
-        return this._generateWithUsage(prompt, 'gemini-1.5-flash');
+        const result = await this._generateWithUsage(prompt, 'gemini-1.5-flash');
+        
+        // Validate the result
+        if (result && result.text) {
+          const questionCount = (result.text.match(/^\d+\./gm) || []).length;
+          console.log(`Generated ${questionCount} questions (requested: ${numQuestions})`);
+          
+          if (questionCount < numQuestions) {
+            console.log('⚠️ Insufficient questions generated, attempting retry...');
+            // Try once more with a more explicit prompt
+            const retryPrompt = `URGENT: You must generate EXACTLY ${numQuestions} questions about ${subject}.
+
+Previously you only generated ${questionCount} questions, but I need exactly ${numQuestions}.
+
+Please generate ${numQuestions} complete questions now, numbered 1. through ${numQuestions}.
+
+Each question must be complete and self-contained with all necessary information.
+
+START NOW:
+
+1.`;
+            
+            const retryResult = await this._generateWithUsage(retryPrompt, 'gemini-1.5-flash');
+            if (retryResult && retryResult.text) {
+              const retryCount = (retryResult.text.match(/^\d+\./gm) || []).length;
+              console.log(`Retry generated ${retryCount} questions`);
+              if (retryCount >= questionCount) {
+                return retryResult; // Use retry result if it's better
+              }
+            }
+          }
+        }
+        
+        return result;
       }
     } catch (error) {
       console.error('Error generating practice exam:', error);
@@ -316,7 +397,7 @@ START GENERATING ${numQuestions} QUESTIONS NOW:
       let pointsInstructions = '';
       if (questionPoints && questionPoints.length > 0) {
         pointsInstructions = `\n\nCRITICAL POINT VALUES - MUST INCLUDE:
-Each question must include its point value in the same format as the template:
+Each question must include its point value in the EXACT same format as the template:
 ${questionPoints.map((points, index) => `Question ${index + 1}: ${points} points`).join('\n')}
 
 Look at how the template shows point values and use the EXACT same format (e.g., "[25 points]", "(35 pts)", "40 points", etc.).`;
@@ -324,44 +405,72 @@ Look at how the template shows point values and use the EXACT same format (e.g.,
       
       const prompt = `TASK: Create a practice exam that EXACTLY matches the format, style, and structure of the uploaded PDF template.
 
-STEP 1: ANALYZE THE TEMPLATE
-Carefully examine the uploaded PDF template and note:
+STEP 1: ANALYZE THE TEMPLATE CAREFULLY
+Examine the uploaded PDF template and note:
 - The exact header format (course code, title, date, etc.)
 - How the title and subtitle are formatted
 - How "Total: X points" is displayed
 - Any "Important Notes" sections and their formatting
-- How questions are numbered and formatted
+- How questions are numbered and formatted (Problem 1, Problem 2, etc.)
 - How point values are shown for each question
-- Any special formatting, boxes, or layout elements
+- How tables are structured and formatted
+- How diagrams are drawn (DAG structures, node representations)
 - Font styles, spacing, and alignment
 
-STEP 2: USE THESE CLEAN QUESTIONS AS CONTENT
+STEP 2: USE THESE CLEAN QUESTIONS AS CONTENT BASE
 ${interactiveQuestions}
 
-STEP 3: REFORMAT TO MATCH TEMPLATE EXACTLY
+STEP 3: REFORMAT TO MATCH TEMPLATE EXACTLY WITH ENHANCED CONTENT
 Create a new exam that:
 1. Uses the EXACT same header structure as the template
 2. Copies the course information format (adjust for "${subject}")
 3. Includes the same "Important Notes" section if present
-4. Uses the same question numbering style
+4. Uses the same question numbering style (Problem 1, Problem 2, etc.)
 5. Integrates the point values in the same format as template
-6. Maintains the same professional layout and spacing
-7. Includes any honor code boxes or special sections from template
+6. Creates professional tables when needed for data
+7. Includes ASCII art diagrams for complex problems
+8. Maintains the same professional layout and spacing
 
-STEP 4: ENSURE CONSISTENCY
+CRITICAL REQUIREMENTS FOR TABLES:
+- If a question needs execution time data, create a proper table like:
+| Task | CPU type A | CPU type B |
+|------|------------|------------|
+|  A   |     5      |     5      |
+|  B   |    10      |     5      |
+|  C   |    20      |    30      |
+
+CRITICAL REQUIREMENTS FOR DIAGRAMS:
+- If a question involves DAG structures, include ASCII art like:
+\`\`\`
+       A
+      / \\\\
+     B   C   D
+      \\\\ | /
+       \\\\|/
+        E
+        |
+        F
+        |
+        G
+\`\`\`
+
+STEP 4: ENSURE PROFESSIONAL QUALITY
 - Keep all ${numQuestions} questions
-- Use the provided question content but format it to match template style
+- Use the provided question content but enhance it with proper data tables
 - Make it look like it came from the same professor/institution as the template
-- Include ALL formatting elements from the original${pointsInstructions}
+- Include ALL formatting elements from the original
+- Add complete data tables and diagrams where appropriate
+- Never reference missing information - include everything needed${pointsInstructions}
 
 REQUIREMENTS:
 - Subject: ${subject}
 - Difficulty: ${difficulty}
 - Total Questions: ${numQuestions}
 - Must look identical in style to the uploaded template
+- Include complete tables and diagrams as needed
 ${instructions ? `- Additional instructions: ${instructions}` : ''}
 
-Generate the complete formatted exam now, matching the template exactly:`;
+Generate the complete formatted exam now, matching the template exactly with enhanced professional content:`;
 
       console.log('=== SENDING PROMPT TO GEMINI ===');
       console.log('Prompt length:', prompt.length);

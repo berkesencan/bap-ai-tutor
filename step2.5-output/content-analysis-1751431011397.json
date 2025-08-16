@@ -1,0 +1,20 @@
+{
+  "subject": "operating-systems",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": true,
+  "hasMathEquations": false,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": false,
+  "detectedElements": [
+    "Code snippets"
+  ],
+  "codeLanguages": [
+    "JavaScript"
+  ],
+  "diagramTypes": [],
+  "tableStructures": [],
+  "mathNotations": []
+}

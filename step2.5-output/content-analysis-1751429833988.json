@@ -1,0 +1,26 @@
+{
+  "subject": "parallel-computing",
+  "hasDAGs": true,
+  "hasCircuits": true,
+  "hasTables": true,
+  "hasCodeSnippets": false,
+  "hasMathEquations": false,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": true,
+  "hasAlgorithmPseudocode": true,
+  "detectedElements": [
+    "DAG diagrams",
+    "Circuit diagrams",
+    "Tables",
+    "Algorithm pseudocode",
+    "Network diagrams"
+  ],
+  "codeLanguages": [],
+  "diagramTypes": [
+    "DAG",
+    "circuits",
+    "network"
+  ],
+  "tableStructures": [],
+  "mathNotations": []
+}

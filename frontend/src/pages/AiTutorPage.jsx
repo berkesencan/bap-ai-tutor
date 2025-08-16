@@ -5,8 +5,8 @@ import { generateStudyPlan, explainConcept, generatePracticeQuestions, testGemin
 import { FaBookOpen, FaClipboardList, FaQuestion, FaLightbulb, FaSpinner, FaComments, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import './AiTutorPage.css';
 
-// Add pulse animation styles
-const pulseStyles = `
+// Add enhanced styles for code snippets, tables, and diagrams
+const enhancedStyles = `
   @keyframes pulse {
     0% {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(16, 185, 129, 0.7);
@@ -18,17 +18,567 @@ const pulseStyles = `
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(16, 185, 129, 0);
     }
   }
+  
+  .code-snippet {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 8px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+  
+  .code-snippet code {
+    background: none;
+    padding: 0;
+    color: #333;
+  }
+  
+  .question-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    background-color: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .question-table th {
+    background-color: #f8f9fa;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    color: #495057;
+  }
+  
+  .question-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: top;
+  }
+  
+  .question-table tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .question-table tr:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .diagram-container {
+    margin: 12px 0;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+  }
+  
+  .diagram {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.2;
+    margin: 0;
+    white-space: pre;
+    color: #333;
+  }
+  
+  .latex-table {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 8px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-x: auto;
+  }
 `;
 
 // Inject styles
 if (typeof document !== 'undefined') {
   const styleSheet = document.createElement('style');
-  styleSheet.textContent = pulseStyles;
+  styleSheet.textContent = enhancedStyles;
   document.head.appendChild(styleSheet);
 }
 
+// UNIVERSAL TABLE CONVERSION FUNCTION
+const convertTableTextToHTML = async (questionText) => {
+  try {
+    console.log('🔍 Enhanced conversion called with text:', questionText.substring(0, 100) + '...');
+    
+    let processedText = questionText;
+    
+    // STEP 1: Handle preserved code snippets from backend
+    console.log('🔍 Checking for [CODE SNIPPET] tags in:', processedText.substring(0, 200) + '...');
+    const codeMatches = processedText.match(/\[CODE SNIPPET\]([\s\S]*?)\[\/CODE SNIPPET\]/g);
+    console.log('🔍 Found code matches:', codeMatches ? codeMatches.length : 0);
+    
+    processedText = processedText.replace(/\[CODE SNIPPET\]([\s\S]*?)\[\/CODE SNIPPET\]/g, (match, codeContent) => {
+      console.log('✅ Converting code snippet:', codeContent.substring(0, 50) + '...');
+      const lines = codeContent.split('\n');
+      const looksLikeNonCodeLine = (line) => {
+        if (!line) return false;
+        const trimmed = line.trim();
+        return (
+          /^Q\d+[a-z]?\)/i.test(trimmed) ||
+          /^\(?[a-dA-DivxIVX]\)?[.)]/.test(trimmed) ||
+          /^a\./i.test(trimmed) ||
+          /\[\d+\s*points?\]/i.test(trimmed)
+        );
+      };
+      const leading = [];
+      while (lines.length && looksLikeNonCodeLine(lines[0])) leading.push(lines.shift());
+      const trailing = [];
+      while (lines.length && looksLikeNonCodeLine(lines[lines.length - 1])) trailing.unshift(lines.pop());
+      const core = lines.join('\n').trim();
+      let html = '';
+      if (leading.length) html += leading.join('\n') + '\n';
+      if (core) html += `<pre class="code-snippet"><code>${core}</code></pre>`;
+      if (trailing.length) html += '\n' + trailing.join('\n');
+      return html;
+    });
+    
+    // STEP 2: Handle preserved tables from backend
+    console.log('🔍 Checking for [TABLE] tags in:', processedText.substring(0, 200) + '...');
+    const tableMatches = processedText.match(/\[TABLE\]([\s\S]*?)\[\/TABLE\]/g);
+    console.log('🔍 Found table matches:', tableMatches ? tableMatches.length : 0);
+    
+    processedText = processedText.replace(/\[TABLE\]([\s\S]*?)\[\/TABLE\]/g, (match, tableContent) => {
+      console.log('✅ Converting table:', tableContent.substring(0, 50) + '...');
+      // Convert LaTeX table to HTML
+      const htmlTable = convertLatexTableToHTML(tableContent);
+      return htmlTable;
+    });
+    
+    // STEP 3: Handle preserved diagrams from backend
+    console.log('🔍 Checking for [DIAGRAM] tags in:', processedText.substring(0, 200) + '...');
+    const diagramMatches = processedText.match(/\[DIAGRAM\]([\s\S]*?)\[\/DIAGRAM\]/g);
+    console.log('🔍 Found diagram matches:', diagramMatches ? diagramMatches.length : 0);
+    
+    processedText = processedText.replace(/\[DIAGRAM\]([\s\S]*?)\[\/DIAGRAM\]/g, (match, diagramContent) => {
+      console.log('✅ Converting diagram:', diagramContent.substring(0, 50) + '...');
+      return `<div class="diagram-container"><pre class="diagram">${diagramContent.trim()}</pre></div>`;
+    });
+    
+    // STEP 4: Check for other table-like content and convert
+    const hasTableIndicators = processedText.includes('table') || 
+                              processedText.includes('Task') || 
+                              processedText.includes('Time') || 
+                              processedText.includes('core type') ||
+                              processedText.includes('|') ||
+                              processedText.includes('&') ||
+                              processedText.includes('-----') ||
+                              processedText.includes('---') ||
+                              (processedText.match(/\b[A-Z]\s+\d+\s+\d+\b/) !== null) ||
+                              (processedText.match(/\b\d+\s+\d+\s+\d+\b/) !== null) ||
+                              (processedText.match(/[A-Z]\s+\d+\.?\d*\s+[A-Z]/) !== null) ||
+                              (processedText.match(/\d+\s+\d+\.?\d*\s+[A-Z]/) !== null);
+    
+    if (hasTableIndicators) {
+      console.log('🔍 Additional table content detected, calling Gemini...');
+      
+      const tableConversionPrompt = `You are a text processor. Your ONLY job is to convert table-like data to HTML tables while keeping everything else exactly the same.
+
+QUESTION TO PROCESS:
+"${processedText}"
+
+RULES:
+- If you see rows and columns of data that look like a table, convert ONLY that part to HTML table format
+- Tables may use | (pipe), & (ampersand), or other separators
+- Use <table class="question-table"><thead><tr><th>...</th></tr></thead><tbody><tr><td>...</td></tr></tbody></table>
+- Keep ALL other text exactly as it appears
+- If no table data exists, return the original text unchanged
+- Do NOT include any instructions, examples, or explanations in your response
+- ONLY return the processed question text
+
+Process and return the question:`;
+
+      const response = await testGemini(tableConversionPrompt);
+      
+      if (response.success && response.data && response.data.response) {
+        console.log('✅ Table conversion successful');
+        processedText = response.data.response;
+      } else {
+        console.log('⚠️ Table conversion failed, keeping processed text');
+      }
+    }
+    
+    console.log('✅ Enhanced conversion completed');
+    return processedText;
+  } catch (error) {
+    console.error('❌ Enhanced conversion error:', error);
+    return questionText; // Return original text if conversion fails
+  }
+};
+
+// Helper function to convert LaTeX tables to HTML
+const convertLatexTableToHTML = (latexTable) => {
+  try {
+    const lines = latexTable.trim().split('\n');
+    let html = '<table class="question-table">';
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Skip LaTeX table commands
+      if (line.startsWith('\\hline') || line.startsWith('\\end{') || line.startsWith('\\begin{')) {
+        continue;
+      }
+      
+      // Remove LaTeX table formatting
+      const cleanLine = line
+        .replace(/\\\\/g, '') // Remove line breaks
+        .replace(/&/g, '|') // Replace & with | for easier parsing
+        .replace(/\\hline/g, '') // Remove horizontal lines
+        .trim();
+      
+      if (cleanLine) {
+        const cells = cleanLine.split('|').map(cell => cell.trim()).filter(cell => cell);
+        
+        if (cells.length > 0) {
+          const isHeader = i === 0 || line.includes('\\hline');
+          const tag = isHeader ? 'th' : 'td';
+          
+          html += '<tr>';
+          cells.forEach(cell => {
+            html += `<${tag}>${cell}</${tag}>`;
+          });
+          html += '</tr>';
+        }
+      }
+    }
+    
+    html += '</table>';
+    return html;
+  } catch (error) {
+    console.error('Error converting LaTeX table:', error);
+    return `<pre class="latex-table">${latexTable}</pre>`;
+  }
+};
+
+// GEMINI MULTIPLE CHOICE DETECTION FUNCTION
+const detectAndGroupMultipleChoice = async (questionsArray) => {
+  try {
+    console.log('🔍 Starting smart multiple choice detection...');
+    console.log('📋 Questions to analyze:', questionsArray.length);
+    
+    // Create the analysis prompt - ONLY relying on Gemini
+    console.log('🔍 DEBUG: Raw questions being sent to Gemini:');
+    questionsArray.forEach((q, i) => {
+      console.log(`   ${i + 1}. ${q.substring(0, 200)}...`);
+    });
+    
+    const analysisPrompt = `SMART MULTIPLE CHOICE DETECTION
+You must distinguish between QUESTION SUBPARTS and MULTIPLE CHOICE OPTIONS.
+QUESTIONS TO ANALYZE:
+${questionsArray.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+CRITICAL DISTINCTION:
+**QUESTION SUBPARTS** = Keep as separate questions BUT PRESERVE FULL CONTEXT:
+- For questions like "Consider the following code: [CODE SNIPPET] ... [/CODE SNIPPET] (a) Explain..." → Keep the FULL question including the code snippet
+- For questions like "Suppose we have a table: [TABLE] ... [/TABLE] (a) Calculate..." → Keep the FULL question including the table
+- For questions like "(a) f(n) = 3(log₃ n)³, g(n) = n³" - This is a mathematical subpart of a larger problem
+- These are SEPARATE mathematical problems to solve, NOT multiple choice options!
+
+**TRUE MULTIPLE CHOICE** = Group as one question with options:
+- "What is the capital of France? a) Paris b) London c) Berlin d) Madrid"
+- This has a question followed by SHORT answer choices
+- Options are alternative answers to ONE question
+
+**KEY DIFFERENCES:**
+- Subparts: Complex mathematical expressions, equations, separate problems to solve (BUT KEEP FULL CONTEXT)
+- Multiple choice: Simple short answer choices to select from
+
+**GROUPING RULE (IMPORTANT):**
+If you see a STEM that repeats across several consecutive items (e.g., "Which of the following statements is false?"), followed by lettered short statements "(a) ...", "(b) ...", "(c) ...", "(d) ...", then TREAT THESE AS ONE MULTIPLE-CHOICE QUESTION with options [a, b, c, d]. Do NOT return them as separate single questions. The "question" field must contain ONLY the shared stem. The "options" array must contain the lettered options in order.
+
+**IMPORTANT: When extracting subparts like "(a)", "(b)", "(c)", ALWAYS include the parent question context (code snippets, tables, diagrams) that the subpart refers to.**
+
+RESPONSE FORMAT:
+Return a JSON array where each item is either:
+- Single question: {"type": "single", "question": "question text", "originalIndex": 0}
+- Multiple choice: {"type": "multiple_choice", "question": "main question", "options": ["a) option1", "b) option2", "c) option3", "d) option4"], "originalIndex": 0}
+
+EXAMPLES:
+- "f(n) = 3(log₃ n)³, g(n) = n³" → {"type": "single"} (mathematical subpart)
+- "What color is the sky? a) blue b) green c) red" → {"type": "multiple_choice"} (simple choices)
+- "Consider the following code: [CODE SNIPPET] #pragma omp parallel for for (int i = 0; i < 1000; i++) arr[i] = arr[i] * 2; [/CODE SNIPPET] (a) Explain what this directive does." → {"type": "single", "question": "Consider the following code: [CODE SNIPPET] #pragma omp parallel for for (int i = 0; i < 1000; i++) arr[i] = arr[i] * 2; [/CODE SNIPPET] (a) Explain what this directive does."} (KEEP FULL CONTEXT)
+
+GROUPING EXAMPLE (CRITICAL):
+Input lines:
+"Q8a) Which of the following statements is false? (a) n^2 = O(n^3)"
+"Q8b) Which of the following statements is false? (b) n log n = Ω(n)"
+"Q8c) Which of the following statements is false? (c) 2^n = Θ(3^n)"
+"Q8d) Which of the following statements is false? (d) n^2 = ω(n log n)"
+Return ONE item:
+{"type": "multiple_choice", "question": "Which of the following statements is false?", "options": ["(a) n^2 = O(n^3)", "(b) n log n = Ω(n)", "(c) 2^n = Θ(3^n)", "(d) n^2 = ω(n log n)"], "originalIndex": indexOfFirst}
+
+Analyze and return the JSON array:`;
+
+    console.log('🤖 Sending analysis prompt to Gemini...');
+    const response = await testGemini(analysisPrompt);
+    
+    if (response.success && response.data && response.data.response) {
+      console.log('🔍 Raw AI Response:', response.data.response);
+      try {
+        // Extract JSON from response
+        const jsonMatch = response.data.response.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          console.log('📋 Extracted JSON:', jsonMatch[0]);
+          const groupedQuestions = JSON.parse(jsonMatch[0]);
+          console.log('✅ Multiple choice detection successful:', groupedQuestions);
+          
+          // DEBUG: Log detection summary
+          const multipleChoiceCount = groupedQuestions.filter(q => q.type === 'multiple_choice').length;
+          const singleCount = groupedQuestions.filter(q => q.type === 'single').length;
+          console.log(`🎯 DETECTION SUMMARY: ${multipleChoiceCount} multiple choice, ${singleCount} single questions`);
+          
+          // DEBUG: Log each question type
+          groupedQuestions.forEach((result, index) => {
+            console.log(`   ${index + 1}. Type: ${result.type}, OriginalIndex: ${result.originalIndex}`);
+            if (result.type === 'multiple_choice') {
+              console.log(`      Question: "${result.question.substring(0, 50)}..."`);
+              console.log(`      Options: ${result.options.join(' | ')}`);
+            } else {
+              console.log(`      Question: "${result.question.substring(0, 100)}..."`);
+              console.log(`      Full question length: ${result.question.length} characters`);
+            }
+          });
+          
+          return groupedQuestions;
+        } else {
+          console.warn('⚠️ No JSON found in response, using fallback (original format)');
+          // Simple fallback - just return as single questions
+          return questionsArray.map((question, index) => ({
+            type: 'single',
+            question: question,
+            originalIndex: index
+          }));
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing multiple choice analysis:', parseError);
+        console.log('🔧 Using simple fallback...');
+        // Simple fallback - just return as single questions
+        return questionsArray.map((question, index) => ({
+          type: 'single',
+          question: question,
+          originalIndex: index
+        }));
+      }
+    } else {
+      console.warn('⚠️ Multiple choice detection failed, using simple fallback');
+      // Simple fallback - just return as single questions
+      return questionsArray.map((question, index) => ({
+        type: 'single',
+        question: question,
+        originalIndex: index
+      }));
+    }
+  } catch (error) {
+    console.error('❌ Multiple choice detection error:', error);
+    console.log('🔧 Using simple fallback due to error...');
+    // Simple fallback - just return as single questions
+    return questionsArray.map((question, index) => ({
+      type: 'single',
+      question: question,
+      originalIndex: index
+    }));
+  }
+};
+
+// DEBUG: Test function for manual testing
+window.debugMultipleChoiceDetection = async (testQuestions) => {
+  console.log('🧪 DEBUG: Testing multiple choice detection with provided questions...');
+  if (!testQuestions || !Array.isArray(testQuestions)) {
+    console.error('❌ Please provide an array of questions to test');
+    return;
+  }
+  
+  console.log('📋 Input questions:');
+  testQuestions.forEach((question, index) => {
+    console.log(`${index + 1}. [${question.length} chars] "${question}"`);
+  });
+  
+  const results = await detectAndGroupMultipleChoice(testQuestions);
+  console.log('🎯 Detection results:', results);
+  return results;
+};
+
+// DEBUG: Test function for table conversion
+window.debugTableConversion = async (questionText) => {
+  console.log('🧪 DEBUG: Testing table conversion with provided text...');
+  if (!questionText || typeof questionText !== 'string') {
+    console.error('❌ Please provide a string to test table conversion');
+    return;
+  }
+  
+  console.log('📋 Input text:', questionText);
+  
+  const result = await convertTableTextToHTML(questionText);
+  console.log('🎯 Table conversion result:', result);
+  return result;
+};
+
+// ENHANCED QUESTION DISPLAY COMPONENT WITH MULTIPLE CHOICE SUPPORT
+const QuestionDisplay = ({ 
+  questionData, 
+  questionText, 
+  index, 
+  isExam = false, 
+  onAnswerChange, 
+  userAnswer, 
+  isGrading, 
+  onGrade 
+}) => {
+  const [processedText, setProcessedText] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [hasProcessed, setHasProcessed] = useState(false);
+  const [selectedChoice, setSelectedChoice] = useState('');
+
+  // Handle both new format (questionData) and old format (questionText)
+  const isOldFormat = !questionData && questionText;
+  const actualQuestionData = isOldFormat ? { type: 'single', question: questionText } : questionData;
+
+  useEffect(() => {
+    const processQuestion = async () => {
+      // If questionData is undefined, don't process
+      if (!actualQuestionData || !actualQuestionData.question) {
+        console.warn('QuestionDisplay: No valid question data provided');
+        setProcessedText(questionText || 'No question text available');
+        setHasProcessed(true);
+        return;
+      }
+      
+      setIsProcessing(true);
+      try {
+        const questionTextToProcess = actualQuestionData.question;
+        const converted = await convertTableTextToHTML(questionTextToProcess);
+        setProcessedText(converted);
+        setHasProcessed(true);
+      } catch (error) {
+        console.error('Question processing error:', error);
+        setProcessedText(actualQuestionData.question || questionText || 'Error processing question');
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    // Reset hasProcessed when questionData changes to allow re-processing
+    setHasProcessed(false);
+    processQuestion();
+  }, [questionData, questionText, actualQuestionData]);
+
+  const handleMultipleChoiceChange = (choice) => {
+    setSelectedChoice(choice);
+    if (onAnswerChange) {
+      onAnswerChange(index, choice);
+    }
+  };
+
+  const handleTextAnswerChange = (e) => {
+    if (onAnswerChange) {
+      onAnswerChange(index, e.target.value);
+    }
+  };
+
+  return (
+    <div className="question-display">
+      {/* Question Text */}
+      <div className="question-text">
+        {isProcessing ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
+            <div className="btn-spinner small"></div>
+            <span>Processing question...</span>
+          </div>
+        ) : (
+          <div 
+            dangerouslySetInnerHTML={{ __html: processedText }}
+            style={{ lineHeight: '1.6' }}
+          />
+        )}
+      </div>
+
+      {/* Multiple Choice Options */}
+      {actualQuestionData && actualQuestionData.type === 'multiple_choice' && (
+        <div className="multiple-choice-options">
+          {actualQuestionData.options && actualQuestionData.options.map((option, optionIndex) => (
+            <label key={optionIndex} className="choice-option">
+              <input
+                type="radio"
+                name={`question-${index}`}
+                value={option}
+                checked={userAnswer === option || selectedChoice === option}
+                onChange={() => handleMultipleChoiceChange(option)}
+                disabled={isGrading}
+              />
+              <span className="choice-text">{option}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {/* Text Answer (for non-multiple choice) */}
+      {(!actualQuestionData || actualQuestionData.type === 'single' || isOldFormat) && (
+        <div className="text-answer">
+          <textarea
+            value={userAnswer || ''}
+            onChange={handleTextAnswerChange}
+            className="answer-textarea"
+            placeholder="Type your answer here..."
+            disabled={isGrading}
+            rows="4"
+          />
+        </div>
+      )}
+
+      {/* Grade Button */}
+      {onGrade && userAnswer && (
+        <button
+          onClick={() => onGrade(index)}
+          disabled={isGrading}
+          className="grade-btn"
+        >
+          {isGrading ? (
+            <>
+              <div className="btn-spinner small"></div>
+              Grading...
+            </>
+          ) : (
+            <>
+              <FaCheckCircle />
+              Grade Answer
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
+
 // Helper function to parse numbered questions
-const parseNumberedQuestions = (text) => {
+const parseNumberedQuestions = (data) => {
+  // Handle the new object format from backend
+  let text = '';
+  if (typeof data === 'string') {
+    text = data;
+  } else if (data && typeof data === 'object' && data.text) {
+    text = data.text;
+  } else if (data && typeof data === 'object') {
+    // If it's an object but no .text property, try to stringify it
+    text = JSON.stringify(data);
+  } else {
+    console.warn('parseNumberedQuestions received invalid data:', data);
+    return [];
+  }
+  
   if (!text) return [];
   
   console.log('=== PARSING QUESTIONS ===');
@@ -510,6 +1060,10 @@ const AiTutorPage = () => {
   const [practiceExamPoints, setPracticeExamPoints] = useState([]); // Points for each practice exam question
   const [practiceExamScores, setPracticeExamScores] = useState({}); // Scores for each exam question
 
+  // Multiple choice detection results
+  const [practiceQuestionDetection, setPracticeQuestionDetection] = useState([]); // Detection results for practice questions
+  const [practiceExamDetection, setPracticeExamDetection] = useState([]); // Detection results for practice exam questions
+
   const handleStudyPlanSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -588,6 +1142,7 @@ const AiTutorPage = () => {
     setUserAnswers({}); 
     setQuestionPoints([]);
     setUserScores({});
+    setPracticeQuestionDetection([]); // Clear detection results
     
     try {
       // Enhanced prompt with more explicit instructions for well-formed questions
@@ -622,6 +1177,25 @@ Generate ${questionsForm.count} high-quality practice questions now:`;
         
         // Basic validation of the generated questions
         const questionsArray = parseNumberedQuestions(generatedText);
+        
+        // DEBUG: Test multiple choice detection on generated questions
+        console.log('🧪 DEBUG: Testing multiple choice detection on generated questions...');
+        try {
+          const detectionResults = await detectAndGroupMultipleChoice(questionsArray);
+          console.log('🎯 DEBUG: Detection completed successfully');
+          
+          // Store detection results for UI formatting
+          setPracticeQuestionDetection(detectionResults);
+          console.log('✅ Stored detection results in state');
+        } catch (detectionError) {
+          console.error('❌ DEBUG: Detection failed:', detectionError);
+          // Fallback to single questions if detection fails
+          setPracticeQuestionDetection(questionsArray.map((question, index) => ({
+            type: 'single',
+            question: question,
+            originalIndex: index
+          })));
+        }
         
         // Check if we have the right number of questions and they're not too short
         if (questionsArray.length < questionsForm.count) {
@@ -728,12 +1302,12 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
     const baseDelay = 1000; // 1 second
 
     while (retryCount <= maxRetries) {
-      try {
-        const response = await testGemini(gradingPrompt);
+    try {
+      const response = await testGemini(gradingPrompt);
         console.log(`Grading API Response Q${index + 1} (attempt ${retryCount + 1}):`, response);
 
         if (response.success && response.data && response.data.response) {
-           console.log("Raw feedback:", response.data.response);
+         console.log("Raw feedback:", response.data.response);
            
            // Validate response format
            if (!response.data.response.includes('POINTS:')) {
@@ -753,20 +1327,20 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
            
            // Update scores
            setUserScores(prev => ({ ...prev, [index]: earnedPoints }));
-           
-           // Update only the feedback for the specific answer
-           setUserAnswers(prev => ({ 
-             ...prev, 
-             [index]: { ...prev[index], feedback: response.data.response } 
-           }));
+         
+         // Update only the feedback for the specific answer
+         setUserAnswers(prev => ({ 
+           ...prev, 
+           [index]: { ...prev[index], feedback: response.data.response } 
+         }));
            
            // Success - break out of retry loop
            break;
            
-        } else {
+      } else {
            throw new Error(response.message || response.error || 'Invalid API response');
-        }
-      } catch (error) {
+      }
+    } catch (error) {
         console.error(`Grading attempt ${retryCount + 1} failed:`, error);
         
         if (retryCount === maxRetries) {
@@ -777,8 +1351,8 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
             ? 'Request timed out - please try again'
             : `Grading failed: ${error.message || 'Unknown error'}`;
             
-          setUserAnswers(prev => ({ 
-            ...prev, 
+       setUserAnswers(prev => ({ 
+         ...prev, 
             [index]: { 
               ...prev[index], 
               feedback: `❌ Error: ${errorMessage}\n\nPlease try grading this answer again.` 
@@ -796,10 +1370,10 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
     }
     
     // Always clear loading state
-    setUserAnswers(prev => ({ 
-      ...prev, 
-      [index]: { ...prev[index], isGrading: false } 
-    }));
+       setUserAnswers(prev => ({ 
+         ...prev, 
+         [index]: { ...prev[index], isGrading: false } 
+       }));
   };
 
   // Modify the handleDiscussInChat function to support question-specific content
@@ -818,9 +1392,9 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
         role: 'ai',
         content: `Let's discuss this question:\n\n**Question:** ${question}\n\n**Your Answer:** ${userAnswer}\n\n**Feedback:** ${feedback}\n\n How can I help you understand this better?`
       };
-    } else if (questionIndex !== undefined && practiceExamResult?.text) {
+    } else if (questionIndex !== undefined && practiceExamResult?.questions) {
       // Handle practice exam questions
-      const questions = parseNumberedQuestions(practiceExamResult.text);
+      const questions = parseNumberedQuestions(practiceExamResult.questions);
       const question = questions[questionIndex];
       const userAnswer = practiceExamAnswers[questionIndex]?.answer || '(No answer provided)';
       const feedback = practiceExamAnswers[questionIndex]?.feedback || '(No feedback available)';
@@ -867,6 +1441,7 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
     setPracticeExamAnswers({});
     setPracticeExamPoints([]);
     setPracticeExamScores({});
+    setPracticeExamDetection([]); // Clear detection results
     
     console.log('=== PRACTICE EXAM SUBMIT START ===');
     console.log('Form data:', practiceExamForm);
@@ -900,21 +1475,69 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
         console.log('=== SETTING RESULT ===');
         console.log('Setting practiceExamResult to:', response.data);
         
-        // Store the entire response data object, not just the text
+        // Store the entire response data object with new format
         setPracticeExamResult(response.data);
         
+        // CRITICAL FIX: Use interactiveQuestions from backend for interactive tutor
+        console.log('=== USING BACKEND INTERACTIVE QUESTIONS ===');
+        console.log('Backend interactiveQuestions:', response.data.interactiveQuestions);
+        console.log('Backend parsedQuestions (PDF):', response.data.parsedQuestions);
+        console.log('Raw questions text:', response.data.questions);
+        
+        // Use the structured questions from backend if available
+        let questionsArray = [];
+        let questionPoints = [];
+        
+        // PRIORITY: Use interactiveQuestions for the interactive tutor display
+        if (response.data.interactiveQuestions && Array.isArray(response.data.interactiveQuestions)) {
+          // Use backend's interactive questions (ALL extracted questions)
+          questionsArray = response.data.interactiveQuestions.map(q => q.question);
+          questionPoints = response.data.interactiveQuestions.map(q => q.points);
+          console.log('✅ Using backend interactive questions (ALL questions)');
+          console.log(`Questions: ${questionsArray.length} total questions`);
+          console.log('Questions preview:', questionsArray.slice(0, 3).map((q, i) => `${i+1}: ${q.substring(0, 50)}...`));
+          console.log('Points:', questionPoints);
+        } else if (response.data.parsedQuestions && Array.isArray(response.data.parsedQuestions)) {
+          // Fallback to parsedQuestions if interactiveQuestions not available
+          questionsArray = response.data.parsedQuestions.map(q => q.question);
+          questionPoints = response.data.parsedQuestions.map(q => q.points);
+          console.log('⚠️ Fallback to backend parsed questions (limited)');
+          console.log('Questions:', questionsArray.map((q, i) => `${i+1}: ${q.substring(0, 50)}...`));
+          console.log('Points:', questionPoints);
+        } else {
+          // Last resort: parse raw text
+          console.log('⚠️ Last resort: frontend parsing (backend questions not available)');
+          console.log('🔍 Backend response data keys:', Object.keys(response.data || {}));
+          console.log('🔍 Available data:', response.data);
+          questionsArray = parseNumberedQuestions(response.data.questions || '');
+          questionPoints = response.data.questionPoints || [];
+          console.log('📋 Parsed questions count:', questionsArray.length);
+        }
+        
+        // UNIFIED: Always run multiple choice detection regardless of data source
+        console.log('🧪 DEBUG: Testing multiple choice detection on practice exam questions...');
+        try {
+          const detectionResults = await detectAndGroupMultipleChoice(questionsArray);
+          console.log('🎯 DEBUG: Practice exam detection completed successfully');
+          
+          // Store detection results for UI formatting
+          setPracticeExamDetection(detectionResults);
+          console.log('✅ Stored practice exam detection results in state');
+        } catch (detectionError) {
+          console.error('❌ DEBUG: Practice exam detection failed:', detectionError);
+          // Fallback to single questions if detection fails
+          const fallbackQuestions = questionsArray.map((question, index) => ({
+            type: 'single',
+            question: question,
+            originalIndex: index
+          }));
+          setPracticeExamDetection(fallbackQuestions);
+          console.log('🔄 Applied fallback question structure:', fallbackQuestions.length, 'questions');
+        }
+        
         // Initialize answers structure for interactive grading
-        const generatedText = response.data.text || '';
-        const questionsArray = parseNumberedQuestions(generatedText);
         const initialAnswers = {};
         const initialScores = {};
-        
-        // CRITICAL: Use the points returned from backend (ensures perfect sync with PDF)
-        const backendPoints = response.data.questionPoints;
-        console.log('=== USING BACKEND POINTS FOR INTERACTIVE ===');
-        console.log('Backend returned points:', backendPoints);
-        console.log('Frontend generated points:', questionPoints);
-        console.log('Using backend points for perfect sync');
         
         questionsArray.forEach((_, index) => {
           initialAnswers[index] = { answer: '', feedback: null, isGrading: false }; 
@@ -922,14 +1545,26 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
         });
         
         setPracticeExamAnswers(initialAnswers);
-        setPracticeExamPoints(backendPoints || questionPoints); // Use backend points, fallback to frontend
+        setPracticeExamPoints(questionPoints);
         setPracticeExamScores(initialScores);
         
-        // Additional logging for PDF status
-        console.log('PDF Generated:', response.data.pdfGenerated);
-        console.log('PDF Download URL:', response.data.pdfDownloadUrl);
-        console.log('PDF Error:', response.data.pdfError);
-        console.log('Final points for interactive grading:', backendPoints || questionPoints);
+        // SAFETY CHECK: Ensure we have questions to display
+        console.log('🛡️ Safety check: Ensuring questions are available for display');
+        console.log('📊 Questions array length:', questionsArray.length);
+        console.log('📊 Detection results length:', questionsArray.length); // This will be the same as questionsArray
+        
+        console.log('Final setup:', {
+          questionsCount: questionsArray.length,
+          points: questionPoints,
+          totalPoints: questionPoints.reduce((sum, p) => sum + p, 0),
+          detectionCount: practiceExamDetection?.length || 0
+        });
+        
+        // Updated logging for new LaTeX PDF system
+        console.log('PDF Path:', response.data.pdfPath);
+        console.log('Subject:', response.data.subject);
+        console.log('Difficulty:', response.data.difficulty);
+        console.log('Final points for interactive grading:', questionPoints);
         
       } else {
         console.log('=== API ERROR ===');
@@ -997,9 +1632,55 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
       window.URL.revokeObjectURL(url);
       
       console.log('PDF downloaded successfully');
-    } catch (err) {
-      console.error('Download error:', err);
-      setPracticeExamError(`Download failed: ${err.message}`);
+    } catch (error) {
+      console.error('Download error:', error);
+      setPracticeExamError(`Download failed: ${error.message}`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle LaTeX PDF download
+  const handleDownloadLaTeXPDF = async (pdfPath) => {
+    if (isDownloading) return; // Prevent multiple downloads
+    
+    setIsDownloading(true);
+    setPracticeExamError(null);
+    
+    try {
+      console.log('Downloading LaTeX PDF from path:', pdfPath);
+      
+      // Extract filename from the path
+      const filename = pdfPath.split('/').pop();
+      
+      // Read the file directly using fetch
+      const response = await fetch(`http://localhost:8000/api/ai/download-pdf/${filename}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      console.log('LaTeX PDF downloaded successfully');
+    } catch (error) {
+      console.error('LaTeX PDF download error:', error);
+      setPracticeExamError(`Download failed: ${error.message}`);
     } finally {
       setIsDownloading(false);
     }
@@ -1021,8 +1702,21 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
     }));
     setPracticeExamError(null);
     
-    // Get the specific question and answer
-    const questionsArray = parseNumberedQuestions(practiceExamResult?.text || '');
+    // FIXED: Use the same question array logic as display
+    let questionsArray = [];
+    
+    // PRIORITY: Use interactiveQuestions for consistent question access
+    if (practiceExamResult.interactiveQuestions && Array.isArray(practiceExamResult.interactiveQuestions)) {
+      // Use backend's interactive questions (ALL extracted questions)
+      questionsArray = practiceExamResult.interactiveQuestions.map(q => q.question);
+    } else if (practiceExamResult.parsedQuestions && Array.isArray(practiceExamResult.parsedQuestions)) {
+      // Fallback to parsedQuestions if interactiveQuestions not available
+      questionsArray = practiceExamResult.parsedQuestions.map(q => q.question);
+    } else {
+      // Last resort: parse raw text
+      questionsArray = parseNumberedQuestions(practiceExamResult?.questions || '');
+    }
+    
     const questionText = questionsArray[index];
     const answerText = practiceExamAnswers[index]?.answer || '(No answer provided)';
     const maxPoints = practiceExamPoints[index] || 10;
@@ -1499,7 +2193,7 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                 <div className="tool-header-icon">🧪</div>
                 <div className="tool-header-content">
                   <h2 className="tool-title">Generate Practice Exam</h2>
-                  <p className="tool-subtitle">Upload an old exam or describe your desired exam to generate a new one in a similar format.</p>
+                  <p className="tool-subtitle">Create a custom practice exam for any subject. Optionally upload an old exam to generate questions in a similar format.</p>
                 </div>
               </div>
               <form className="tool-form" onSubmit={handlePracticeExamSubmit}>
@@ -1636,13 +2330,13 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                         {/* Debug info */}
                         {console.log('Practice Exam Result:', {
                           hasResult: !!practiceExamResult,
-                          pdfGenerated: practiceExamResult.pdfGenerated,
-                          pdfDownloadUrl: practiceExamResult.pdfDownloadUrl,
-                          pdfError: practiceExamResult.pdfError,
+                          pdfPath: practiceExamResult.pdfPath,
+                          subject: practiceExamResult.subject,
+                          difficulty: practiceExamResult.difficulty,
                           fullResult: practiceExamResult
                         })}
                         
-                        {practiceExamResult.pdfGenerated && practiceExamResult.pdfDownloadUrl && (
+                        {practiceExamResult.pdfPath && (
                           <div style={{ 
                             marginBottom: '24px', 
                             padding: '20px', 
@@ -1655,14 +2349,14 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                             <div style={{ marginBottom: '16px' }}>
                               <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
                               <h3 style={{ color: 'white', fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
-                                PDF Generated Successfully!
+                                LaTeX PDF Generated Successfully!
                               </h3>
                               <p style={{ color: '#d1fae5', fontSize: '16px', margin: 0 }}>
-                                Your practice exam is ready for download
+                                Your practice exam is ready for download with perfect formatting
                               </p>
                             </div>
                             <button 
-                              onClick={() => handleDownloadPDF(practiceExamResult.pdfDownloadUrl)}
+                              onClick={() => handleDownloadLaTeXPDF(practiceExamResult.pdfPath)}
                               disabled={isDownloading}
                               style={{
                                 padding: '16px 32px',
@@ -1708,8 +2402,8 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                                 </>
                               ) : (
                                 <>
-                                  <span style={{ fontSize: '24px' }}>📥</span>
-                                  Download PDF Exam
+                                  <span style={{ fontSize: '24px' }}>📄</span>
+                                  Download LaTeX PDF
                                 </>
                               )}
                             </button>
@@ -1717,7 +2411,7 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                         )}
                         
                         {/* Fallback download button - always show if generatePDF was checked */}
-                        {practiceExamForm.generatePDF && !practiceExamResult.pdfGenerated && !practiceExamResult.pdfError && (
+                        {practiceExamForm.generatePDF && !practiceExamResult.pdfPath && (
                           <div style={{ 
                             marginBottom: '16px', 
                             padding: '16px', 
@@ -1727,7 +2421,7 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                             textAlign: 'center'
                           }}>
                             <p style={{ color: '#92400e', margin: 0 }}>
-                              ⏳ PDF generation in progress... The download button will appear when ready.
+                              ⏳ LaTeX PDF generation in progress... The download button will appear when ready.
                             </p>
                           </div>
                         )}
@@ -1772,105 +2466,96 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                           </div>
                           
                           <div className="questions-list">
-                            {parseNumberedQuestions(practiceExamResult.text || '').map((question, index) => (
+                            {/* FIXED: Use the structured questions that preserve backend numbering */}
+                            {practiceExamDetection && practiceExamDetection.length > 0 ? (
+                              practiceExamDetection.map((questionData, index) => (
                               <div key={index} className="question-item">
                                 <div className="question-header">
                                   <div className="question-number">
-                                    <span>Q{index + 1}</span>
-                                    {practiceExamPoints[index] && (
+                                      {/* FIXED: Extract question number from question text instead of using index */}
+                                      <span>
+                                        {(() => {
+                                          // Extract display number like Q1a from the text
+                                          const text = questionData.question || '';
+                                          const m = text.match(/^Q(\d+)([a-z]?)\)/i);
+                                          if (m) {
+                                            let letter = (m[2] || '').toLowerCase();
+                                            if (!letter) {
+                                              // Handle forms like "Q1) [a.]" or "Q1) (a)"
+                                              const m2 = text.match(/^Q\d+\)\s*(?:\[\s*([a-z])\.\s*\]|\(([a-z])\))/i);
+                                              if (m2) {
+                                                letter = (m2[1] || m2[2] || '').toLowerCase();
+                                              }
+                                            }
+                                            return `Q${m[1]}${letter}`;
+                                          }
+                                          return `Q${index + 1}`;
+                                        })()}
+                                      </span>
+                                    {practiceExamPoints[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index] && (
                                       <div style={{ 
                                         fontSize: '12px', 
                                         color: '#6b7280', 
                                         fontWeight: 'normal',
                                         marginTop: '2px'
                                       }}>
-                                        ({practiceExamPoints[index]} pts)
+                                        ({practiceExamPoints[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]} pts)
                                       </div>
                                     )}
                                   </div>
-                                  <div className="question-text">
-                                    <p>{question}</p>
-                                  </div>
-                                </div>
-                                
-                                <div className="question-answer">
-                                  <label className="answer-label">
-                                    <span className="label-icon">✍️</span>
-                                    Your Answer:
-                                    {practiceExamScores[index] !== undefined && practiceExamScores[index] > 0 && (
-                                      <span style={{ 
-                                        marginLeft: '8px', 
-                                        color: '#059669', 
-                                        fontWeight: 'bold',
-                                        fontSize: '14px'
-                                      }}>
-                                        Score: {practiceExamScores[index]}/{practiceExamPoints[index] || 10} points
-                                      </span>
-                                    )}
-                                  </label>
-                                  <textarea
-                                    value={practiceExamAnswers[index]?.answer || ''} 
-                                    onChange={(e) => handlePracticeExamAnswerChange(index, e.target.value)}
-                                    className="answer-textarea"
-                                    placeholder="Type your answer here..."
-                                    disabled={practiceExamAnswers[index]?.isGrading}
-                                    rows="4"
+                                  <QuestionDisplay 
+                                    questionData={questionData}
+                                    index={(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index} 
+                                    isExam={true}
+                                    onAnswerChange={handlePracticeExamAnswerChange}
+                                    userAnswer={practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.answer || ''}
+                                    isGrading={practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.isGrading || false}
+                                    onGrade={handleGradePracticeExamAnswer}
                                   />
-                                  
-                                  <button 
-                                    onClick={() => handleGradePracticeExamAnswer(index)}
-                                    className="grade-btn"
-                                    disabled={!practiceExamAnswers[index]?.answer || practiceExamAnswers[index]?.isGrading}
-                                  >
-                                    {practiceExamAnswers[index]?.isGrading ? (
-                                      <>
-                                        <div className="btn-spinner small"></div>
-                                        Grading...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className="btn-icon">✅</span>
-                                        Grade Answer ({practiceExamPoints[index] || 10} pts)
-                                      </>
-                                    )}
-                                  </button>
                                 </div>
                                 
-                                {practiceExamAnswers[index]?.feedback && !practiceExamAnswers[index]?.isGrading && (
+                                {/* Question answer and grading is now handled inside QuestionDisplay component */}
+                                
+                                {practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.feedback && !practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.isGrading && (
                                   <div className={`feedback-card ${practiceExamScores[index] === practiceExamPoints[index]
                                     ? 'correct' 
                                     : practiceExamScores[index] > 0 ? 'partial' : 'incorrect'}`}>
-                                     <div className="feedback-header">
-                                       <div className="feedback-icon">
-                                         {practiceExamScores[index] === practiceExamPoints[index] ? '✅' : 
-                                          practiceExamScores[index] > 0 ? '⚡' : '❌'}
-                                       </div>
-                                       <h5 className="feedback-title">
-                                         {practiceExamScores[index] === practiceExamPoints[index] ? 'Perfect!' : 
-                                          practiceExamScores[index] > 0 ? 'Partial Credit' : 'Needs Improvement'}
-                                         <span style={{ marginLeft: '8px', fontSize: '14px' }}>
-                                           ({practiceExamScores[index]}/{practiceExamPoints[index] || 10} points)
-                                         </span>
-                                       </h5>
-                                     </div>
-                                     
-                                     <div className="feedback-content">
-                                       <pre className="feedback-text">{practiceExamAnswers[index].feedback}</pre>
-                                     </div>
-                                     
-                                     <div className="feedback-actions">
-                                       <button 
-                                         onClick={() => handleDiscussInChat(null, index)}
-                                         className="feedback-action-btn"
-                                       >
-                                         <span className="btn-icon">💬</span>
-                                         Discuss in Chat
-                                       </button>
-                                     </div>
-                                   </div>
+                                      <div className="feedback-header">
+                                        <div className="feedback-icon">
+                                          {practiceExamScores[index] === practiceExamPoints[index] ? '✅' : 
+                                           practiceExamScores[index] > 0 ? '⚡' : '❌'}
+                                        </div>
+                                        <h5 className="feedback-title">
+                                          {practiceExamScores[index] === practiceExamPoints[index] ? 'Perfect!' : 
+                                           practiceExamScores[index] > 0 ? 'Partial Credit' : 'Needs Improvement'}
+                                          <span style={{ marginLeft: '8px', fontSize: '14px' }}>
+                                            ({practiceExamScores[index]}/{practiceExamPoints[index] || 10} points)
+                                          </span>
+                                        </h5>
+                                      </div>
+                                      
+                                      <div className="feedback-content">
+                                        <pre className="feedback-text">{practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index].feedback}</pre>
+                                      </div>
+                                      
+                                      <div className="feedback-actions">
+                                        <button 
+                                          onClick={() => handleDiscussInChat(null, (questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index)}
+                                          className="feedback-action-btn"
+                                        >
+                                          <span className="btn-icon">💬</span>
+                                          Discuss in Chat
+                                        </button>
+                                      </div>
+                                    </div>
                                 )}
                               </div>
-                            ))}
+                            ))
+                            ) : (
+                              <div className="no-questions-message">
+                                <p>No questions available. Please try generating a new practice exam.</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1941,56 +2626,67 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
               </div>
               
               <div className="questions-list">
-                {parseNumberedQuestions(actionResult.content).map((question, index) => (
+                {practiceQuestionDetection.map((questionData, index) => (
                   <div key={index} className="question-item">
                     <div className="question-header">
                       <div className="question-number">
                         <span>Q{index + 1}</span>
-                        {questionPoints[index] && (
+                        {questionData && questionData.type === 'multiple_choice' && (
+                          <span className="question-type-indicator">Multiple Choice</span>
+                        )}
+                        {questionPoints[questionData ? questionData.originalIndex : index] && (
                           <div style={{ 
                             fontSize: '12px', 
                             color: '#6b7280', 
                             fontWeight: 'normal',
                             marginTop: '2px'
                           }}>
-                            ({questionPoints[index]} pts)
+                            ({questionPoints[questionData ? questionData.originalIndex : index]} pts)
                           </div>
                         )}
                       </div>
-                      <div className="question-text">
-                        <p>{question}</p>
-                      </div>
+                      <QuestionDisplay 
+                        questionData={questionData}
+                        index={questionData ? questionData.originalIndex : index}
+                        isExam={false}
+                        onAnswerChange={handleAnswerChange}
+                        userAnswer={userAnswers[questionData ? questionData.originalIndex : index]?.answer || ''}
+                        isGrading={userAnswers[questionData ? questionData.originalIndex : index]?.isGrading || false}
+                        onGrade={handleGradeSingleAnswer}
+                      />
                     </div>
                     
-                    <div className="question-answer">
-                      <label className="answer-label">
-                        <span className="label-icon">✍️</span>
-                        Your Answer:
-                        {userScores[index] !== undefined && userScores[index] > 0 && (
-                          <span style={{ 
-                            marginLeft: '8px', 
-                            color: '#059669', 
-                            fontWeight: 'bold',
-                            fontSize: '14px'
-                          }}>
-                            Score: {userScores[index]}/{questionPoints[index] || 10} points
-                          </span>
-                        )}
-                      </label>
-                      <textarea
-                        value={userAnswers[index]?.answer || ''} 
-                        onChange={(e) => handleAnswerChange(index, e.target.value)}
-                        className="answer-textarea"
-                        placeholder="Type your answer here..."
-                        disabled={userAnswers[index]?.isGrading}
-                        rows="4"
-                      />
-                      
-                      <button 
-                        onClick={() => handleGradeSingleAnswer(index)}
-                        className="grade-btn"
-                        disabled={!userAnswers[index]?.answer || userAnswers[index]?.isGrading}
-                      >
+                    {/* Only show question-answer section for single questions, multiple choice is handled in QuestionDisplay */}
+                    {(!questionData || questionData.type === 'single') && (
+                      <div className="question-answer">
+                        <label className="answer-label">
+                          <span className="label-icon">✍️</span>
+                          Your Answer:
+                          {userScores[questionData ? questionData.originalIndex : index] !== undefined && userScores[questionData ? questionData.originalIndex : index] > 0 && (
+                            <span style={{ 
+                              marginLeft: '8px', 
+                              color: '#059669', 
+                              fontWeight: 'bold',
+                              fontSize: '14px'
+                            }}>
+                              Score: {userScores[questionData ? questionData.originalIndex : index]}/{questionPoints[questionData ? questionData.originalIndex : index] || 10} points
+                            </span>
+                          )}
+                        </label>
+                        <textarea
+                          value={userAnswers[questionData ? questionData.originalIndex : index]?.answer || ''} 
+                          onChange={(e) => handleAnswerChange(questionData ? questionData.originalIndex : index, e.target.value)}
+                          className="answer-textarea"
+                          placeholder="Type your answer here..."
+                          disabled={userAnswers[questionData ? questionData.originalIndex : index]?.isGrading}
+                          rows="4"
+                        />
+                        
+                        <button 
+                          onClick={() => handleGradeSingleAnswer(questionData ? questionData.originalIndex : index)}
+                          className="grade-btn"
+                          disabled={!userAnswers[questionData ? questionData.originalIndex : index]?.answer || userAnswers[questionData ? questionData.originalIndex : index]?.isGrading}
+                        >
                         {userAnswers[index]?.isGrading ? (
                           <>
                             <div className="btn-spinner small"></div>
@@ -2004,32 +2700,33 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                         )}
                       </button>
                     </div>
+                    )}
                     
-                    {userAnswers[index]?.feedback && !userAnswers[index]?.isGrading && (
-                      <div className={`feedback-card ${userScores[index] === questionPoints[index] 
+                    {userAnswers[questionData ? questionData.originalIndex : index]?.feedback && !userAnswers[questionData ? questionData.originalIndex : index]?.isGrading && (
+                      <div className={`feedback-card ${userScores[questionData ? questionData.originalIndex : index] === questionPoints[questionData ? questionData.originalIndex : index] 
                         ? 'correct' 
-                        : userScores[index] > 0 ? 'partial' : 'incorrect'}`}>
+                        : userScores[questionData ? questionData.originalIndex : index] > 0 ? 'partial' : 'incorrect'}`}>
                          <div className="feedback-header">
                            <div className="feedback-icon">
-                             {userScores[index] === questionPoints[index] ? '✅' : 
-                              userScores[index] > 0 ? '⚡' : '❌'}
+                             {userScores[questionData ? questionData.originalIndex : index] === questionPoints[questionData ? questionData.originalIndex : index] ? '✅' : 
+                              userScores[questionData ? questionData.originalIndex : index] > 0 ? '⚡' : '❌'}
                            </div>
                            <h5 className="feedback-title">
-                             {userScores[index] === questionPoints[index] ? 'Perfect!' : 
-                              userScores[index] > 0 ? 'Partial Credit' : 'Needs Improvement'}
+                             {userScores[questionData ? questionData.originalIndex : index] === questionPoints[questionData ? questionData.originalIndex : index] ? 'Perfect!' : 
+                              userScores[questionData ? questionData.originalIndex : index] > 0 ? 'Partial Credit' : 'Needs Improvement'}
                              <span style={{ marginLeft: '8px', fontSize: '14px' }}>
-                               ({userScores[index]}/{questionPoints[index] || 10} points)
+                               ({userScores[questionData ? questionData.originalIndex : index]}/{questionPoints[questionData ? questionData.originalIndex : index] || 10} points)
                              </span>
                            </h5>
                          </div>
                          
                          <div className="feedback-content">
-                           <pre className="feedback-text">{userAnswers[index].feedback}</pre>
+                           <pre className="feedback-text">{userAnswers[questionData ? questionData.originalIndex : index].feedback}</pre>
                          </div>
                          
                          <div className="feedback-actions">
                            <button 
-                             onClick={() => handleDiscussInChat(null, index)}
+                             onClick={() => handleDiscussInChat(null, questionData ? questionData.originalIndex : index)}
                              className="feedback-action-btn"
                            >
                              <span className="btn-icon">💬</span>

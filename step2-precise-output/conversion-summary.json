@@ -1,0 +1,15 @@
+{
+  "step2A": {
+    "formatPromptLength": 47370,
+    "baseLatexLength": 4665
+  },
+  "step2B": {
+    "contentPromptLength": 13090,
+    "finalLatexLength": 9942
+  },
+  "outputFiles": {
+    "baseLatex": "step2-precise-output/base-formatting.tex",
+    "finalLatex": "step2-precise-output/final-exam.tex"
+  },
+  "timestamp": "2025-07-02T02:05:04.078Z"
+}

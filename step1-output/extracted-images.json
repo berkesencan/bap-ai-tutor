@@ -1,0 +1,67 @@
+[
+  {
+    "type": "background",
+    "index": 0,
+    "src": "page-1-1755370953753-xgdhrr.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "background",
+    "index": 1,
+    "src": "page-2-1755370953753-xgdhrr.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "background",
+    "index": 2,
+    "src": "page-3-1755370953753-xgdhrr.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "background",
+    "index": 3,
+    "src": "page-4-1755370953753-xgdhrr.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "background",
+    "index": 4,
+    "src": "page-5-1755370953753-xgdhrr.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "inline",
+    "index": 0,
+    "src": "page-1-1755370953753-xgdhrr.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  },
+  {
+    "type": "inline",
+    "index": 1,
+    "src": "page-2-1755370953753-xgdhrr.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  },
+  {
+    "type": "inline",
+    "index": 2,
+    "src": "page-3-1755370953753-xgdhrr.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  },
+  {
+    "type": "inline",
+    "index": 3,
+    "src": "page-4-1755370953753-xgdhrr.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  },
+  {
+    "type": "inline",
+    "index": 4,
+    "src": "page-5-1755370953753-xgdhrr.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  }
+]

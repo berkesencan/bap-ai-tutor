@@ -1,0 +1,3 @@
+SAMPLE INTERACTIVE QUESTION:
+
+Q1) For each example, indicate whether f = o(g) (little-oh), f = ω(g) (little-omega), or f = Θ(g) (big-Theta). No justification is necessary.

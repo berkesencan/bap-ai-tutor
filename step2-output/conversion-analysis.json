@@ -1,0 +1,155 @@
+{
+  "conversionSummary": {
+    "originalTextLength": 8322,
+    "originalHtmlLength": 38567,
+    "latexLength": 11395,
+    "questionsIncluded": false
+  },
+  "htmlStructure": {
+    "elementsFound": 140,
+    "rowsDetected": 40,
+    "pagesDetected": 1
+  },
+  "formattingSpecs": {
+    "fontSizes": [
+      17,
+      18,
+      10,
+      13,
+      15,
+      21
+    ],
+    "fontSizeFrequency": {
+      "10": 1,
+      "13": 1,
+      "15": 1,
+      "17": 13,
+      "18": 6,
+      "21": 1
+    },
+    "colors": [
+      "#000000",
+      "#ff0000"
+    ],
+    "colorFrequency": {
+      "#000000": 18,
+      "#ff0000": 5
+    },
+    "fontMapping": {
+      "title": 21,
+      "body": 17,
+      "header": 18,
+      "small": 10,
+      "tiny": 13
+    },
+    "hasRedText": true,
+    "documentStyle": "formal_exam_with_red"
+  },
+  "contentStructure": {
+    "title": "CSCI-UA.0480-051: Parallel Computing",
+    "sections": [
+      {
+        "title": "Problem 1",
+        "lineNumber": 56,
+        "content": []
+      },
+      {
+        "title": "Problem 2",
+        "lineNumber": 107,
+        "content": []
+      },
+      {
+        "title": "1. We can have a core with superscalar capability but without speculative execution.",
+        "lineNumber": 123,
+        "content": []
+      },
+      {
+        "title": "2. In a core with hyperthreading technology, instructions can come from different",
+        "lineNumber": 124,
+        "content": []
+      },
+      {
+        "title": "3. MISD is implemented in real life in GPUs even though multicore can do the same",
+        "lineNumber": 127,
+        "content": []
+      },
+      {
+        "title": "4. If we have two processes, with one thread each, executing on a shared memory",
+        "lineNumber": 129,
+        "content": []
+      },
+      {
+        "title": "5. If we have two processes, with multiple threads each, executing on a shared",
+        "lineNumber": 131,
+        "content": []
+      },
+      {
+        "title": "Problem 3",
+        "lineNumber": 138,
+        "content": []
+      },
+      {
+        "title": "Problem 4",
+        "lineNumber": 162,
+        "content": []
+      }
+    ],
+    "problems": [
+      {
+        "number": 1,
+        "content": "in separate page,"
+      },
+      {
+        "number": 2,
+        "content": "in another separate\npage, etc).\nThis exam has 4 problems totaling 100 points.\nThe very first page of your answer is the cover page and must contain:\n- You Last Name\n- Your First Name\n- Your NetID\n- Copy and paste the honor code showed in the rectangle at the bottom of this\npage.\n\nHonor code (copy and paste, what is type in red below, to the first page of your exam)\n\n\n\n\n\n\nYou may use the textbook, slides, and any notes you have. But you may not use the\ninternet.\nYou may NOT use communication tools to collaborate with other humans. This includes\nbut is not limited to G-Chat, Messenger, E-mail, etc.\nDo not try to search for answers on the internet it will show in your answer, and you will\nearn an immediate grade of 0.\nAnyone found sharing answers or communicating with another student during the exam\nperiod will earn an immediate grade of 0.\n“I understand the ground rules and agree to abide by them. I will not share answers\nor assist another student during this exam, nor will I seek assistance from another\nstudent or attempt to view their answers.”"
+      },
+      {
+        "number": 1,
+        "content": "Assume we have the following task flow graph where every node is a task and an arrow\nfrom a task to another means dependencies. For example, task b cannot start before task a\nis done.\n\nSuppose we have two types of cores: type 1 and type 2. The following table shows the\ntime taken by each task, in nano seconds, if executed on a core of type 1 and if executed\non a core of type 2.\nTask\n\nTime Taken on\ncore type 1\n\nTime Taken on\ncore type 2\n\na\nb\nc\nd\ne\n\n5\n10\n15\n5\n10\n\n5\n5\n20\n5\n5\n\na. [5 points] If we use all cores of type 1, what will be the span (indicate tasks and total\ntime) of the DAG?\nb. [5] If we use all cores of type 2, what will be the span (indicate tasks and total time) of\nthe DAG?\nc. [15] What will be the smallest number of cores, of any type, that gives the best speedup\ncompared to using a single core of type 1? You can use a mix of any cores (e.g. two cores\nof type 1 and one core of type 2, etc). In your solution, indicate which task will run on\nwhich core, the total number of cores you will use for each type, the total execution times\n(for parallel version and the sequential version running on core of type 1), and the\nspeedup (relative to sequential execution on core of type 1).\nd. [10] Suppose we use only cores of type 1. What is the smallest number of cores to get\nthe highest speedup? Calculate that speedup. Then, if you are allowed to remove only one\narrow from the DAG, while keeping the DAG a legal one, what will be that arrow to give\na better speedup than the one you just calculated? If there are several solutions, pick one\nsolution, and calculate the new speedup. If there are no solutions, state so, and give no\nmore than two lines of explanation as to why there is no solution."
+      },
+      {
+        "number": 2,
+        "content": "a. [5] For each one of the following designs, indicate whether it is SISD, SIMD, MISD,\nor MIMD. No justification needed. Note: If the design fits more than one category, then\npick the more general one. For example, MIMD can execute as SIMD if all the\ninstructions are the same. The more general is MIMD so pick MIMD not SIMD.\n1. single core with superscalar capability but without speculative execution and\nwithout hyperthreading technology\n2. single core with superscalar capability and speculative execution but without\nhyperthreading technology\n3. single core with superscalar capability, speculative execution, and hyperthreading\ntechnology\n4. multicore chip where each core has pipelining only\n5. multicore chip where some cores have pipelining only while other cores have\nsuperscalar capability without hyperthreading technology\nb. [5] Indicate whether each statement below is true (T) or false (F). No justification\nneeded.\n1. We can have a core with superscalar capability but without speculative execution.\n2. In a core with hyperthreading technology, instructions can come from different\nthreads belonging to the same process but not from threads belonging to different\nprocesses.\n3. MISD is implemented in real life in GPUs even though multicore can do the same\njob.\n4. If we have two processes, with one thread each, executing on a shared memory\nmachine, there is no coherence overhead that can result from their execution.\n5. If we have two processes, with multiple threads each, executing on a shared\nmemory machine, there is no coherence overhead that can result from their\nexecution.\nc. [5] If we have a multicore processor with eight cores, and two-way hyperthreading\neach, what is the largest number of processes that can execute at the same time? Explain\nyour answer with no more than two sentences."
+      },
+      {
+        "number": 3,
+        "content": "a. Suppose you have an algorithm with four tasks that can be executed in parallel.\n1. [6] What are the characteristics of those tasks that can make you decide to\nimplement the program as one process with four threads as opposed to four\nprocesses with one thread each? State two characteristics to get full credit.\n2. [4] With four parallel tasks, it may seem that four cores will give the best speedup\nover sequential code. However, there may be cases where less than four cores can\ngive the same speedup as the four cores. Give a brief description of such a case in\nno more than 2-3 lines.\nb. [4] If we have two implementations of the same algorithm and we found that one\nimplementation has higher efficiency than the other. Does that always mean that the\nimplementation with higher efficiency will always be faster? Justify in two sentences.\nc. We have two different implementations of the same algorithm. The first\nimplementation has one million instructions where half of them are floating point\ninstructions, and the other half are integer instructions. The second implementation has\ntwo million instructions where all of them are integer instructions. Suppose a floatingpoint instruction takes 10 cycles while an integer instruction takes one cycle. We execute\nthese two implementations on a 2GHz machine. Assume single core processor, where this\ncore is SISD.\n1. [6] What is the MIPS of each implementation?\n2. [6] What is the CPI of each implementation?\n3. [6] What is the total execution time of each implementation?\n4. [8] State which implementation is better based on each of the following\nmeasurements: instruction count, MIPS, CPI, and execution time."
+      },
+      {
+        "number": 4,
+        "content": "For"
+      },
+      {
+        "number": 4,
+        "content": ", assume we have one communicator: MPI_COMM_WORLD.\nSuppose we have four processes. Each process has two arrays, of five integers each, A\nand B. B is declared as int B[5] but is not initialized and A is initialized as follows:\nprocess 0: int A[5] = {1, 2, 3, 4, 5};\nprocess 1: int A[5] = {11, 12, 13, 14, 15};\nprocess 2: int A[5] = {6, 7, 8, 9, 10};\nprocess 3: int A[5] = {16, 17, 18, 19, 20};\na. [3] Write one MPI command that, if executed by all the four processes, the B arrays at\neach process will be:\nprocess 0: int B[5] = {34, 38, 42, 46, 50};\nprocess 1: int B[5] = {34, 38, 42, 46, 50};\nprocess 2: int B[5] = {34, 38, 42, 46, 50};\nprocess 3: int B[5] = {34, 38, 42, 46, 50};\nb. [3] Write one MPI command that, if executed by all the four processes, the A arrays at\neach process will be:\nprocess 0: int A[5] = {6, 7, 8, 9, 10};\nprocess 1: int A[5] = {6, 7, 8, 9, 10};\nprocess 2: int A[5] = {6, 7, 8, 9, 10};\nprocess 3: int A[5] = {6, 7, 8, 9, 10};\nc. [4] Why MPI_Bcast() does not have an argument for the tag in a way similar to\nMPI_send()?"
+      }
+    ],
+    "hasMath": true,
+    "hasCode": false,
+    "hasRedText": true,
+    "contentType": "exam"
+  },
+  "latexMapping": {
+    "documentClass": "article",
+    "fontSize": "12pt",
+    "geometry": "margin=1in",
+    "fontCommands": {
+      "titlefont": "\\fontsize{21}{25}\\selectfont\\bfseries",
+      "bodyfont": "\\fontsize{17}{20}\\selectfont",
+      "headerfont": "\\fontsize{18}{22}\\selectfont\\bfseries",
+      "smallfont": "\\fontsize{10}{12}\\selectfont",
+      "tinyfont": "\\fontsize{13}{16}\\selectfont"
+    },
+    "colorCommands": {
+      "redtext": "\\textcolor{red}"
+    },
+    "sectionMapping": {
+      "problemFormat": "\\headerfont{Problem %d}",
+      "useEnumerate": true,
+      "sectionFormat": "\\headerfont{%s}",
+      "useSubsections": true
+    },
+    "layoutStrategy": "complex_positioning"
+  },
+  "timestamp": "2025-07-02T00:46:14.464Z"
+}

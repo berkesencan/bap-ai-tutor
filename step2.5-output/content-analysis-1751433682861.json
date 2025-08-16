@@ -1,0 +1,41 @@
+{
+  "subject": "algorithms",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": false,
+  "hasMathEquations": true,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": false,
+  "detectedElements": [
+    "Mathematical equations"
+  ],
+  "codeLanguages": [],
+  "diagramTypes": [],
+  "tableStructures": [],
+  "mathNotations": [],
+  "contentTopics": [
+    "algorithms (9 mentions)",
+    "data-structures (10 mentions)",
+    "programming (3 mentions)",
+    "mathematics (13 mentions)"
+  ],
+  "questionTypes": [
+    "theoretical (5 instances)",
+    "analytical (2 instances)",
+    "practical (4 instances)",
+    "problem-solving (2 instances)"
+  ],
+  "academicPatterns": [
+    "advanced-math (13 instances)",
+    "multi-step-problems (1 instances)"
+  ],
+  "technicalTerms": [
+    "EdStem",
+    "little-oh",
+    "little-omega",
+    "closed-form"
+  ],
+  "complexityLevel": "advanced"
+}

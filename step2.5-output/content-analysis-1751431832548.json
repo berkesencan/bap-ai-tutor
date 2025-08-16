@@ -1,0 +1,48 @@
+{
+  "subject": "operating-systems",
+  "hasDAGs": true,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": false,
+  "hasMathEquations": false,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": true,
+  "detectedElements": [
+    "DAG diagrams",
+    "Algorithm pseudocode"
+  ],
+  "codeLanguages": [],
+  "diagramTypes": [
+    "DAG"
+  ],
+  "tableStructures": [],
+  "mathNotations": [],
+  "contentTopics": [
+    "algorithms (3 mentions)",
+    "data-structures (4 mentions)",
+    "operating-systems (41 mentions)",
+    "parallel-computing (31 mentions)",
+    "computer-networks (8 mentions)"
+  ],
+  "questionTypes": [
+    "theoretical (8 instances)",
+    "analytical (3 instances)",
+    "practical (20 instances)",
+    "problem-solving (1 instances)"
+  ],
+  "academicPatterns": [],
+  "technicalTerms": [
+    "CSCI",
+    "READ",
+    "BEFORE",
+    "SOLVING",
+    "EXAM",
+    "take-home",
+    "NetID",
+    "SISD",
+    "SIMD",
+    "MISD"
+  ],
+  "complexityLevel": "basic"
+}

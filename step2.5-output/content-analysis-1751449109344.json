@@ -1,0 +1,43 @@
+{
+  "subject": "software-engineering",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": true,
+  "hasMathEquations": false,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": false,
+  "detectedElements": [
+    "Code snippets (from text)"
+  ],
+  "codeLanguages": [
+    "C/C++",
+    "JavaScript"
+  ],
+  "diagramTypes": [],
+  "tableStructures": [],
+  "mathNotations": [],
+  "contentTopics": [
+    "data-structures (46 mentions)",
+    "programming (69 mentions)"
+  ],
+  "questionTypes": [
+    "theoretical (4 instances)",
+    "practical (23 instances)"
+  ],
+  "academicPatterns": [],
+  "technicalTerms": [
+    "SmartTelevision",
+    "REMEMBER",
+    "SPACES",
+    "INDENT",
+    "YOUR",
+    "CODE",
+    "LessThan",
+    "half-open",
+    "GreetingCard",
+    "ranged-for"
+  ],
+  "complexityLevel": "basic"
+}

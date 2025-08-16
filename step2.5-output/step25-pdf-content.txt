@@ -1,0 +1,116 @@
+CSCI-UA.0480-051: Parallel Computing Midterm Exam (Oct
+19th, 2021)
+Your Name
+Total: 100 points
+Important Notes - READ BEFORE SOLVING THE EXAM
+• If you perceive any ambiguity in any of the questions, state your assumptions clearly and solve the
+problem based on your assumptions. We will grade both your solutions and your assumptions.
+• This exam is take-home.
+• The exam is posted, on Brightspace, at the beginning of the Oct 19th lecture.
+• You have up to 23 hours and 55 minutes from the beginning of the Oct 19th lecture to submit on
+Brightspace (in the assignments section).
+• You are allowed only one submission, unlike assignments and labs.
+• Your answers must be very focused. You may be penalized for wrong answers and for putting
+irrelevant information in your answers.
+• You must upload a pdf file.
+• Your answer sheet must have a cover page (as indicated below) and one problem answer per page
+(e.g. problem 1 in separate page, problem 2 in another separate page, etc).
+• This exam has 4 problems totaling 100 points.
+• The very first page of your answer is the cover page and must contain:
+– Your Last Name
+– Your First Name
+– Your NetID
+– Copy and paste the honor code shown in the rectangle at the bottom of this page.
+Honor code (copy and paste what is typed in red below, to the first page of your exam)
+• You may use the textbook, slides, and any notes you have. But you may not use the internet.
+• You may NOT use communication tools to collaborate with other humans. This includes but is
+not limited to G-Chat, Messenger, E-mail, etc.
+• Do not try to search for answers on the internet it will show in your answer, and you will earn an
+immediate grade of 0.
+• Anyone found sharing answers or communicating with another student during the exam period will
+earn an immediate grade of 0.
+• “I understand the ground rules and agree to abide by them. I will not share answers or assist
+another student during this exam, nor will I seek assistance from another student or attempt to
+view their answers.”
+
+Problem 1
+A single core processor with a single instruction stream and a single data stream.
+1
+
+Problem 2
+A vector processor executing the same instruction on multiple data elements simultaneously.
+
+Problem 3
+A hypothetical processor that executes multiple instructions on the same data stream.
+
+Problem 4
+A multi-core processor with each core executing independent instruction streams.
+
+Problem 5
+A many-core processor where some cores have SIMD capabilities while others execute independently. b.
+[5] Indicate whether each statement below is true (T) or false (F). No justification needed.
+
+Problem 1
+Hyperthreading allows a single core to execute multiple threads concurrently.
+
+Problem 2
+Superscalar processors can execute multiple instructions simultaneously in a single cycle.
+
+Problem 3
+Speculative execution improves performance by predicting the outcome of branches.
+
+Problem 4
+Cache coherence ensures that all cores see the same data in a shared memory system.
+
+Problem 5
+In a distributed memory system, processes communicate by message passing. c. [5] If we have a multicore
+processor with twelve cores, and four-way hyperthreading each, what is the largest number of threads
+that can execute at the same time? Explain your answer with no more than two sentences.
+Problem 3 a. Suppose you have an algorithm with six tasks that can be executed in parallel.
+
+Problem 1
+[6] What are the characteristics of those tasks that can make you decide to implement the program as
+one process with six threads as opposed to six processes with one thread each? State two characteristics
+to get full credit.
+
+Problem 2
+[4] With six parallel tasks, it may seem that six cores will give the best speedup over sequential code.
+However, there may be cases where less than six cores can give the same speedup as the six cores. Give
+a brief description of such a case in no more than 2-3 lines. b. [4] If we have two implementations of
+the same algorithm and we found that one implementation has higher efficiency than the other. Does
+that always mean that the implementation with higher efficiency will always be faster? Justify in two
+2
+
+sentences. c. We have two different implementations of the same algorithm. The first implementation
+has three million instructions where one third are floating point instructions, and two thirds are integer
+instructions. The second implementation has five million instructions where all of them are integer
+instructions. Suppose a floatingpoint instruction takes 12 cycles while an integer instruction takes two
+cycles. We execute these two implementations on a 3GHz machine. Assume single core processor, where
+this core is SISD.
+
+Problem 1
+[6] What is the MIPS of each implementation?
+
+Problem 2
+[6] What is the CPI of each implementation?
+
+Problem 3
+[6] What is the total execution time of each implementation?
+
+Problem 4
+[8] State which implementation is better based on each of the following measurements: instruction count,
+MIPS, CPI, and execution time.
+Problem 4 For problem 4, assume we have one communicator: MPI COMM WORLD. Suppose we
+have eight processes. Each process has two arrays, of ten integers each, C and D. D is declared as int
+D[10] but is not initialized and C is initialized as follows: process 0-7: int C[10] = i*10, i*10+1, i*10+2,
+i*10+3, i*10+4, i*10+5, i*10+6, i*10+7, i*10+8, i*10+9; (where i is the process rank)
+a. [3] Write one MPI command that, if executed by all the eight processes, the D arrays at each
+process will be: process 0-7: int D[10] = 280, 281, 282, 283, 284, 285, 286, 287, 288, 289;
+b. [3] Write one MPI command that, if executed by all the eight processes, the C arrays at each
+process will be: process 0-7: int C[10] = 70, 71, 72, 73, 74, 75, 76, 77, 78, 79;
+c. [4] Why MPI Reduce() requires a reduction operation as an argument while MPI Allgather() does
+not?
+
+3
+
+

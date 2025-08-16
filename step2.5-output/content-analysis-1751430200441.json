@@ -1,0 +1,20 @@
+{
+  "subject": "algorithms",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": false,
+  "hasMathEquations": true,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": false,
+  "detectedElements": [
+    "Mathematical equations"
+  ],
+  "codeLanguages": [],
+  "diagramTypes": [],
+  "tableStructures": [],
+  "mathNotations": [
+    "complexity notation"
+  ]
+}

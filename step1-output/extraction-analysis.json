@@ -1,0 +1,158 @@
+{
+  "summary": {
+    "pdfPath": "/Users/berkesencan/Desktop/bap-ai-tutor-main/backend/uploads/1755370953647-midterm-sp24.pdf",
+    "textLength": 5640,
+    "htmlLength": 29090,
+    "pageCount": 1,
+    "fontSizes": [
+      21,
+      18,
+      17,
+      14,
+      10
+    ],
+    "colors": [
+      "#000000",
+      "#ff0000"
+    ],
+    "tableCount": 1,
+    "imageCount": 10,
+    "errors": []
+  },
+  "tables": [
+    {
+      "type": "structured_table",
+      "rows": 10,
+      "columns": 4,
+      "data": [
+        [
+          "▪",
+          "A",
+          "5",
+          "5"
+        ],
+        [
+          "▪",
+          "B",
+          "10",
+          "5"
+        ],
+        [
+          "▪",
+          "C",
+          "20",
+          "30"
+        ],
+        [
+          "D",
+          "30",
+          "25"
+        ],
+        [
+          "-",
+          "E",
+          "10",
+          "15"
+        ],
+        [
+          "•",
+          "F",
+          "10",
+          "5"
+        ],
+        [
+          "•",
+          "G",
+          "5",
+          "10"
+        ],
+        [
+          "•",
+          "You may use the textbook, slides, the class recorded lectures, the information in the"
+        ],
+        [
+          "•",
+          "You may NOT use communication tools to collaborate with other humans. This includes"
+        ],
+        [
+          "•",
+          "You cannot use LLMs such as chatGPT, Gemini, Bard, etc."
+        ]
+      ],
+      "htmlTable": "<p>Table structure not supported</p>",
+      "position": {
+        "top": 516,
+        "left": 270
+      },
+      "description": "Extracted Table Data"
+    }
+  ],
+  "images": [
+    {
+      "type": "background",
+      "index": 0,
+      "src": "page-1-1755370953753-xgdhrr.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 1,
+      "src": "page-2-1755370953753-xgdhrr.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 2,
+      "src": "page-3-1755370953753-xgdhrr.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 3,
+      "src": "page-4-1755370953753-xgdhrr.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 4,
+      "src": "page-5-1755370953753-xgdhrr.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "inline",
+      "index": 0,
+      "src": "page-1-1755370953753-xgdhrr.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 1,
+      "src": "page-2-1755370953753-xgdhrr.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 2,
+      "src": "page-3-1755370953753-xgdhrr.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 3,
+      "src": "page-4-1755370953753-xgdhrr.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 4,
+      "src": "page-5-1755370953753-xgdhrr.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    }
+  ],
+  "timestamp": "2025-08-16T19:02:33.954Z"
+}
