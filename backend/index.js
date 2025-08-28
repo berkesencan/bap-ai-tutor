@@ -2,7 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const http = require('http');
+const socketIo = require('socket.io');
 require('dotenv').config();
+const path = require('path');
 
 // Security validation - ensure critical environment variables are set
 const requiredEnvVars = ['ENCRYPTION_KEY', 'JWT_SECRET'];
@@ -33,6 +36,7 @@ const analyticsRoutes = require('./routes/analytics.routes');
 const gradescopeRoutes = require('./routes/gradescope.routes');
 const classroomRoutes = require('./routes/classroom.routes');
 const usersRoutes = require('./routes/users.routes');
+const activityRoutes = require('./routes/activity.routes');
 
 // Import middleware
 const { errorHandler } = require('./middleware/error.middleware');
@@ -43,7 +47,35 @@ const GradescopeAuth = require('./models/gradescope-auth.model');
 
 // Initialize Express app
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 8000;
+
+// Initialize Socket.IO for real-time progress updates
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// Make io available globally for progress updates
+global.io = io;
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 Client connected for real-time updates:', socket.id);
+
+  // Join room for 3D model generation updates
+  socket.on('join-generation-room', (sessionId) => {
+    socket.join(`generation-${sessionId}`);
+    console.log(`📡 Client ${socket.id} joined generation room: generation-${sessionId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ Client disconnected:', socket.id);
+  });
+});
 
 // Enhanced security middleware
 app.use(helmet({
@@ -88,7 +120,6 @@ app.get('/api/ai/download-pdf/:filename', require('./controllers/ai.controller')
 
 // Unprotected practice exam generation route
 const multer = require('multer');
-const path = require('path');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -115,6 +146,38 @@ app.post('/api/ai/practice-exam', upload.single('pdf'), require('./controllers/a
 // Test form parsing (unprotected for debugging)
 app.post('/api/ai/test-form', upload.single('pdf'), require('./controllers/ai.controller').testFormParsing);
 
+// Unprotected Neural Conquest routes
+const NeuralConquestController = require('./controllers/activities/neural-conquest.controller');
+const neuralConquestController = new NeuralConquestController();
+
+// Neural Conquest debug and content routes (no auth required)
+app.get('/api/activities/neural-conquest/debug', neuralConquestController.debugStatus.bind(neuralConquestController));
+app.get('/api/activities/neural-conquest/topics', neuralConquestController.getAvailableTopics.bind(neuralConquestController));
+app.get('/api/activities/neural-conquest/content', neuralConquestController.getContent.bind(neuralConquestController));
+
+// Neural Conquest session route with optional auth
+app.get('/api/activities/neural-conquest/session/:sessionId', (req, res) => {
+  // Try authentication first, but don't fail if it doesn't work
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Use auth middleware if token is provided
+    authMiddleware(req, res, (err) => {
+      if (err) {
+        console.log('⚠️ Auth failed for session load, proceeding without auth');
+        // Clear any auth data and proceed
+        req.user = null;
+      }
+      // Proceed to controller regardless of auth success/failure
+      neuralConquestController.getNeuralConquestSession(req, res);
+    });
+  } else {
+    console.log('⚠️ No auth token provided for session load, proceeding without auth');
+    // No auth token, proceed without user context
+    req.user = null;
+    neuralConquestController.getNeuralConquestSession(req, res);
+  }
+});
+
 // Protected routes with auth middleware
 app.use('/api/assignments', authMiddleware, assignmentRoutes);
 app.use('/api/schedules', authMiddleware, scheduleRoutes);
@@ -125,6 +188,47 @@ app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/gradescope', authMiddleware, gradescopeRoutes);
 app.use('/api/classrooms', authMiddleware, classroomRoutes);
 app.use('/api/users', authMiddleware, usersRoutes);
+app.use('/api/activities', authMiddleware, activityRoutes);
+
+// Static file serving
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Test route for 3D model serving
+app.get('/api/test-3d-models', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    const modelsDir = path.join(__dirname, 'uploads/3d-models');
+    const files = fs.readdirSync(modelsDir).filter(file => 
+      file.endsWith('.obj') || file.endsWith('.ply')
+    );
+    
+    const testResults = files.slice(0, 3).map(file => ({
+      filename: file,
+      size: fs.statSync(path.join(modelsDir, file)).size,
+      url: `/api/3d-models/${file}`,
+      accessible: true
+    }));
+    
+    res.json({
+      success: true,
+      message: '3D model serving test',
+      totalFiles: files.length,
+      testFiles: testResults,
+      baseUrl: '/api/3d-models/'
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error.message,
+      message: 'Failed to test 3D model serving'
+    });
+  }
+});
+
+// NEW: Serve 3D model files
+app.use('/api/3d-models', express.static(path.join(__dirname, 'uploads/3d-models')));
 
 // Root route
 app.get('/', (req, res) => {
@@ -134,10 +238,11 @@ app.get('/', (req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
+// Start server with Socket.IO support
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log('🔌 Socket.IO enabled for real-time updates');
   
   // Security status check
   console.log('🔒 Security Status:');

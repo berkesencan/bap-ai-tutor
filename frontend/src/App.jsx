@@ -19,6 +19,7 @@ import AiTutorPage from './pages/AiTutorPage';
 import Connect from './pages/Connect';
 import AssignmentPDFViewer from './pages/AssignmentPDFViewer';
 import InteractiveActivities from './pages/InteractiveActivities';
+import NeuralConquest from './pages/NeuralConquest';
 import CourseManagement from './pages/CourseManagement';
 import CourseDetails from './pages/CourseDetails';
 
@@ -78,6 +79,11 @@ function App() {
               <Route path="activities" element={
                 <ProtectedRoute>
                   <InteractiveActivities />
+                </ProtectedRoute>
+              } />
+              <Route path="neural-conquest/:sessionId" element={
+                <ProtectedRoute>
+                  <NeuralConquest />
                 </ProtectedRoute>
               } />
 

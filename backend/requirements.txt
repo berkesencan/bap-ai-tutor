@@ -1,0 +1,12 @@
+# OpenAI Shap-E dependencies via diffusers
+diffusers>=0.34.0
+torch>=2.0.0
+accelerate>=0.20.0
+transformers>=4.30.0
+trimesh>=3.23.0
+numpy>=1.24.0
+# For 3D mesh file processing
+Pillow>=9.0.0 
+fastapi
+uvicorn 
+h11

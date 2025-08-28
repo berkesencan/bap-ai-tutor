@@ -99,6 +99,12 @@ try {
 // Get Firestore instance
 const db = admin.firestore();
 
+// Configure Firestore to ignore undefined properties - this is the safest approach
+// instead of manually cleaning objects which could cause data loss
+db.settings({
+  ignoreUndefinedProperties: true
+});
+
 // Get Auth instance
 const auth = admin.auth();
 

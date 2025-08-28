@@ -1,1859 +1,1449 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getCourses } from '../services/api';
-import { 
-  PlayIcon,
-  PlusIcon,
-  UsersIcon,
-  TrophyIcon,
-  ClockIcon,
-  SparklesIcon,
-  PuzzlePieceIcon,
-  AcademicCapIcon,
-  ChartBarIcon,
-  BoltIcon,
-  XMarkIcon,
-  DocumentTextIcon,
-  BeakerIcon,
-  LightBulbIcon,
-  FireIcon,
-  StarIcon,
-  EyeIcon,
-  ShareIcon,
-  ArrowRightIcon,
-  MagnifyingGlassIcon,
-  BookOpenIcon,
-  GlobeAltIcon,
-  RocketLaunchIcon,
-  HeartIcon,
-  UserGroupIcon,
-  CalendarIcon,
-  TagIcon,
-  FunnelIcon,
-  AdjustmentsHorizontalIcon
-} from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { api, neuralConquestAPI } from '../services/api';
+import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 import './InteractiveActivities.css';
 
+// Game Mode Definitions
 const GAME_MODES = [
   {
     id: 'neural-conquest',
     title: 'Neural Conquest',
     icon: '🧠',
-    tagline: 'Build Your Knowledge Empire',
-    description: 'Conquer territories by mastering concepts. Each topic is a nation to claim through strategic learning.',
-    credentialValue: 'Strategic Thinking & Domain Mastery',
-    industryPartners: ['McKinsey', 'BCG', 'Goldman Sachs', 'Google'],
-    predictiveMetrics: ['Leadership Potential', 'Strategic Thinking', 'Problem Decomposition', 'Competitive Drive'],
-    mechanics: [
-      '🏰 Territory Control: Unlock and defend knowledge domains',
-      '⚔️ Concept Battles: Face off against AI or peers in real-time',
-      '👑 Empire Building: Expand your academic kingdom',
-      '💎 Mastery Crystals: Collect rare rewards for deep understanding',
-      '🗺️ Dynamic World Map: Explore interconnected subject territories',
-      '📊 Performance Analytics: Track strategic decision-making patterns'
-    ],
-    psychologyHooks: [
-      'Territorial acquisition drives (ownership psychology)',
-      'Variable ratio reinforcement (unpredictable rewards)',
-      'Social status signaling (public achievements)',
-      'Loss aversion (defending conquered territories)',
-      'Progression fantasy (building academic empire)'
-    ],
-    flowTriggers: [
-      'Clear goals: Specific territories to conquer',
-      'Immediate feedback: Real-time battle results',
-      'Challenge-skill balance: Adaptive AI opponents',
-      'Deep concentration: Immersive battle scenarios'
-    ],
-    assessmentDepth: 'Measures strategic thinking, pattern recognition, and long-term planning abilities',
-    careerRelevance: 'Directly applicable to consulting, management, and leadership roles'
+    tagline: 'Strategic Knowledge Empire',
+    description: 'Build your academic empire by conquering knowledge territories through strategic battles.',
+    color: '#4ecdc4',
+    skills: ['Strategic Thinking', 'Domain Mastery', 'Competitive Analysis'],
+    industryRelevance: ['Consulting', 'Management', 'Strategy'],
+    partnerCompanies: ['McKinsey', 'BCG', 'Goldman Sachs']
   },
   {
     id: 'mystery-syndicate',
-    title: 'The Knowledge Syndicate',
+    title: 'Knowledge Syndicate',
     icon: '🕵️',
-    tagline: 'Uncover Academic Conspiracies',
-    description: 'Join a secret society of scholars. Solve interconnected mysteries that span multiple disciplines.',
-    credentialValue: 'Research Excellence & Collaborative Innovation',
-    industryPartners: ['MIT Labs', 'Stanford Research', 'NASA', 'Pfizer R&D'],
-    predictiveMetrics: ['Research Aptitude', 'Collaborative Intelligence', 'Critical Analysis', 'Innovation Potential'],
-    mechanics: [
-      '🔍 Investigation Chains: Multi-step mysteries requiring diverse knowledge',
-      '🤝 Syndicate Alliances: Form teams with complementary expertise',
-      '📜 Ancient Codex: Unlock hidden knowledge through collaborative discovery',
-      '⚡ Eureka Moments: Breakthrough insights trigger massive point cascades',
-      '🎭 Role Specialization: Become the Historian, Scientist, or Philosopher',
-      '🧬 Cross-Disciplinary Synthesis: Connect insights across fields'
-    ],
-    psychologyHooks: [
-      'Curiosity gap exploitation (cliffhanger mysteries)',
-      'Social belonging (exclusive syndicate membership)',
-      'Competence satisfaction (solving complex puzzles)',
-      'Narrative transportation (immersive storylines)',
-      'Collaborative achievement (team success)'
-    ],
-    flowTriggers: [
-      'Mystery narrative creates clear objectives',
-      'Clue discovery provides constant feedback',
-      'Puzzle complexity scales with skill',
-      'Team coordination requires focus'
-    ],
-    assessmentDepth: 'Evaluates research methodology, hypothesis formation, and interdisciplinary thinking',
-    careerRelevance: 'Essential for PhD programs, research positions, and innovation roles'
+    tagline: 'Collaborative Investigation',
+    description: 'Join secret academic societies to solve complex mysteries spanning multiple disciplines.',
+    color: '#ff6b6b',
+    skills: ['Research Excellence', 'Collaboration', 'Critical Analysis'],
+    industryRelevance: ['Research', 'Academia', 'Innovation'],
+    partnerCompanies: ['MIT Labs', 'Stanford Research', 'NASA']
   },
   {
     id: 'synthesis-arena',
     title: 'Synthesis Arena',
     icon: '⚡',
-    tagline: 'Where Ideas Collide and Evolve',
-    description: 'High-energy concept fusion battles. Connect ideas at lightning speed to create knowledge explosions.',
-    credentialValue: 'Rapid Learning & Cognitive Agility',
-    industryPartners: ['Y Combinator', 'Andreessen Horowitz', 'Tesla', 'OpenAI'],
-    predictiveMetrics: ['Learning Velocity', 'Cognitive Flexibility', 'Pattern Recognition', 'Startup Potential'],
-    mechanics: [
-      '💥 Concept Fusion: Combine ideas to create powerful new insights',
-      '🌪️ Chain Reactions: Trigger cascading knowledge explosions',
-      '🏆 Speed Mastery: Rapid-fire rounds with escalating difficulty',
-      '🎯 Precision Strikes: Perfect connections unlock bonus multipliers',
-      '🌟 Evolution Trees: Watch your understanding branch and grow',
-      '🚀 Innovation Incubator: Generate novel solutions under pressure'
-    ],
-    psychologyHooks: [
-      'Time pressure creates adrenaline rush',
-      'Pattern recognition satisfaction',
-      'Mastery progression (skill improvement)',
-      'Achievement unlocking (combo systems)',
-      'Social competition (leaderboards)'
-    ],
-    flowTriggers: [
-      'Time constraints create urgency',
-      'Immediate visual feedback on connections',
-      'Difficulty ramps perfectly with skill',
-      'Requires complete attention and focus'
-    ],
-    assessmentDepth: 'Measures cognitive speed, creative connections, and adaptability under pressure',
-    careerRelevance: 'Crucial for startups, consulting, and fast-paced innovation environments'
+    tagline: 'Rapid Concept Fusion',
+    description: 'High-speed battles where ideas collide and evolve into breakthrough insights.',
+    color: '#ffeaa7',
+    skills: ['Rapid Learning', 'Pattern Recognition', 'Innovation'],
+    industryRelevance: ['Technology', 'Startups', 'Product Development'],
+    partnerCompanies: ['Y Combinator', 'Tesla', 'OpenAI']
   }
 ];
 
-// Credential and Industry Integration System
-const CREDENTIAL_SYSTEM = {
-  levels: [
-    { name: 'Novice Scholar', threshold: 0, color: '#64748b' },
-    { name: 'Apprentice Thinker', threshold: 1000, color: '#059669' },
-    { name: 'Skilled Practitioner', threshold: 5000, color: '#0284c7' },
-    { name: 'Expert Analyst', threshold: 15000, color: '#7c3aed' },
-    { name: 'Master Synthesizer', threshold: 35000, color: '#dc2626' },
-    { name: 'Grandmaster Scholar', threshold: 75000, color: '#ea580c' },
-    { name: 'Legendary Intellect', threshold: 150000, color: '#facc15' }
-  ],
-  
-  badges: {
-    'neural-conquest': [
-      { id: 'strategic-mind', name: 'Strategic Mind', description: 'Demonstrates advanced strategic thinking patterns', industry_value: 'High' },
-      { id: 'empire-architect', name: 'Empire Architect', description: 'Builds complex knowledge structures systematically', industry_value: 'Very High' },
-      { id: 'battle-tactician', name: 'Battle Tactician', description: 'Excels in competitive knowledge application', industry_value: 'High' }
-    ],
-    'mystery-syndicate': [
-      { id: 'research-pioneer', name: 'Research Pioneer', description: 'Shows exceptional research methodology', industry_value: 'Very High' },
-      { id: 'collaboration-catalyst', name: 'Collaboration Catalyst', description: 'Enhances team performance significantly', industry_value: 'High' },
-      { id: 'insight-synthesizer', name: 'Insight Synthesizer', description: 'Connects disparate concepts brilliantly', industry_value: 'Very High' }
-    ],
-    'synthesis-arena': [
-      { id: 'rapid-learner', name: 'Rapid Learner', description: 'Demonstrates exceptional learning velocity', industry_value: 'Very High' },
-      { id: 'pattern-master', name: 'Pattern Master', description: 'Recognizes complex patterns instantly', industry_value: 'High' },
-      { id: 'innovation-engine', name: 'Innovation Engine', description: 'Generates novel solutions consistently', industry_value: 'Very High' }
-    ]
-  },
-
-  certifications: [
-    {
-      id: 'cognitive-excellence',
-      name: 'Cognitive Excellence Certificate',
-      description: 'Demonstrates superior cognitive abilities across multiple domains',
-      requirements: ['Complete 50+ activities', 'Achieve Expert level in 2+ game modes', 'Maintain 85%+ accuracy'],
-      industry_recognition: ['Google', 'Microsoft', 'McKinsey', 'Harvard Graduate School'],
-      validity_period: '2 years'
-    },
-    {
-      id: 'collaborative-leadership',
-      name: 'Collaborative Leadership Certificate',
-      description: 'Proven ability to lead and excel in team-based environments',
-      requirements: ['Lead 25+ syndicate investigations', 'Achieve 90%+ team satisfaction', 'Mentor 10+ junior scholars'],
-      industry_recognition: ['BCG', 'Bain', 'Stanford MBA', 'Wharton'],
-      validity_period: '3 years'
-    },
-    {
-      id: 'innovation-mastery',
-      name: 'Innovation Mastery Certificate',
-      description: 'Exceptional ability to generate and implement novel solutions',
-      requirements: ['Top 5% in synthesis speed', 'Create 10+ novel concept connections', 'Achieve innovation score 95+'],
-      industry_recognition: ['Y Combinator', 'Andreessen Horowitz', 'Tesla', 'OpenAI'],
-      validity_period: '2 years'
-    }
-  ]
-};
-
-// Predictive Analytics System
-const PREDICTIVE_MODELS = {
-  academic_success: {
-    factors: ['learning_velocity', 'pattern_recognition', 'persistence', 'collaborative_ability'],
-    accuracy: '94%',
-    validated_against: 'Harvard, MIT, Stanford academic outcomes'
-  },
-  
-  career_potential: {
-    consulting: ['strategic_thinking', 'problem_decomposition', 'client_simulation_performance'],
-    tech: ['learning_velocity', 'pattern_recognition', 'innovation_score'],
-    research: ['hypothesis_formation', 'methodology_rigor', 'interdisciplinary_thinking'],
-    leadership: ['team_performance_impact', 'decision_making_under_pressure', 'vision_articulation']
-  },
-  
-  industry_fit: {
-    factors: ['cognitive_profile', 'collaboration_style', 'learning_preferences', 'performance_patterns'],
-    partner_companies: 150,
-    placement_success_rate: '87%'
-  }
-};
-
 const InteractiveActivities = () => {
   const { currentUser } = useAuth();
-  
-  // Core state
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('my-courses');
-  const [error, setError] = useState('');
-  
-  // Data state
+  const [activeTab, setActiveTab] = useState('my-activities');
+  const [selectedCourse, setSelectedCourse] = useState('general');
   const [courses, setCourses] = useState([]);
-  const [activities, setActivities] = useState([]);
-  const [publicActivities, setPublicActivities] = useState([]);
-  
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAIGenerateModal, setShowAIGenerateModal] = useState(false);
-  const [showActivityDetails, setShowActivityDetails] = useState(null);
-  
-  // Search and filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilters, setSelectedFilters] = useState({
-    type: 'all',
-    difficulty: 'all',
-    duration: 'all',
-    subject: 'all'
+  const [activitiesByCourse, setActivitiesByCourse] = useState({});
+  const [playerStats, setPlayerStats] = useState({
+    totalXP: 0,
+    currentLevel: 'Novice Scholar',
+    badges: [],
+    completedActivities: 0,
+    weeklyProgress: 0
   });
+  const [loading, setLoading] = useState(true);
+
+  // My Activities State
+  const [selectedGameMode, setSelectedGameMode] = useState(null);
+  const [gameStats, setGameStats] = useState({
+    'neural-conquest': { played: 0, avgScore: 0, bestStreak: 0, territoriesOwned: 0 },
+    'mystery-syndicate': { played: 0, avgScore: 0, mysteriesSolved: 0, collaborationRating: 0 },
+    'synthesis-arena': { played: 0, avgScore: 0, synthesisStreak: 0, innovationScore: 0 }
+  });
+
+  // Public Library State
+  const [publicActivities, setPublicActivities] = useState([]);
+  const [activeGames, setActiveGames] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterDifficulty, setFilterDifficulty] = useState('all');
+
+  // AI Generate State
+  const [aiDescription, setAiDescription] = useState('');
+  const [aiCourse, setAiCourse] = useState('');
+  const [aiGameMode, setAiGameMode] = useState('synthesis-arena');
+  const [aiDifficulty, setAiDifficulty] = useState('intermediate');
+  const [aiDuration, setAiDuration] = useState('30');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Neural Conquest topic selection states
+  const [showTopicModal, setShowTopicModal] = useState(false);
+  const [topicDescription, setTopicDescription] = useState('');
+  const [generatingTopics, setGeneratingTopics] = useState(false);
+  const [generatedTopics, setGeneratedTopics] = useState(null);
+  const [selectedTopics, setSelectedTopics] = useState(new Set()); // Track selected topics
+  const [gameModeType, setGameModeType] = useState('single'); // 'single' | 'multiplayer'
+  const [inviteQuery, setInviteQuery] = useState('');
+  const [inviteResults, setInviteResults] = useState([]);
+  const [selectedInvites, setSelectedInvites] = useState([]);
   
-  // AI Generation state
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [aiGenerating, setAiGenerating] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState('');
+  // NEW: 3D model generation states
+  const [generating3DModels, setGenerating3DModels] = useState(false);
+  const [modelGenerationProgress, setModelGenerationProgress] = useState({
+    current: 0,
+    total: 0,
+    currentModel: '',
+    stage: 'preparing', // 'preparing', 'generating', 'completing'
+    detailedProgress: [] // Track individual model progress
+  });
+  const [socket, setSocket] = useState(null);
+
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (showTopicModal) {
+      document.body.style.overflow = 'hidden';
+      
+      // Add escape key listener
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          closeTopicModal();
+        }
+      };
+      
+      document.addEventListener('keydown', handleEscape);
+      
+      return () => {
+        document.removeEventListener('keydown', handleEscape);
+      };
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup when component unmounts
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showTopicModal]);
 
   useEffect(() => {
-    fetchInitialData();
+    fetchData();
   }, [currentUser]);
 
+  // Initialize Socket.IO connection for real-time progress
   useEffect(() => {
-    if (activeTab === 'public-library') {
-      searchPublicActivities();
-    }
-  }, [activeTab, searchQuery, selectedFilters]);
+    if (generating3DModels && !socket) {
+      console.log('🔌 Connecting to Socket.IO for real-time progress...');
+      const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      console.log('🔗 Socket URL:', socketUrl);
+      const newSocket = io(socketUrl);
+      
+      newSocket.on('connect', () => {
+        console.log('✅ Connected to Socket.IO:', newSocket.id);
+      });
 
-  const fetchInitialData = async () => {
+      // Listen for overall generation progress
+      newSocket.on('generation-progress', (data) => {
+        try {
+          console.log('📡 Generation progress:', data);
+          if (data && typeof data === 'object') {
+            setModelGenerationProgress(prev => ({
+              ...prev,
+              current: data.current || 0,
+              total: data.total || 0,
+              currentModel: data.currentModel || '',
+              stage: data.stage === 'starting' ? 'generating' : data.stage === 'completed' ? 'completing' : prev.stage
+            }));
+          }
+        } catch (error) {
+          console.warn('⚠️ Error handling generation progress:', error);
+        }
+      });
+
+      // Listen for individual model progress
+      newSocket.on('model-progress', (data) => {
+        try {
+          console.log('🎨 Model progress:', data);
+          if (data && typeof data === 'object' && data.objectName) {
+            setModelGenerationProgress(prev => ({
+              ...prev,
+              detailedProgress: [
+                ...(prev.detailedProgress || []).filter(p => p.objectName !== data.objectName),
+                {
+                  objectName: data.objectName,
+                  stage: data.stage || 'unknown',
+                  description: data.description || '',
+                  timestamp: data.timestamp || new Date().toISOString()
+                }
+              ]
+            }));
+          }
+        } catch (error) {
+          console.warn('⚠️ Error handling model progress:', error);
+        }
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('❌ Disconnected from Socket.IO');
+      });
+
+      newSocket.on('connect_error', (error) => {
+        console.error('🔌 Socket.IO connection error:', error);
+      });
+
+      setSocket(newSocket);
+    }
+
+    // Cleanup socket when not generating
+    return () => {
+      if (socket && !generating3DModels) {
+        console.log('🔌 Disconnecting Socket.IO...');
+        socket.disconnect();
+        setSocket(null);
+      }
+    };
+  }, [generating3DModels, socket]);
+
+  const fetchData = async () => {
     try {
       setLoading(true);
-      if (!currentUser) return;
       
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      // Get Firebase auth token
       const token = await currentUser.getIdToken();
       
-      // Fetch courses and user's activities in parallel
-      const [coursesResponse, activitiesResponse] = await Promise.all([
-        getCourses(),
-        fetch('/api/activities/my-activities', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
-
-      if (coursesResponse.success) {
-        setCourses(coursesResponse.data.courses || []);
+      // Fetch user's courses and activities
+      const coursesResponse = await fetch('/api/courses', {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (coursesResponse.ok) {
+        const coursesData = await coursesResponse.json();
+        setCourses(coursesData.data?.courses || []);
       }
 
-      if (activitiesResponse.ok) {
-        const activitiesData = await activitiesResponse.json();
-        setActivities(activitiesData.data || []);
+      // Fetch player stats and game data (also fetch active games)
+      const statsResponse = await fetch('/api/activities/my-activities', {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        if (statsData.success && statsData.data) {
+          setPlayerStats(statsData.data.playerStats || playerStats);
+          setGameStats(statsData.data.gameStats || gameStats);
+          if (statsData.data.activeGames) setActiveGames(statsData.data.activeGames);
+          // Update courses with activity data if available
+          if (statsData.data.courses) {
+            setCourses(statsData.data.courses);
+          }
+        }
       }
+
+      // Fetch public activities
+      const publicResponse = await fetch('/api/activities/public');
+      if (publicResponse.ok) {
+        const publicData = await publicResponse.json();
+        if (publicData.success && publicData.data) {
+          setPublicActivities(publicData.data.activities || []);
+        }
+      }
+
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to load activities. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const searchPublicActivities = async () => {
+  const startActivity = async (gameMode, courseId = null) => {
     try {
+      if (!currentUser) {
+        alert('Please log in to start activities');
+        return;
+      }
+
+      console.log(`🎮 Starting activity: ${gameMode}, courseId: ${courseId}`);
+
+      // For Neural Conquest, show topic selection modal first
+      if (gameMode === 'neural-conquest') {
+        setSelectedGameMode(gameMode);
+        setShowTopicModal(true);
+        return;
+      }
+
+      // For other game modes, proceed with normal flow
       const token = await currentUser.getIdToken();
-      const queryParams = new URLSearchParams({
-        query: searchQuery,
-        ...selectedFilters
-      });
       
-      const response = await fetch(`/api/activities/public?${queryParams}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const requestBody = {
+        gameMode,
+        courseId: courseId || 'general',
+        settings: {
+          anonymousMode: true,
+          adaptiveDifficulty: true,
+          detailedAnalytics: true
+        }
+      };
+
+      console.log('📤 Sending request:', requestBody);
+      
+      const response = await fetch('/api/activities/start-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestBody)
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPublicActivities(data.data || []);
+      console.log('📥 Response status:', response.status);
+      
+      if (!response.ok) {
+        console.error('❌ HTTP error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}\nResponse: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('📥 Response data:', data);
+      
+      if (data.success && data.sessionId) {
+        // For other game modes, show success message for now
+        alert(`🎮 ${gameMode.replace('-', ' ').toUpperCase()} Session Started!\n\nSession ID: ${data.sessionId}\nCourse: ${data.data?.courseName || 'Unknown'}\n\nThis game mode is coming soon!`);
+      } else {
+        console.error('❌ API returned error:', data);
+        const errorMessage = data.message || data.error || 'Unknown error';
+        const debugInfo = data.debug ? `\n\nDebug Info:\n${JSON.stringify(data.debug, null, 2)}` : '';
+        alert(`Failed to start activity: ${errorMessage}${debugInfo}`);
       }
     } catch (error) {
-      console.error('Error searching public activities:', error);
+      console.error('❌ Error starting activity:', error);
+      console.error('Error stack:', error.stack);
+      
+      let errorMessage = 'Failed to start activity. Please try again.';
+      
+      if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (error.message.includes('HTTP 401')) {
+        errorMessage = 'Authentication error. Please log out and log back in.';
+      } else if (error.message.includes('HTTP 500')) {
+        errorMessage = 'Server error. The development team has been notified. Please try again in a few minutes.';
+      } else if (error.message.includes('HTTP 400')) {
+        errorMessage = 'Invalid request. Please refresh the page and try again.';
+      }
+      
+      alert(`❌ ${errorMessage}\n\nTechnical details: ${error.message}`);
     }
   };
 
   const generateAIActivity = async () => {
-    if (!aiPrompt.trim()) {
-      setError('Please enter a description for your activity');
+    if (!aiDescription.trim()) {
+      alert('Please provide a description for your AI activity');
       return;
     }
 
-    setAiGenerating(true);
-    setError('');
-
-    try {
-      const token = await currentUser.getIdToken();
-      
-      const response = await fetch('/api/activities/generate-ai', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt: aiPrompt,
-          courseId: selectedCourse || null,
-          preferences: {
-            difficulty: selectedFilters.difficulty !== 'all' ? selectedFilters.difficulty : 'adaptive',
-            duration: selectedFilters.duration !== 'all' ? selectedFilters.duration : 'medium',
-            type: selectedFilters.type !== 'all' ? selectedFilters.type : 'quiz-battle'
-          }
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setShowAIGenerateModal(false);
-        setAiPrompt('');
-        setShowActivityDetails(data.activity);
-        await fetchInitialData(); // Refresh activities
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to generate activity');
-      }
-    } catch (error) {
-      console.error('Error generating AI activity:', error);
-      setError('Failed to generate activity. Please try again.');
-    } finally {
-      setAiGenerating(false);
-    }
-  };
-
-  const joinActivity = async (activityId) => {
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/activities/${activityId}/join`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        // Redirect to activity or show success
-        window.location.href = `/activities/${activityId}/play`;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to join activity');
-      }
-    } catch (error) {
-      console.error('Error joining activity:', error);
-      setError('Failed to join activity. Please try again.');
-    }
-  };
-
-  const activityTypes = [
-    {
-      id: 'adaptive-mastery',
-      name: 'Adaptive Mastery Challenge',
-      icon: '🧠',
-      color: 'purple',
-      description: 'AI-powered spaced repetition system that adapts to individual learning patterns',
-      features: ['Spaced Repetition', 'Difficulty Adaptation', 'Progress Analytics', 'Anonymous Leaderboards'],
-      details: 'Students progress through course material at their own pace with AI adjusting difficulty based on performance. Anonymous competition drives engagement while detailed analytics help professors identify knowledge gaps.',
-      analytics: ['Concept mastery rates', 'Time-to-mastery per topic', 'Common misconceptions', 'Learning velocity trends']
-    },
-    {
-      id: 'collaborative-inquiry',
-      name: 'Collaborative Inquiry Lab',
-      icon: '🔬',
-      color: 'blue',
-      description: 'Asynchronous collaborative problem-solving with peer review and expert validation',
-      features: ['Peer Collaboration', 'Expert Validation', 'Asynchronous Play', 'Skill Development'],
-      details: 'Students work together on complex, multi-step problems that mirror real-world scenarios. Anonymous peer review and AI-assisted expert validation ensure academic integrity while building critical thinking skills.',
-      analytics: ['Collaboration effectiveness', 'Problem-solving approaches', 'Peer review quality', 'Critical thinking development']
-    },
-    {
-      id: 'knowledge-synthesis',
-      name: 'Knowledge Synthesis Arena',
-      icon: '⚡',
-      color: 'green',
-      description: 'Fast-paced concept connection challenges that build deep understanding',
-      features: ['Concept Mapping', 'Rapid Recall', 'Pattern Recognition', 'Synthesis Skills'],
-      details: 'Students rapidly connect concepts, identify patterns, and synthesize information across course topics. Gamified elements include streak bonuses and achievement unlocks while maintaining academic rigor.',
-      analytics: ['Concept connection accuracy', 'Synthesis speed improvement', 'Cross-topic understanding', 'Knowledge retention patterns']
-    }
-  ];
-
-  // Tab configuration
-  const tabs = [
-    {
-      id: 'my-courses',
-      name: 'My Course Activities',
-      icon: BookOpenIcon,
-      count: activities.length,
-      description: 'Activities from your enrolled courses'
-    },
-    {
-      id: 'public-library',
-      name: 'Public Library',
-      icon: GlobeAltIcon,
-      count: publicActivities.length,
-      description: 'Discover activities shared by the community'
-    },
-    {
-      id: 'ai-generate',
-      name: 'AI Generate',
-      icon: SparklesIcon,
-      count: '∞',
-      description: 'Create custom activities with AI'
-    }
-  ];
-
-  if (loading) {
-    return (
-      <div className="activities-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading interactive activities...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="interactive-activities">
-      {/* Header */}
-      <div className="activities-header">
-        <div className="header-content">
-          <h1 className="page-title">
-            <span className="title-icon">🎓</span>
-            Interactive Learning Activities
-          </h1>
-          <p className="page-subtitle">
-            Sophisticated gamified learning experiences designed for higher education
-          </p>
-        </div>
-        <div className="header-actions">
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className="action-btn primary"
-          >
-            <PlusIcon className="btn-icon" />
-            Create Activity
-          </button>
-        </div>
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="error-banner">
-          <span className="error-icon">⚠️</span>
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="error-close">
-            <XMarkIcon />
-          </button>
-        </div>
-      )}
-
-      {/* Navigation Tabs */}
-      <div className="activities-nav">
-        <div className="nav-tabs">
-          {tabs.map(tab => {
-            const IconComponent = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
-              >
-                <IconComponent className="tab-icon" />
-                <span className="tab-label">{tab.name}</span>
-                <span className="tab-count">{tab.count}</span>
-              </button>
-            );
-          })}
-        </div>
-        
-        {/* Tab Description */}
-        <div className="tab-description">
-          <p>{tabs.find(tab => tab.id === activeTab)?.description}</p>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="activities-content">
-        {/* My Course Activities Tab */}
-        {activeTab === 'my-courses' && (
-          <MyCourseActivities 
-            courses={courses}
-            activities={activities}
-            onJoinActivity={joinActivity}
-            onShowDetails={setShowActivityDetails}
-          />
-        )}
-
-        {/* Public Library Tab */}
-        {activeTab === 'public-library' && (
-          <PublicLibrary 
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            selectedFilters={selectedFilters}
-            setSelectedFilters={setSelectedFilters}
-            publicActivities={publicActivities}
-            onJoinActivity={joinActivity}
-            onShowDetails={setShowActivityDetails}
-            activityTypes={activityTypes}
-          />
-        )}
-
-        {/* AI Generate Tab */}
-        {activeTab === 'ai-generate' && (
-          <AIGenerate 
-            courses={courses}
-            onActivityCreated={setShowActivityDetails}
-          />
-        )}
-      </div>
-
-      {/* Modals */}
-      {showCreateModal && (
-        <CreateActivityModal 
-          courses={courses}
-          activityTypes={activityTypes}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={fetchInitialData}
-        />
-      )}
-
-      {showActivityDetails && (
-        <ActivityDetailsModal 
-          activity={showActivityDetails}
-          onClose={() => setShowActivityDetails(null)}
-          onJoin={joinActivity}
-        />
-      )}
-    </div>
-  );
-};
-
-// My Course Activities Component
-const MyCourseActivities = ({ courses, activities, onJoinActivity, onShowDetails }) => {
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [playerStats, setPlayerStats] = useState({
-    territoriesOwned: 0,
-    mysteriesSolved: 0,
-    synthesisStreak: 0,
-    totalXP: 0,
-    currentRank: 'Novice Scholar',
-    credentialProgress: {
-      badges: [],
-      certifications: [],
-      industryEndorsements: []
-    },
-    predictiveScores: {
-      academicSuccess: 0,
-      careerPotential: {},
-      industryFit: {}
-    }
-  });
-
-  const [showCredentialDetails, setShowCredentialDetails] = useState(false);
-  const [showPredictiveAnalytics, setShowPredictiveAnalytics] = useState(false);
-
-  const getCurrentLevel = () => {
-    return CREDENTIAL_SYSTEM.levels.find(level => 
-      playerStats.totalXP >= level.threshold
-    ) || CREDENTIAL_SYSTEM.levels[0];
-  };
-
-  const getNextLevel = () => {
-    const currentLevel = getCurrentLevel();
-    const currentIndex = CREDENTIAL_SYSTEM.levels.indexOf(currentLevel);
-    return CREDENTIAL_SYSTEM.levels[currentIndex + 1] || currentLevel;
-  };
-
-  const renderCredentialProgress = () => (
-    <div className="credential-progress-card">
-      <div className="credential-header">
-        <h4>🎓 Academic Credentials</h4>
-        <button 
-          onClick={() => setShowCredentialDetails(true)}
-          className="view-details-btn"
-        >
-          View Portfolio
-        </button>
-      </div>
-      
-      <div className="current-level">
-        <div className="level-info">
-          <span className="level-name" style={{ color: getCurrentLevel().color }}>
-            {getCurrentLevel().name}
-          </span>
-          <div className="level-progress">
-            <div 
-              className="progress-bar"
-              style={{ 
-                width: `${((playerStats.totalXP - getCurrentLevel().threshold) / 
-                          (getNextLevel().threshold - getCurrentLevel().threshold)) * 100}%`,
-                backgroundColor: getCurrentLevel().color
-              }}
-            />
-          </div>
-          <span className="next-level">
-            Next: {getNextLevel().name} ({getNextLevel().threshold - playerStats.totalXP} XP needed)
-          </span>
-        </div>
-      </div>
-
-      <div className="credential-highlights">
-        <div className="badges-earned">
-          <h5>🏆 Badges Earned ({playerStats.credentialProgress.badges.length})</h5>
-          <div className="badge-grid">
-            {playerStats.credentialProgress.badges.slice(0, 3).map(badge => (
-              <div key={badge.id} className="mini-badge">
-                <span className="badge-icon">🏅</span>
-                <span className="badge-name">{badge.name}</span>
-              </div>
-            ))}
-            {playerStats.credentialProgress.badges.length > 3 && (
-              <div className="more-badges">+{playerStats.credentialProgress.badges.length - 3} more</div>
-            )}
-          </div>
-        </div>
-
-        <div className="certifications-progress">
-          <h5>📜 Certifications ({playerStats.credentialProgress.certifications.length})</h5>
-          <div className="cert-list">
-            {CREDENTIAL_SYSTEM.certifications.map(cert => {
-              const earned = playerStats.credentialProgress.certifications.includes(cert.id);
-              return (
-                <div key={cert.id} className={`cert-item ${earned ? 'earned' : 'locked'}`}>
-                  <span className="cert-icon">{earned ? '✅' : '🔒'}</span>
-                  <span className="cert-name">{cert.name}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPredictiveAnalytics = () => (
-    <div className="predictive-analytics-card">
-      <div className="analytics-header">
-        <h4>🔮 Predictive Career Analytics</h4>
-        <button 
-          onClick={() => setShowPredictiveAnalytics(true)}
-          className="view-details-btn"
-        >
-          Full Report
-        </button>
-      </div>
-
-      <div className="prediction-grid">
-        <div className="prediction-item">
-          <div className="prediction-label">Academic Success Probability</div>
-          <div className="prediction-score">
-            <div className="score-circle" style={{ '--score': playerStats.predictiveScores.academicSuccess }}>
-              <span>{playerStats.predictiveScores.academicSuccess}%</span>
-            </div>
-          </div>
-          <div className="prediction-note">Based on Harvard/MIT validation data</div>
-        </div>
-
-        <div className="prediction-item">
-          <div className="prediction-label">Top Industry Matches</div>
-          <div className="industry-matches">
-            {Object.entries(playerStats.predictiveScores.careerPotential)
-              .sort(([,a], [,b]) => b - a)
-              .slice(0, 3)
-              .map(([industry, score]) => (
-                <div key={industry} className="industry-match">
-                  <span className="industry-name">{industry}</span>
-                  <span className="match-score">{score}%</span>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-
-        <div className="prediction-item">
-          <div className="prediction-label">Learning Velocity Percentile</div>
-          <div className="velocity-rank">
-            <span className="percentile">Top {100 - (playerStats.predictiveScores.learningVelocity || 50)}%</span>
-            <div className="velocity-bar">
-              <div 
-                className="velocity-fill"
-                style={{ width: `${playerStats.predictiveScores.learningVelocity || 50}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="industry-endorsements">
-        <h5>🤝 Industry Partner Interest</h5>
-        <div className="endorsement-list">
-          {playerStats.credentialProgress.industryEndorsements.map(endorsement => (
-            <div key={endorsement.company} className="endorsement-item">
-              <img src={endorsement.logo} alt={endorsement.company} className="company-logo" />
-              <span className="endorsement-text">{endorsement.message}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderGameModeCard = (mode, courseActivities) => (
-    <div key={mode.id} className="enhanced-game-mode-card">
-      <div className="game-mode-header">
-        <div className="game-icon">{mode.icon}</div>
-        <div className="game-info">
-          <h3>{mode.title}</h3>
-          <p className="tagline">{mode.tagline}</p>
-          <div className="credential-value">
-            <span className="credential-label">Builds:</span>
-            <span className="credential-skill">{mode.credentialValue}</span>
-          </div>
-        </div>
-        <div className="industry-partners">
-          <h5>Industry Partners</h5>
-          <div className="partner-logos">
-            {mode.industryPartners.map(partner => (
-              <span key={partner} className="partner-badge">{partner}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-      
-      <div className="game-description">
-        <p>{mode.description}</p>
-        <div className="assessment-depth">
-          <strong>Assessment Focus:</strong> {mode.assessmentDepth}
-        </div>
-        <div className="career-relevance">
-          <strong>Career Relevance:</strong> {mode.careerRelevance}
-        </div>
-      </div>
-
-      <div className="predictive-metrics">
-        <h4>📊 Measured Capabilities</h4>
-        <div className="metrics-grid">
-          {mode.predictiveMetrics.map(metric => (
-            <div key={metric} className="metric-badge">
-              <span className="metric-icon">📈</span>
-              <span className="metric-name">{metric}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="game-mechanics">
-        <h4>🎮 Advanced Features</h4>
-        <ul>
-          {mode.mechanics.map((mechanic, idx) => (
-            <li key={idx}>{mechanic}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="course-sessions">
-        <h4>📚 Available Sessions</h4>
-        {courseActivities && courseActivities.length > 0 ? (
-          <div className="sessions-grid">
-            {courseActivities.map(activity => (
-              <div key={activity.id} className="enhanced-session-card">
-                <div className="session-info">
-                  <h5>{activity.title}</h5>
-                  <p>{activity.description}</p>
-                  <div className="session-stats">
-                    <span>👥 {activity.participants || 0} scholars</span>
-                    <span>🏆 Avg Performance: {activity.avgScore || 'N/A'}</span>
-                    <span>📈 Credential Value: {activity.credentialWeight || 'Standard'}</span>
-                  </div>
-                  <div className="session-benefits">
-                    <span className="xp-reward">+{activity.xpReward || 100} XP</span>
-                    <span className="skill-boost">+{activity.skillBoost || 'Multiple'} Skills</span>
-                  </div>
-                </div>
-                <button 
-                  className="join-session-btn enhanced"
-                  onClick={() => onJoinActivity(activity.id)}
-                >
-                  <span className="btn-icon">🚀</span>
-                  Enter {mode.title}
-                  <span className="btn-subtext">Build Your Credentials</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="no-sessions enhanced">
-            <div className="no-sessions-content">
-              <span className="no-sessions-icon">🎯</span>
-              <h5>Ready to Build Your Academic Portfolio?</h5>
-              <p>Launch the first session and start earning industry-recognized credentials</p>
-              <button 
-                className="create-session-btn enhanced"
-                onClick={() => setShowCreateModal(true)}
-              >
-                <span className="btn-icon">✨</span>
-                Launch Credential Session
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  if (!courses || courses.length === 0) {
-    return (
-      <div className="empty-state enhanced">
-        <div className="empty-icon">🎓</div>
-        <h3>Build Your Academic Empire</h3>
-        <p>Join courses to unlock industry-recognized learning experiences and build credentials that matter to top employers and graduate schools.</p>
-        <button 
-          className="primary-btn enhanced"
-          onClick={() => window.location.href = '/courses'}
-        >
-          <span className="btn-icon">🚀</span>
-          Explore Courses
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="course-activities enhanced">
-      <div className="player-dashboard enhanced">
-        <div className="dashboard-header">
-          <h3>🏆 Your Academic Portfolio</h3>
-          <div className="portfolio-actions">
-            <button className="share-portfolio-btn">Share Portfolio</button>
-            <button className="export-credentials-btn">Export Credentials</button>
-          </div>
-        </div>
-        
-        <div className="dashboard-grid">
-          <div className="stats-section">
-            <h4>📊 Performance Metrics</h4>
-            <div className="stats-grid">
-              <div className="stat-card enhanced">
-                <div className="stat-icon">🏰</div>
-                <div className="stat-value">{playerStats.territoriesOwned}</div>
-                <div className="stat-label">Territories Owned</div>
-                <div className="stat-growth">+12% this week</div>
-              </div>
-              <div className="stat-card enhanced">
-                <div className="stat-icon">🕵️</div>
-                <div className="stat-value">{playerStats.mysteriesSolved}</div>
-                <div className="stat-label">Mysteries Solved</div>
-                <div className="stat-growth">+8% this week</div>
-              </div>
-              <div className="stat-card enhanced">
-                <div className="stat-icon">⚡</div>
-                <div className="stat-value">{playerStats.synthesisStreak}</div>
-                <div className="stat-label">Synthesis Streak</div>
-                <div className="stat-growth">Personal Best!</div>
-              </div>
-              <div className="stat-card enhanced">
-                <div className="stat-icon">✨</div>
-                <div className="stat-value">{playerStats.totalXP}</div>
-                <div className="stat-label">Total XP</div>
-                <div className="stat-growth">Top 15%</div>
-              </div>
-            </div>
-          </div>
-
-          {renderCredentialProgress()}
-          {renderPredictiveAnalytics()}
-        </div>
-      </div>
-
-      {courses.map(course => {
-        const courseActivities = activities.filter(a => a.courseId === course.id);
-        
-        return (
-          <div key={course.id} className="course-section enhanced">
-            <div className="course-header enhanced">
-              <div className="course-info">
-                <h2>{course.name}</h2>
-                <p>{course.description}</p>
-                <div className="course-credentials">
-                  <span className="credential-badge">Industry Validated</span>
-                  <span className="credential-badge">Graduate School Recognized</span>
-                </div>
-              </div>
-              <div className="course-stats">
-                <div className="stat-item">
-                  <span className="stat-icon">📊</span>
-                  <span className="stat-text">{courseActivities.length} credential activities</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-icon">👥</span>
-                  <span className="stat-text">{course.enrolledCount || 0} scholars enrolled</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-icon">🏆</span>
-                  <span className="stat-text">Top-tier outcomes</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="game-modes-grid enhanced">
-              {GAME_MODES.map(mode => renderGameModeCard(mode, courseActivities.filter(a => a.gameMode === mode.id)))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// Public Library Component  
-const PublicLibrary = ({ 
-  searchQuery, 
-  setSearchQuery, 
-  selectedFilters, 
-  setSelectedFilters,
-  publicActivities, 
-  onJoinActivity, 
-  onShowDetails,
-  activityTypes 
-}) => {
-  const [trendingActivities, setTrendingActivities] = useState([]);
-
-  const searchActivities = async () => {
-    try {
-      const params = new URLSearchParams({
-        q: searchQuery,
-        ...selectedFilters
-      });
-      const response = await fetch(`/api/activities/public?${params}`);
-      const data = await response.json();
-      setTrendingActivities(data.activities || []);
-    } catch (error) {
-      console.error('Search failed:', error);
-    }
-  };
-
-  useEffect(() => {
-    // Load trending activities on mount
-    const loadTrending = async () => {
-      try {
-        const response = await fetch('/api/activities/public?trending=true&limit=6');
-        const data = await response.json();
-        setTrendingActivities(data.activities || []);
-      } catch (error) {
-        console.error('Failed to load trending:', error);
-      }
-    };
-    loadTrending();
-  }, []);
-
-  const renderPublicActivityCard = (activity) => (
-    <div key={activity.id} className="public-activity-card">
-      <div className="activity-header">
-        <div className="game-mode-badge">
-          {GAME_MODES.find(m => m.id === activity.gameMode)?.icon} 
-          {GAME_MODES.find(m => m.id === activity.gameMode)?.title}
-        </div>
-        <div className="activity-stats">
-          <span>🔥 {activity.playCount || 0}</span>
-          <span>⭐ {activity.rating || 0}/5</span>
-          <span>❤️ {activity.likes || 0}</span>
-        </div>
-      </div>
-      
-      <div className="activity-content">
-        <h3>{activity.title}</h3>
-        <p>{activity.description}</p>
-        
-        <div className="activity-meta">
-          <span className="subject-tag">{activity.subject}</span>
-          <span className="difficulty-tag difficulty-{activity.difficulty}">
-            {activity.difficulty}
-          </span>
-          <span className="duration-tag">⏱️ {activity.duration}</span>
-        </div>
-        
-        <div className="creator-info">
-          <span>Created by {activity.creatorName}</span>
-          <span>{activity.institution}</span>
-        </div>
-      </div>
-      
-      <div className="activity-actions">
-        <button 
-          className="preview-btn"
-          onClick={() => onShowDetails(activity)}
-        >
-          👁️ Preview
-        </button>
-        <button 
-          className="join-btn"
-          onClick={() => onJoinActivity(activity.id)}
-        >
-          🎮 Play Now
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="public-library">
-      <div className="library-header">
-        <h2>🌟 Community Game Library</h2>
-        <p>Discover addictive learning games created by educators worldwide</p>
-      </div>
-
-      <div className="trending-section">
-        <h3>🔥 Trending Games</h3>
-        <div className="trending-grid">
-          {trendingActivities.map(renderPublicActivityCard)}
-        </div>
-      </div>
-
-      <div className="search-section">
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search for addictive learning games..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && searchActivities()}
-          />
-          <button onClick={searchActivities} disabled={loading}>
-            {loading ? '🔄' : '🔍'} Search
-          </button>
-        </div>
-
-        <div className="filters">
-          <select 
-            value={selectedFilters.gameMode} 
-            onChange={(e) => setSelectedFilters({...selectedFilters, gameMode: e.target.value})}
-          >
-            <option value="">All Game Modes</option>
-            {GAME_MODES.map(mode => (
-              <option key={mode.id} value={mode.id}>{mode.title}</option>
-            ))}
-          </select>
-
-          <select 
-            value={selectedFilters.difficulty} 
-            onChange={(e) => setSelectedFilters({...selectedFilters, difficulty: e.target.value})}
-          >
-            <option value="">Any Difficulty</option>
-            <option value="beginner">Beginner Friendly</option>
-            <option value="intermediate">Intermediate Challenge</option>
-            <option value="advanced">Advanced Mastery</option>
-            <option value="expert">Expert Level</option>
-          </select>
-
-          <select 
-            value={selectedFilters.duration} 
-            onChange={(e) => setSelectedFilters({...selectedFilters, duration: e.target.value})}
-          >
-            <option value="">Any Duration</option>
-            <option value="quick">Quick Session (5-15 min)</option>
-            <option value="medium">Medium Session (15-45 min)</option>
-            <option value="long">Long Session (45+ min)</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="search-results">
-        {loading && <div className="loading">🎮 Loading awesome games...</div>}
-        
-        {publicActivities.length > 0 && (
-          <div className="activities-grid">
-            {publicActivities.map(renderPublicActivityCard)}
-          </div>
-        )}
-        
-        {!loading && publicActivities.length === 0 && searchQuery && (
-          <div className="no-results">
-            <div className="no-results-icon">🎯</div>
-            <h3>No Games Found</h3>
-            <p>Try different keywords or create the game you're looking for!</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// AI Generate Component
-const AIGenerate = ({ courses, onActivityCreated }) => {
-  const [description, setDescription] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState('');
-  const [selectedGameMode, setSelectedGameMode] = useState('neural-conquest');
-  const [difficulty, setDifficulty] = useState('intermediate');
-  const [duration, setDuration] = useState('medium');
-  const [learningObjectives, setLearningObjectives] = useState(['']);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedPreview, setGeneratedPreview] = useState(null);
-
-  const addLearningObjective = () => {
-    setLearningObjectives([...learningObjectives, '']);
-  };
-
-  const updateLearningObjective = (index, value) => {
-    const updated = [...learningObjectives];
-    updated[index] = value;
-    setLearningObjectives(updated);
-  };
-
-  const removeLearningObjective = (index) => {
-    if (learningObjectives.length > 1) {
-      setLearningObjectives(learningObjectives.filter((_, i) => i !== index));
-    }
-  };
-
-  const generateActivity = async () => {
-    if (!description.trim()) {
-      alert('Please provide a description for your activity');
+    if (!currentUser) {
+      alert('Please log in to generate activities');
       return;
     }
 
-    setIsGenerating(true);
     try {
+      setIsGenerating(true);
+      const token = await currentUser.getIdToken();
+      
       const response = await fetch('/api/activities/generate-ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          description: description.trim(),
-          courseId: selectedCourse,
-          gameMode: selectedGameMode,
-          difficulty,
-          duration,
-          learningObjectives: learningObjectives.filter(obj => obj.trim())
+          description: aiDescription,
+          courseId: aiCourse || 'general',
+          gameMode: aiGameMode,
+          difficulty: aiDifficulty,
+          duration: parseInt(aiDuration),
+          learningObjectives: [],
+          materials: []
         })
       });
 
       const data = await response.json();
       
       if (data.success) {
-        setGeneratedPreview(data.activity);
-        if (onActivityCreated) {
-          onActivityCreated(data.activity);
-        }
+        alert(`🎉 AI Activity Generated Successfully!\n\nTitle: ${data.data.title}\n\nYou can now find this activity in your course activities.`);
+        setAiDescription('');
+        setAiCourse('');
+        setAiGameMode('synthesis-arena');
+        setAiDifficulty('intermediate');
+        setAiDuration('30');
       } else {
-        alert('Failed to generate activity: ' + (data.error || 'Unknown error'));
+        alert(`Failed to generate activity: ${data.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Generation error:', error);
+      console.error('Error generating AI activity:', error);
       alert('Failed to generate activity. Please try again.');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const examplePrompts = [
-    {
-      gameMode: 'neural-conquest',
-      title: 'Conquer Ancient Civilizations',
-      description: 'Students build and expand historical empires by mastering key concepts about ancient civilizations, trade routes, and cultural exchanges.',
-      objectives: ['Understand trade networks', 'Analyze cultural impact', 'Compare civilizations']
-    },
-    {
-      gameMode: 'mystery-syndicate',
-      title: 'The Quantum Physics Conspiracy',
-      description: 'Teams of student investigators uncover the mysteries of quantum mechanics through collaborative problem-solving and evidence analysis.',
-      objectives: ['Quantum superposition', 'Wave-particle duality', 'Measurement theory']
-    },
-    {
-      gameMode: 'synthesis-arena',
-      title: 'Literary Fusion Chamber',
-      description: 'High-speed connections between literary themes, historical contexts, and modern interpretations create explosive insights.',
-      objectives: ['Thematic analysis', 'Historical context', 'Modern relevance']
-    }
-  ];
-
-  const useExamplePrompt = (example) => {
-    setSelectedGameMode(example.gameMode);
-    setDescription(example.description);
-    setLearningObjectives(example.objectives);
-  };
-
-  return (
-    <div className="ai-generate-section">
-      <div className="ai-header">
-        <h2>🤖 AI Activity Generator</h2>
-        <p>Describe your vision and let AI create an addictive learning experience</p>
-      </div>
-
-      <div className="generation-form">
-        <div className="form-section">
-          <h3>🎯 Activity Vision</h3>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the learning experience you want to create. Be specific about the subject matter, learning goals, and what you want students to experience..."
-            rows={4}
-            className="description-input"
-          />
-        </div>
-
-        <div className="form-section">
-          <h3>🎮 Game Mode Selection</h3>
-          <div className="game-mode-selector">
-            {GAME_MODES.map(mode => (
-              <div 
-                key={mode.id}
-                className={`game-mode-option ${selectedGameMode === mode.id ? 'selected' : ''}`}
-                onClick={() => setSelectedGameMode(mode.id)}
-              >
-                <div className="mode-icon">{mode.icon}</div>
-                <div className="mode-info">
-                  <h4>{mode.title}</h4>
-                  <p>{mode.tagline}</p>
-                  <small>{mode.description}</small>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h3>⚙️ Configuration</h3>
-          <div className="config-grid">
-            <div className="config-item">
-              <label>Course (Optional)</label>
-              <select 
-                value={selectedCourse} 
-                onChange={(e) => setSelectedCourse(e.target.value)}
-              >
-                <option value="">No specific course</option>
-                {courses.map(course => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="config-item">
-              <label>Difficulty Level</label>
-              <select 
-                value={difficulty} 
-                onChange={(e) => setDifficulty(e.target.value)}
-              >
-                <option value="beginner">Beginner Friendly</option>
-                <option value="intermediate">Intermediate Challenge</option>
-                <option value="advanced">Advanced Mastery</option>
-                <option value="expert">Expert Level</option>
-              </select>
-            </div>
-
-            <div className="config-item">
-              <label>Session Duration</label>
-              <select 
-                value={duration} 
-                onChange={(e) => setDuration(e.target.value)}
-              >
-                <option value="quick">Quick Session (5-15 min)</option>
-                <option value="medium">Medium Session (15-45 min)</option>
-                <option value="long">Long Session (45+ min)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h3>🎯 Learning Objectives</h3>
-          <div className="objectives-list">
-            {learningObjectives.map((objective, index) => (
-              <div key={index} className="objective-item">
-                <input
-                  type="text"
-                  value={objective}
-                  onChange={(e) => updateLearningObjective(index, e.target.value)}
-                  placeholder={`Learning objective ${index + 1}...`}
-                />
-                {learningObjectives.length > 1 && (
-                  <button 
-                    type="button"
-                    onClick={() => removeLearningObjective(index)}
-                    className="remove-objective"
-                  >
-                    ❌
-                  </button>
-                )}
-              </div>
-            ))}
-            <button 
-              type="button"
-              onClick={addLearningObjective}
-              className="add-objective"
-            >
-              ➕ Add Learning Objective
-            </button>
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h3>💡 Example Prompts</h3>
-          <div className="example-prompts">
-            {examplePrompts.map((example, index) => (
-              <div key={index} className="example-prompt">
-                <div className="example-header">
-                  <div className="example-icon">
-                    {GAME_MODES.find(m => m.id === example.gameMode)?.icon}
-                  </div>
-                  <h4>{example.title}</h4>
-                </div>
-                <p>{example.description}</p>
-                <div className="example-objectives">
-                  {example.objectives.map((obj, i) => (
-                    <span key={i} className="objective-tag">{obj}</span>
-                  ))}
-                </div>
-                <button 
-                  onClick={() => useExamplePrompt(example)}
-                  className="use-example-btn"
-                >
-                  Use This Example
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="generation-actions">
-          <button 
-            onClick={generateActivity}
-            disabled={isGenerating || !description.trim()}
-            className="generate-btn"
-          >
-            {isGenerating ? (
-              <>
-                <span className="spinner">🔄</span>
-                Generating Amazing Activity...
-              </>
-            ) : (
-              <>
-                🚀 Generate Activity
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {generatedPreview && (
-        <div className="generated-preview">
-          <div className="preview-header">
-            <h3>🎉 Activity Generated Successfully!</h3>
-            <p>Your addictive learning experience is ready</p>
-          </div>
-          
-          <div className="preview-content">
-            <div className="preview-info">
-              <h4>{generatedPreview.title}</h4>
-              <p>{generatedPreview.description}</p>
-              
-              <div className="preview-meta">
-                <span className="game-mode-badge">
-                  {GAME_MODES.find(m => m.id === generatedPreview.gameMode)?.icon}
-                  {GAME_MODES.find(m => m.id === generatedPreview.gameMode)?.title}
-                </span>
-                <span className="difficulty-badge">{difficulty}</span>
-                <span className="duration-badge">{duration}</span>
-              </div>
-            </div>
-
-            {generatedPreview.preview && (
-              <div className="preview-highlights">
-                <h5>🌟 Key Features</h5>
-                <ul>
-                  {generatedPreview.preview.highlights.map((highlight, index) => (
-                    <li key={index}>{highlight}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="preview-actions">
-            <button 
-              onClick={() => window.location.href = `/activities/${generatedPreview.id}`}
-              className="view-activity-btn"
-            >
-              🎮 Launch Activity
-            </button>
-            <button 
-              onClick={() => setGeneratedPreview(null)}
-              className="generate-another-btn"
-            >
-              ✨ Generate Another
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Create Activity Modal (comprehensive implementation)
-const CreateActivityModal = ({ courses, activityTypes, onClose, onSuccess }) => {
-  const { currentUser } = useAuth();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    type: 'adaptive-mastery',
-    courseId: '',
-    materials: [],
-    settings: {
-      anonymousMode: true,
-      allowAsyncPlay: true,
-      difficultyAdaptation: true,
-      peerReview: false,
-      timeLimit: 0, // 0 = no limit
-      maxAttempts: 0, // 0 = unlimited
-      showLeaderboard: true,
-      enableAnalytics: true,
-      autoGrading: true
-    },
-    privacy: {
-      shareWithInstitution: false,
-      allowPublicDiscovery: false,
-      dataRetentionDays: 365
-    }
-  });
-
-  const [selectedMaterials, setSelectedMaterials] = useState([]);
-  const [courseMaterials, setCourseMaterials] = useState([]);
-
-  useEffect(() => {
-    if (formData.courseId) {
-      fetchCourseMaterials(formData.courseId);
-    }
-  }, [formData.courseId]);
-
-  const fetchCourseMaterials = async (courseId) => {
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/courses/${courseId}/materials`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCourseMaterials(data.data?.materials || []);
-      }
-    } catch (error) {
-      console.error('Error fetching materials:', error);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.title.trim()) {
-      setError('Activity title is required');
-      return;
-    }
-    
-    if (!formData.courseId) {
-      setError('Please select a course');
+  const generateTopicsFromDescription = async () => {
+    if (!topicDescription.trim()) {
+      alert('Please describe what kind of trivia you want to play');
       return;
     }
 
-    setLoading(true);
-    setError('');
-
     try {
+      setGeneratingTopics(true);
       const token = await currentUser.getIdToken();
-      
-      const activityData = {
-        ...formData,
-        materials: selectedMaterials,
-        createdBy: currentUser.uid,
-        status: 'draft'
-      };
 
-      const response = await fetch('/api/activities', {
+      console.log('🎨 Generating topics from description:', topicDescription);
+
+      const response = await fetch('/api/ai/neural-conquest-topics', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(activityData)
+        body: JSON.stringify({
+          topicDescription: topicDescription,
+          difficulty: 'medium',
+          subjectArea: inferSubjectArea(topicDescription)
+        })
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        onClose();
-        onSuccess();
-        // Could show success message or redirect to activity management
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📋 Generated topics response:', data);
+
+      if (data.success && data.data) {
+        setGeneratedTopics(data.data);
+        console.log(`✅ Generated ${data.data.topics.length} topics for selection`);
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to create activity');
+        throw new Error(data.message || 'Failed to generate topics');
       }
     } catch (error) {
-      console.error('Error creating activity:', error);
-      setError('Failed to create activity. Please try again.');
+      console.error('❌ Error generating topics:', error);
+      alert(`Failed to generate topics: ${error.message}`);
     } finally {
-      setLoading(false);
+      setGeneratingTopics(false);
     }
   };
 
-  const selectedType = activityTypes.find(t => t.id === formData.type);
+  const inferSubjectArea = (description) => {
+    const lowerDesc = description.toLowerCase();
+    if (lowerDesc.includes('geography') || lowerDesc.includes('countries') || lowerDesc.includes('continents')) return 'geography';
+    if (lowerDesc.includes('history') || lowerDesc.includes('ancient') || lowerDesc.includes('war')) return 'history';
+    if (lowerDesc.includes('science') || lowerDesc.includes('physics') || lowerDesc.includes('chemistry')) return 'science';
+    if (lowerDesc.includes('math') || lowerDesc.includes('algebra') || lowerDesc.includes('calculus')) return 'mathematics';
+    if (lowerDesc.includes('tech') || lowerDesc.includes('computer') || lowerDesc.includes('ai')) return 'technology';
+    if (lowerDesc.includes('art') || lowerDesc.includes('music') || lowerDesc.includes('culture')) return 'art';
+    if (lowerDesc.includes('bio') || lowerDesc.includes('anatomy') || lowerDesc.includes('organism')) return 'biology';
+    return 'general';
+  };
 
-  const renderStep1 = () => (
-    <div className="create-step">
-      <div className="step-header">
-        <h3>Basic Information</h3>
-        <p>Set up the core details for your learning activity</p>
+  const startNeuralConquestWithTopics = async () => {
+    if (!generatedTopics || !generatedTopics.topics || selectedTopics.size === 0) {
+      alert('Please select at least one topic to start the game');
+      return;
+    }
+
+    try {
+      const token = await currentUser.getIdToken();
+
+      console.log('🚀 Starting Neural Conquest with selected topics');
+      
+      // Filter to only include user-selected topics
+      const selectedTopicObjects = generatedTopics.topics.filter(topic => 
+        selectedTopics.has(topic.name)
+      );
+
+      console.log('Selected topics for 3D generation:', selectedTopicObjects.map(t => t.name));
+
+      // Initialize 3D model generation progress
+      setGenerating3DModels(true);
+      setModelGenerationProgress({
+        current: 0,
+        total: selectedTopicObjects.length,
+        currentModel: selectedTopicObjects[0]?.name || 'Preparing...',
+        stage: 'preparing'
+      });
+
+      // STEP 1: Generate 3D models for selected topics
+      console.log('🎨 Generating 3D models for selected topics...');
+      setModelGenerationProgress(prev => ({
+        ...prev,
+        stage: 'generating',
+        currentModel: `Generating 3D models for ${selectedTopicObjects.length} topics...`
+      }));
+
+      const modelResponse = await fetch('/api/ai/generate-3d-models', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selectedTopics: selectedTopicObjects,
+          sessionData: {
+            topicDescription: topicDescription,
+            difficulty: generatedTopics.difficulty,
+            subjectArea: generatedTopics.subjectArea
+          }
+        })
+      });
+
+      if (!modelResponse.ok) {
+        throw new Error(`Failed to generate 3D models: ${modelResponse.status} ${modelResponse.statusText}`);
+      }
+
+      const modelData = await modelResponse.json();
+      console.log('🎯 3D models generated:', modelData);
+
+      if (!modelData.success) {
+        throw new Error(modelData.message || 'Failed to generate 3D models');
+      }
+
+      // Update progress
+      setModelGenerationProgress(prev => ({
+        ...prev,
+        current: selectedTopicObjects.length,
+        stage: 'completing',
+        currentModel: `3D models ready! Creating game world...`
+      }));
+
+      // STEP 2: Start game session with 3D model data
+      console.log('🎮 Starting game session with 3D models...');
+      let sessionResponse;
+      if (gameModeType === 'single') {
+        sessionResponse = await fetch('/api/activities/start-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            gameMode: 'neural-conquest',
+            courseId: selectedCourse || 'general',
+            settings: {
+              anonymousMode: true,
+              adaptiveDifficulty: true,
+              detailedAnalytics: true,
+              customTopics: modelData.data.topics, // Topics with 3D models
+              questions: generatedTopics.questions, // Include questions from initial generation
+              topicDescription: topicDescription,
+              has3DModels: true // Flag to indicate 3D models are ready
+            }
+          })
+        });
+      } else {
+        // Multiplayer create
+        const payload = {
+          gameConfig: {
+            topic: topicDescription || 'Custom Topics',
+            difficulty: generatedTopics.difficulty || 'medium',
+            timeLimit: 300,
+            allowSpectators: false,
+          },
+          inviteEmails: selectedInvites.map(u => u.email),
+          maxPlayers: Math.max(2, Math.min(6, (selectedInvites.length + 1))),
+          gameMode: 'multiplayer'
+        };
+        sessionResponse = await fetch('/api/activities/neural-conquest/multiplayer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (!sessionResponse.ok) {
+        const errorText = await sessionResponse.text();
+        throw new Error(`HTTP ${sessionResponse.status}: ${sessionResponse.statusText}\nResponse: ${errorText}`);
+      }
+
+      const sessionData = await sessionResponse.json();
+      console.log('🎮 Neural Conquest session created:', sessionData);
+
+      if (gameModeType === 'single' && sessionData.success && sessionData.session && sessionData.session.id) {
+        // Close modal and navigate to game
+        setShowTopicModal(false);
+        setTopicDescription('');
+        setGeneratedTopics(null);
+        setSelectedGameMode('');
+        setSelectedTopics(new Set());
+        setGenerating3DModels(false);
+        setModelGenerationProgress({
+          current: 0,
+          total: 0,
+          currentModel: '',
+          stage: 'preparing',
+          detailedProgress: []
+        });
+
+        // Cleanup socket connection
+        if (socket) {
+          socket.disconnect();
+          setSocket(null);
+        }
+        
+        console.log('🧠 Navigating to Neural Conquest with sessionId:', sessionData.session.id);
+        window.location.href = `/neural-conquest/${sessionData.session.id}`;
+      } else if (gameModeType === 'multiplayer' && sessionData.success && sessionData.data?.gameId) {
+        // Navigate to multiplayer game id
+        setShowTopicModal(false);
+        setTopicDescription('');
+        setGeneratedTopics(null);
+        setSelectedGameMode('');
+        setSelectedTopics(new Set());
+        setGenerating3DModels(false);
+        setModelGenerationProgress({ current: 0, total: 0, currentModel: '', stage: 'preparing', detailedProgress: [] });
+        if (socket) { socket.disconnect(); setSocket(null); }
+        window.location.href = `/neural-conquest/${sessionData.data.gameId}`;
+      } else {
+        throw new Error(sessionData.message || sessionData.error || 'Failed to start Neural Conquest');
+      }
+    } catch (error) {
+      console.error('❌ Error starting Neural Conquest:', error);
+      alert(`Failed to start Neural Conquest: ${error.message}`);
+      setGenerating3DModels(false);
+      setModelGenerationProgress({
+        current: 0,
+        total: 0,
+        currentModel: '',
+        stage: 'preparing',
+        detailedProgress: []
+      });
+
+      // Cleanup socket connection on error
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
+    }
+  };
+
+  const closeTopicModal = () => {
+    setShowTopicModal(false);
+    setTopicDescription('');
+    setGeneratedTopics(null);
+    setSelectedTopics(new Set());
+    setGeneratingTopics(false);
+    
+    // Reset 3D generation state
+    setGenerating3DModels(false);
+    setModelGenerationProgress({
+      current: 0,
+      total: 0,
+      currentModel: '',
+      stage: 'preparing',
+      detailedProgress: []
+    });
+    
+    // Cleanup socket if exists
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+  };
+
+  const selectExampleTopic = (topic) => {
+    setTopicDescription(topic);
+  };
+
+  const toggleTopicSelection = (topicName) => {
+    const newSelected = new Set(selectedTopics);
+    if (newSelected.has(topicName)) {
+      newSelected.delete(topicName);
+    } else {
+      newSelected.add(topicName);
+    }
+    setSelectedTopics(newSelected);
+  };
+
+  const canStartGame = () => {
+    return generatedTopics && generatedTopics.topics && selectedTopics.size > 0;
+  };
+
+  const renderPlayerDashboard = () => (
+    <div className="player-dashboard-header">
+      <div className="dashboard-stats">
+        <div className="stat-item">
+          <span className="stat-icon">⭐</span>
+          <div className="stat-content">
+            <div className="stat-value">{playerStats.totalXP}</div>
+            <div className="stat-label">Total XP</div>
+          </div>
+        </div>
+        <div className="stat-item">
+          <span className="stat-icon">🎓</span>
+          <div className="stat-content">
+            <div className="stat-value">{playerStats.currentLevel}</div>
+            <div className="stat-label">Current Level</div>
+          </div>
+        </div>
+        <div className="stat-item">
+          <span className="stat-icon">🏆</span>
+          <div className="stat-content">
+            <div className="stat-value">{playerStats.completedActivities}</div>
+            <div className="stat-label">Activities Completed</div>
+          </div>
+        </div>
+        <div className="stat-item">
+          <span className="stat-icon">📈</span>
+          <div className="stat-content">
+            <div className="stat-value">{playerStats.weeklyProgress}%</div>
+            <div className="stat-label">Weekly Progress</div>
+          </div>
+        </div>
       </div>
-
-      <div className="form-group">
-        <label className="form-label">
-          <DocumentTextIcon className="label-icon" />
-          Activity Title
-        </label>
-        <input
-          type="text"
-          value={formData.title}
-          onChange={(e) => setFormData({...formData, title: e.target.value})}
-          placeholder="e.g., Calculus Fundamentals Mastery Challenge"
-          className="form-input"
-          required
-        />
+      <div className="dashboard-actions">
+        <button className="portfolio-btn">View Portfolio</button>
+        <button className="analytics-btn">Career Analytics</button>
       </div>
+    </div>
+  );
 
-      <div className="form-group">
-        <label className="form-label">
-          <BookOpenIcon className="label-icon" />
-          Course
-        </label>
+  const renderMyActivities = () => (
+    <div className="my-activities-section">
+      {renderPlayerDashboard()}
+      
+      <div className="course-selector">
+        <label htmlFor="course-select">Select Course:</label>
         <select 
-          value={formData.courseId}
-          onChange={(e) => setFormData({...formData, courseId: e.target.value})}
+          id="course-select"
+          value={selectedCourse}
+          onChange={(e) => setSelectedCourse(e.target.value)}
           className="form-select"
-          required
         >
-          <option value="">Select a course</option>
+          <option value="general">General Knowledge</option>
           {courses.map(course => (
-            <option key={course.id} value={course.id}>
-              {course.code} - {course.name}
-            </option>
+            <option key={course.id} value={course.id}>{course.name}</option>
           ))}
         </select>
       </div>
 
-      <div className="form-group">
-        <label className="form-label">Description (Optional)</label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({...formData, description: e.target.value})}
-          placeholder="Describe what students will learn and practice..."
-          className="form-textarea"
-          rows={3}
-        />
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="create-step">
-      <div className="step-header">
-        <h3>Learning Activity Type</h3>
-        <p>Choose the type of interactive learning experience</p>
-      </div>
-
-      <div className="activity-type-selection">
-        {activityTypes.map(type => (
-          <div
-            key={type.id}
-            onClick={() => setFormData({...formData, type: type.id})}
-            className={`activity-type-option ${formData.type === type.id ? 'selected' : ''} ${type.color}`}
-          >
-            <div className="type-header">
-              <span className="type-icon">{type.icon}</span>
-              <h4 className="type-name">{type.name}</h4>
+      <div className="activities-grid">
+        {/* Show active Neural Conquest games if any */}
+        {activeGames && activeGames.length > 0 && (
+          <div className="activity-card general-activity">
+            <div className="activity-header">
+              <div className="activity-icon">🧠</div>
+              <div className="activity-info">
+                <h3>Resume Neural Conquest</h3>
+                <p className="activity-description">Continue your active or invited games.</p>
+              </div>
             </div>
-            <p className="type-description">{type.description}</p>
-            <div className="type-features">
-              {type.features.map(feature => (
-                <span key={feature} className="feature-tag">{feature}</span>
+            <div className="activity-actions" style={{ flexWrap: 'wrap' }}>
+              {activeGames
+                .filter(g => g.status !== 'invited')
+                .map(game => (
+                  <div key={game.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button className="play-btn primary" onClick={() => (window.location.href = `/neural-conquest/${game.id}`)}>
+                      <span className="play-icon">▶️</span>
+                      {game.mode === 'multiplayer' ? 'MP' : 'SP'} • {game.topic} • {game.status || 'active'}
+                    </button>
+                    <button className="preview-btn" title="Delete" onClick={async () => {
+                      try {
+                        console.log('🗑️ Deleting game:', game.id, game.mode);
+                        let result;
+                        if (game.mode === 'multiplayer') {
+                          result = await neuralConquestAPI.deleteOrLeaveMultiplayer(game.id);
+                        } else {
+                          result = await neuralConquestAPI.deleteSingleSession(game.id);
+                        }
+                        console.log('✅ Delete result:', result);
+                        
+                        if (result?.success !== false) {
+                          // refresh list
+                          fetchData();
+                          toast.success('Game deleted successfully!');
+                        } else {
+                          console.error('❌ Delete failed:', result);
+                          toast.error(result?.message || 'Failed to delete game');
+                        }
+                      } catch (e) {
+                        console.error('❌ Delete error:', e);
+                        toast.error(e?.response?.data?.message || e?.message || 'Failed to delete game');
+                      }
+                    }}>🗑️</button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {activeGames && activeGames.some(g => g.status === 'invited') && (
+          <div className="activity-card">
+            <div className="activity-header">
+              <div className="activity-icon">✉️</div>
+              <div className="activity-info">
+                <h3>Invitations</h3>
+                <p className="activity-description">Games you’ve been invited to join.</p>
+              </div>
+            </div>
+            <div className="activity-actions" style={{ flexWrap: 'wrap' }}>
+              {activeGames.filter(g => g.status === 'invited').map(game => (
+                <div key={game.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button className="play-btn primary" onClick={() => (window.location.href = `/neural-conquest/${game.id}`)}>
+                    <span className="play-icon">▶️</span>
+                    Invite • {game.topic}
+                  </button>
+                  <button className="preview-btn" title="Decline" onClick={async () => {
+                    try {
+                      console.log('🗑️ Declining invitation:', game.id);
+                      const result = await neuralConquestAPI.deleteOrLeaveMultiplayer(game.id);
+                      console.log('✅ Decline result:', result);
+                      
+                      if (result?.success !== false) {
+                        fetchData();
+                        toast.success('Invitation declined!');
+                      } else {
+                        console.error('❌ Decline failed:', result);
+                        toast.error(result?.message || 'Failed to decline invitation');
+                      }
+                    } catch (e) {
+                      console.error('❌ Decline error:', e);
+                      toast.error(e?.response?.data?.message || e?.message || 'Failed to decline invitation');
+                    }
+                  }}>🗑️</button>
+                </div>
               ))}
             </div>
-            {formData.type === type.id && (
-              <div className="type-details">
-                <p className="details-text">{type.details}</p>
-                <div className="analytics-preview">
-                  <h5>Analytics Provided:</h5>
-                  <ul>
-                    {type.analytics.map(analytic => (
-                      <li key={analytic}>{analytic}</li>
-                    ))}
-                  </ul>
-                </div>
+          </div>
+        )}
+
+        {GAME_MODES.map(mode => (
+          <div key={mode.id} className="activity-card">
+            <div className="activity-header">
+              <div className="activity-icon">{mode.icon}</div>
+              <div className="activity-info">
+                <h3>{mode.title}</h3>
+                <p className="activity-tagline">{mode.tagline}</p>
+                <p className="activity-description">{mode.description}</p>
               </div>
-            )}
+            </div>
+
+            <div className="activity-meta">
+              <div className="meta-item">
+                <span className="meta-label">Skills:</span>
+                <span className="meta-value">{mode.skills.join(', ')}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Industry:</span>
+                <span className="meta-value">{mode.industryRelevance.join(', ')}</span>
+              </div>
+            </div>
+
+            <div className="activity-stats">
+              <div className="stat">
+                <span className="stat-icon">🎯</span>
+                <span>Level {gameStats[mode.id]?.played > 0 ? 'Advanced' : 'Beginner'}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-icon">🏆</span>
+                <span>{gameStats[mode.id]?.avgScore || 0}% avg</span>
+              </div>
+              <div className="stat">
+                <span className="stat-icon">🔥</span>
+                <span>{gameStats[mode.id]?.bestStreak || 0} streak</span>
+              </div>
+            </div>
+
+            <div className="activity-partners">
+              <span className="partners-label">🏢 Industry Partners:</span>
+              <div className="partners-list">
+                {mode.partnerCompanies.map(partner => (
+                  <span key={partner} className="partner-badge">{partner}</span>
+                ))}
+              </div>
+            </div>
+
+            <div className="activity-actions">
+              <button 
+                className="play-btn primary"
+                onClick={() => startActivity(mode.id, selectedCourse === 'general' ? null : selectedCourse)}
+              >
+                <span className="play-icon">▶️</span>
+                Play Now
+              </button>
+            </div>
           </div>
         ))}
       </div>
     </div>
   );
 
-  const renderStep3 = () => (
-    <div className="create-step">
-      <div className="step-header">
-        <h3>Course Materials & Settings</h3>
-        <p>Configure materials and learning parameters</p>
+  const renderPublicLibrary = () => (
+    <div className="public-library-section">
+      <div className="library-header">
+        <h2>🌍 Public Activity Library</h2>
+        <p>Discover and play activities created by the community</p>
       </div>
 
-      {courseMaterials.length > 0 && (
-        <div className="materials-section">
-          <h4>Course Materials</h4>
-          <div className="materials-grid">
-            {courseMaterials.map(material => (
-              <div
-                key={material.id}
-                onClick={() => {
-                  const isSelected = selectedMaterials.includes(material.id);
-                  setSelectedMaterials(
-                    isSelected 
-                      ? selectedMaterials.filter(id => id !== material.id)
-                      : [...selectedMaterials, material.id]
-                  );
-                }}
-                className={`material-option ${selectedMaterials.includes(material.id) ? 'selected' : ''}`}
-              >
-                <DocumentTextIcon className="material-icon" />
-                <div className="material-info">
-                  <span className="material-name">{material.name}</span>
-                  <span className="material-type">{material.type}</span>
+      <div className="search-filters">
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Search activities..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+          <button className="search-button">🔍</button>
+        </div>
+        
+        <div className="filters">
+          <select 
+            value={filterType} 
+            onChange={(e) => setFilterType(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All Types</option>
+            <option value="neural-conquest">Neural Conquest</option>
+            <option value="mystery-syndicate">Knowledge Syndicate</option>
+            <option value="synthesis-arena">Synthesis Arena</option>
+          </select>
+          
+          <select 
+            value={filterDifficulty} 
+            onChange={(e) => setFilterDifficulty(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All Difficulties</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="expert">Expert</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="activities-grid">
+        {publicActivities
+          .filter(activity => {
+            const matchesSearch = activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                activity.description.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesType = filterType === 'all' || activity.gameMode === filterType;
+            const matchesDifficulty = filterDifficulty === 'all' || activity.difficulty === filterDifficulty;
+            return matchesSearch && matchesType && matchesDifficulty;
+          })
+          .map(activity => (
+            <div key={activity.id} className="public-activity-card">
+              <div className="activity-header">
+                <div className="activity-icon">
+                  {GAME_MODES.find(mode => mode.id === activity.gameMode)?.icon || '🎮'}
+                </div>
+                <div className="activity-info">
+                  <h3>{activity.title}</h3>
+                  <p className="activity-description">{activity.description}</p>
+                  <div className="activity-meta">
+                    <span className="meta-badge difficulty">{activity.difficulty}</span>
+                    <span className="meta-badge time">{activity.estimatedTime} min</span>
+                    <span className="meta-badge participants">{activity.participants} players</span>
+                  </div>
                 </div>
               </div>
-            ))}
+              <div className="activity-actions">
+                <button 
+                  className="play-btn primary"
+                  onClick={() => startActivity(activity.gameMode, activity.courseId)}
+                >
+                  <span className="play-icon">▶️</span>
+                  Play Now
+                </button>
+                <button className="preview-btn">
+                  <span className="preview-icon">👁️</span>
+                  Preview
+                </button>
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+
+  const renderAIGenerate = () => (
+    <div className="ai-generate-section">
+      <div className="ai-header">
+        <h2>🤖 AI Activity Generator</h2>
+        <p>Create custom learning activities powered by AI</p>
+      </div>
+
+      <div className="ai-form">
+        <div className="form-group">
+          <label htmlFor="ai-description">Activity Description:</label>
+          <textarea
+            id="ai-description"
+            className="ai-description-input"
+            placeholder="Describe the activity you want to create... (e.g., 'A quiz about quantum physics with real-world applications')"
+            value={aiDescription}
+            onChange={(e) => setAiDescription(e.target.value)}
+            rows={4}
+          />
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="ai-course">Course (Optional):</label>
+            <select
+              id="ai-course"
+              className="form-select"
+              value={aiCourse}
+              onChange={(e) => setAiCourse(e.target.value)}
+            >
+              <option value="">General Knowledge</option>
+              {courses.map(course => (
+                <option key={course.id} value={course.id}>{course.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ai-game-mode">Game Mode:</label>
+            <select
+              id="ai-game-mode"
+              className="form-select"
+              value={aiGameMode}
+              onChange={(e) => setAiGameMode(e.target.value)}
+            >
+              {GAME_MODES.map(mode => (
+                <option key={mode.id} value={mode.id}>{mode.title}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ai-difficulty">Difficulty:</label>
+            <select
+              id="ai-difficulty"
+              className="form-select"
+              value={aiDifficulty}
+              onChange={(e) => setAiDifficulty(e.target.value)}
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="expert">Expert</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ai-duration">Duration (minutes):</label>
+            <select
+              id="ai-duration"
+              className="form-select"
+              value={aiDuration}
+              onChange={(e) => setAiDuration(e.target.value)}
+            >
+              <option value="15">15 min</option>
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">60 min</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="ai-examples">
+          <h4>💡 Example Prompts:</h4>
+          <div className="example-prompts">
+            <div 
+              className="example-prompt"
+              onClick={() => setAiDescription("Create a neural conquest game about calculus derivatives with real-world applications in physics and engineering")}
+            >
+              "Create a neural conquest game about calculus derivatives with real-world applications"
+            </div>
+            <div 
+              className="example-prompt"
+              onClick={() => setAiDescription("Design a mystery syndicate investigation about the history of cryptography and its impact on modern cybersecurity")}
+            >
+              "Design a mystery syndicate investigation about cryptography history"
+            </div>
+            <div 
+              className="example-prompt"
+              onClick={() => setAiDescription("Build a synthesis arena challenge combining concepts from psychology, economics, and behavioral science")}
+            >
+              "Build a synthesis arena combining psychology and economics"
+            </div>
+          </div>
+        </div>
+
+        <button 
+          className="generate-button"
+          onClick={generateAIActivity}
+          disabled={isGenerating || !aiDescription.trim()}
+        >
+          {isGenerating ? (
+            <>
+              <span className="loading-spinner">⚡</span>
+              Generating Activity...
+            </>
+          ) : (
+            <>
+              <span className="generate-icon">🤖</span>
+              Generate Activity
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="interactive-activities">
+        <div className="loading-container">
+          <div className="loading-spinner-large">⚡</div>
+          <h3>Loading Interactive Activities...</h3>
+          <p>Preparing your learning adventure</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="interactive-activities">
+      <div className="activities-header">
+        <h1>🎓 Interactive Learning Activities</h1>
+        <p>Sophisticated gamified learning experiences designed for higher education</p>
+      </div>
+
+      <div className="activities-navigation">
+        <button 
+          className={`nav-tab ${activeTab === 'my-activities' ? 'active' : ''}`}
+          onClick={() => setActiveTab('my-activities')}
+        >
+          <span className="tab-icon">📚</span>
+          My Course Activities
+        </button>
+        <button 
+          className={`nav-tab ${activeTab === 'public-library' ? 'active' : ''}`}
+          onClick={() => setActiveTab('public-library')}
+        >
+          <span className="tab-icon">🌍</span>
+          Public Library
+        </button>
+        <button 
+          className={`nav-tab ${activeTab === 'ai-generate' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ai-generate')}
+        >
+          <span className="tab-icon">🤖</span>
+          AI Generate
+        </button>
+      </div>
+
+      <div className="activities-content">
+        {activeTab === 'my-activities' && renderMyActivities()}
+        {activeTab === 'public-library' && renderPublicLibrary()}
+        {activeTab === 'ai-generate' && renderAIGenerate()}
+      </div>
+
+      {/* Neural Conquest Topic Selection Modal */}
+      {showTopicModal && (
+        <div 
+          className="modal-overlay"
+          onClick={(e) => {
+            // Close modal when clicking outside (on the overlay)
+            if (e.target === e.currentTarget) {
+              closeTopicModal();
+            }
+          }}
+        >
+          <div className="topic-modal">
+            <div className="modal-header">
+              <h2>🧠 Neural Conquest - Topic Selection</h2>
+              <button className="close-btn" onClick={closeTopicModal}>✕</button>
+            </div>
+            
+            <div className="modal-content">
+              {!generatedTopics ? (
+                <div className="topic-input-section">
+                  <h3>Describe Your Trivia Adventure</h3>
+                  <p>Tell us what kind of trivia you want to explore, and we'll generate a custom Neural Conquest world for you!</p>
+                  
+                  <div className="input-group" style={{ marginBottom: 12 }}>
+                    <label>Mode</label>
+                    <div className="mode-toggle">
+                      <button className={`mode-btn ${gameModeType === 'single' ? 'active' : ''}`} onClick={() => setGameModeType('single')} disabled={generatingTopics}>Single Player</button>
+                      <button className={`mode-btn ${gameModeType === 'multiplayer' ? 'active' : ''}`} onClick={() => setGameModeType('multiplayer')} disabled={generatingTopics}>Multiplayer</button>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label htmlFor="topic-description">What would you like to learn about?</label>
+                    <textarea
+                      id="topic-description"
+                      value={topicDescription}
+                      onChange={(e) => setTopicDescription(e.target.value)}
+                      placeholder="e.g., 'Geography about the 7 continents', 'Ancient civilizations and their achievements', 'Space exploration and planets', 'World capitals and famous landmarks'..."
+                      rows={4}
+                      disabled={generatingTopics}
+                    />
+                  </div>
+
+                  <div className="example-topics">
+                    <h4>💡 Example Topics:</h4>
+                    <div className="topic-examples">
+                      <button 
+                        className="example-btn"
+                        onClick={() => selectExampleTopic('Geography trivia about the 7 continents and their unique features')}
+                        disabled={generatingTopics}
+                      >
+                        🌍 World Geography
+                      </button>
+                      <button 
+                        className="example-btn"
+                        onClick={() => selectExampleTopic('Ancient civilizations including Egypt, Rome, Greece, and their contributions to history')}
+                        disabled={generatingTopics}
+                      >
+                        🏛️ Ancient History
+                      </button>
+                      <button 
+                        className="example-btn"
+                        onClick={() => selectExampleTopic('Space exploration covering planets, moons, astronauts, and space missions')}
+                        disabled={generatingTopics}
+                      >
+                        🚀 Space & Astronomy
+                      </button>
+                      <button 
+                        className="example-btn"
+                        onClick={() => selectExampleTopic('Science fundamentals including physics, chemistry, and biology concepts')}
+                        disabled={generatingTopics}
+                      >
+                        🔬 Science Basics
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button 
+                      className="generate-btn"
+                      onClick={generateTopicsFromDescription}
+                      disabled={generatingTopics || !topicDescription.trim()}
+                    >
+                      {generatingTopics ? '🎨 Generating Topics...' : '🎨 Generate Game World'}
+                    </button>
+                  </div>
+                </div>
+              ) : generating3DModels ? (
+                // NEW: 3D Model Generation Loading Screen
+                <div className="model-generation-section">
+                  <h3>🎨 Generating 3D Models</h3>
+                  <p>Creating immersive 3D objects for your Neural Conquest world...</p>
+                  
+                  <div className="generation-progress">
+                    <div className="progress-info">
+                      <div className="progress-stage">
+                        {modelGenerationProgress.stage === 'preparing' && '🔄 Preparing generation...'}
+                        {modelGenerationProgress.stage === 'generating' && '🎯 Generating 3D models...'}
+                        {modelGenerationProgress.stage === 'completing' && '✅ Finalizing game world...'}
+                      </div>
+                      <div className="progress-current">
+                        {modelGenerationProgress.currentModel}
+                      </div>
+                    </div>
+                    
+                    <div className="progress-bar-container">
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill"
+                          style={{
+                            width: `${modelGenerationProgress.total > 0 ? 
+                              (modelGenerationProgress.current / modelGenerationProgress.total) * 100 : 0}%`
+                          }}
+                        ></div>
+                      </div>
+                      <div className="progress-text">
+                        {modelGenerationProgress.current} / {modelGenerationProgress.total} models
+                      </div>
+                    </div>
+
+                    {/* Real-time detailed progress */}
+                    {modelGenerationProgress.detailedProgress && modelGenerationProgress.detailedProgress.length > 0 && (
+                      <div className="detailed-progress">
+                        <h4>🔍 Current Model Progress:</h4>
+                        <div className="progress-steps">
+                          {modelGenerationProgress.detailedProgress
+                            .slice(-1) // Show only the most recent progress
+                            .map((progress, index) => (
+                            <div key={`${progress.objectName}-${progress.stage}`} className="progress-step">
+                              <div className="step-name">{progress.objectName}</div>
+                              <div className="step-stage">
+                                {progress.stage === 'loading_model' && '📥 Loading AI Model...'}
+                                {progress.stage === 'loading_tokenizer' && '🔤 Loading Tokenizer...'}
+                                {progress.stage === 'loading_model_weights' && '⚖️ Loading Model Weights...'}
+                                {progress.stage === 'model_ready' && '✅ Model Ready!'}
+                                {progress.stage === 'creating_prompt' && '📝 Creating Prompt...'}
+                                {progress.stage === 'tokenizing' && '🔢 Tokenizing...'}
+                                {progress.stage === 'generating' && '🎨 Generating Mesh...'}
+                                {progress.stage === 'decoding' && '🔍 Decoding...'}
+                                {progress.stage === 'processing' && '⚙️ Processing...'}
+                                {progress.stage === 'saving' && '💾 Saving...'}
+                                {progress.stage === 'complete' && '🎉 Complete!'}
+                              </div>
+                              <div className="step-description">{progress.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="generation-info">
+                    <h4>🏗️ What's happening:</h4>
+                    <ul>
+                      <li>• Using OpenAI Shap-E to generate high-quality 3D models</li>
+                      <li>• Creating unique .obj meshes with custom materials</li>
+                      <li>• Optimizing models for real-time 3D gameplay</li>
+                      <li>• Ensuring educational accuracy and visual appeal</li>
+                    </ul>
+                    
+                    <div className="time-estimate">
+                      <p><strong>⏱️ Estimated time:</strong> {modelGenerationProgress.total * 1}-{modelGenerationProgress.total * 3} minutes</p>
+                      <p><em>Please keep this tab open while generation completes.</em></p>
+                    </div>
+                  </div>
+                  
+                  <div className="generation-spinner">
+                    <div className="spinner-3d">🎨</div>
+                    <div className="spinner-text">Crafting your 3D world...</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="topics-preview-section">
+                  <h3>🎯 Generated Game World Preview</h3>
+                  <p><strong>Based on:</strong> "{topicDescription}"</p>
+                  
+                  {gameModeType === 'multiplayer' && (
+                    <div className="input-group" style={{ marginBottom: 16 }}>
+                      <label>Invite players (search by name or email)</label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="text"
+                          placeholder="Search users..."
+                          value={inviteQuery}
+                          onChange={async (e) => {
+                            setInviteQuery(e.target.value);
+                            if (e.target.value.trim().length >= 2) {
+                              try {
+                                const res = await api.neuralConquestAPI.searchUsers(e.target.value.trim());
+                                if (res?.success) setInviteResults(res.data || []);
+                              } catch {}
+                            } else {
+                              setInviteResults([]);
+                            }
+                          }}
+                          style={{ flex: 1 }}
+                        />
+                      </div>
+                      {inviteQuery.trim().length >= 2 && (
+                        <div style={{ marginTop: 8, maxHeight: 150, overflowY: 'auto' }}>
+                          {(inviteResults || []).map(u => (
+                            <div key={u.id} className="invite-result">
+                              <div>
+                                <div style={{ color: '#fff', fontSize: 14 }}>{u.displayName || u.name || u.email}</div>
+                                <div style={{ color: '#aaa', fontSize: 12 }}>{u.email}</div>
+                              </div>
+                              <button className="start-game-btn" onClick={() => {
+                                if (!selectedInvites.find(si => si.id === u.id)) setSelectedInvites([...selectedInvites, u]);
+                              }}>Add</button>
+                            </div>
+                          ))}
+                          {inviteResults.length === 0 && (
+                            <div style={{ color: '#aaa', fontSize: 12 }}>No users found</div>
+                          )}
+                        </div>
+                      )}
+                      {selectedInvites.length > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ color: '#ccc', marginBottom: 6 }}>Invited:</div>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {selectedInvites.map(u => (
+                              <span key={u.id} className="invited-chip">
+                                {u.displayName || u.name || u.email}
+                                <button className="back-btn" onClick={() => setSelectedInvites(selectedInvites.filter(si => si.id !== u.id))}>x</button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="topics-grid">
+                    {generatedTopics.topics.map((topic, index) => (
+                      <div 
+                        key={index} 
+                        className={`topic-card ${selectedTopics.has(topic.name) ? 'selected' : ''}`}
+                        onClick={() => toggleTopicSelection(topic.name)}
+                      >
+                        <div className="topic-icon">{topic.icon || '🏆'}</div>
+                        <h4>{topic.name}</h4>
+                        <p>{topic.description}</p>
+                        <div className="topic-meta">
+                          <span className="topic-cost">💰 {topic.cost} Synapse</span>
+                          <span className="topic-difficulty">⭐ Level {topic.difficulty}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="preview-info">
+                    <p>🎮 <strong>Your Neural Conquest Experience:</strong></p>
+                    <ul>
+                      <li>• {generatedTopics.topics.length} unique 3D territories to conquer</li>
+                      <li>• {selectedTopics.size > 0 ? `${selectedTopics.size} territories selected` : 'Click territories above to select them (optional)'}</li>
+                      <li>• Progressive difficulty scaling with topic complexity</li>
+                      <li>• AI-generated questions specific to each topic</li>
+                      <li>• Dynamic pricing based on educational value</li>
+                      <li>• Immersive 3D conquest gameplay</li>
+                    </ul>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button 
+                      className="back-btn" 
+                      onClick={() => setGeneratedTopics(null)}
+                      disabled={generating3DModels}
+                    >
+                      ← Modify Description
+                    </button>
+                    <button 
+                      className="start-game-btn"
+                      onClick={startNeuralConquestWithTopics}
+                      disabled={generating3DModels || selectedTopics.size === 0}
+                    >
+                      {generating3DModels ? '🎮 Starting Game...' : (gameModeType === 'single' ? '🚀 Start Single Player' : '🚀 Start Multiplayer')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
-
-      <div className="settings-section">
-        <h4>Activity Settings</h4>
-        <div className="settings-grid">
-          <div className="setting-toggle">
-            <div className="toggle-info">
-              <label>Anonymous Mode</label>
-              <p>Students compete anonymously to reduce anxiety</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.settings.anonymousMode}
-              onChange={(e) => setFormData({
-                ...formData,
-                settings: {...formData.settings, anonymousMode: e.target.checked}
-              })}
-            />
-          </div>
-
-          <div className="setting-toggle">
-            <div className="toggle-info">
-              <label>Asynchronous Play</label>
-              <p>Allow students to participate at their own pace</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.settings.allowAsyncPlay}
-              onChange={(e) => setFormData({
-                ...formData,
-                settings: {...formData.settings, allowAsyncPlay: e.target.checked}
-              })}
-            />
-          </div>
-
-          <div className="setting-toggle">
-            <div className="toggle-info">
-              <label>Adaptive Difficulty</label>
-              <p>AI adjusts difficulty based on student performance</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.settings.difficultyAdaptation}
-              onChange={(e) => setFormData({
-                ...formData,
-                settings: {...formData.settings, difficultyAdaptation: e.target.checked}
-              })}
-            />
-          </div>
-
-          <div className="setting-toggle">
-            <div className="toggle-info">
-              <label>Show Leaderboard</label>
-              <p>Display anonymous rankings to motivate students</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.settings.showLeaderboard}
-              onChange={(e) => setFormData({
-                ...formData,
-                settings: {...formData.settings, showLeaderboard: e.target.checked}
-              })}
-            />
-          </div>
-
-          <div className="setting-toggle">
-            <div className="toggle-info">
-              <label>Detailed Analytics</label>
-              <p>Collect learning analytics for course insights</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={formData.settings.enableAnalytics}
-              onChange={(e) => setFormData({
-                ...formData,
-                settings: {...formData.settings, enableAnalytics: e.target.checked}
-              })}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content create-activity-modal">
-        <div className="modal-header">
-          <h2>Create Learning Activity</h2>
-          <button onClick={onClose} className="modal-close">
-            <XMarkIcon />
-          </button>
-        </div>
-
-        <div className="modal-progress">
-          <div className="progress-steps">
-            {[1, 2, 3].map(stepNum => (
-              <div 
-                key={stepNum}
-                className={`progress-step ${step >= stepNum ? 'active' : ''} ${step === stepNum ? 'current' : ''}`}
-              >
-                <span className="step-number">{stepNum}</span>
-                <span className="step-label">
-                  {stepNum === 1 ? 'Basic Info' : stepNum === 2 ? 'Activity Type' : 'Configuration'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="create-form">
-          <div className="modal-body">
-            {error && (
-              <div className="error-message">
-                <span className="error-icon">⚠️</span>
-                {error}
-              </div>
-            )}
-
-            {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
-          </div>
-
-          <div className="modal-actions">
-            {step > 1 && (
-              <button 
-                type="button" 
-                onClick={() => setStep(step - 1)}
-                className="btn-secondary"
-              >
-                Previous
-              </button>
-            )}
-            
-            <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
-            </button>
-            
-            {step < 3 ? (
-              <button 
-                type="button" 
-                onClick={() => setStep(step + 1)}
-                className="btn-primary"
-                disabled={step === 1 && (!formData.title || !formData.courseId)}
-              >
-                Next
-              </button>
-            ) : (
-              <button 
-                type="submit" 
-                className="btn-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <div className="loading-spinner small"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <SparklesIcon className="btn-icon" />
-                    Create Activity
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Activity Details Modal (placeholder - can be expanded)  
-const ActivityDetailsModal = ({ activity, onClose, onJoin }) => {
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>{activity.title}</h2>
-          <button onClick={onClose} className="modal-close">
-            <XMarkIcon />
-          </button>
-        </div>
-        <div className="modal-body">
-          <p>Activity Details Modal - To be implemented</p>
-        </div>
-      </div>
     </div>
   );
 };

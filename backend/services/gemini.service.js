@@ -8,29 +8,93 @@ const genAI = new GoogleGenerativeAI(config.geminiApiKey);
  */
 class GeminiService {
   /**
-   * Generate content using the Gemini model (Base method, potentially returning more info)
+   * Generate content using the Gemini model with retry logic and exponential backoff
    * @param {string} prompt - The prompt to send to the model
    * @param {string} modelName - e.g., 'gemini-pro', 'gemini-1.5-flash'
+   * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
+   * @param {number} baseDelay - Base delay in milliseconds for exponential backoff (default: 1000)
    * @returns {Promise<object>} - An object containing { text: string, usageMetadata: object | null }
    */
-  static async _generateWithUsage(prompt, modelName) {
+  static async _generateWithUsage(prompt, modelName, maxRetries = 3, baseDelay = 1000) {
+    let lastError = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      const usageMetadata = response.usageMetadata || null; // Get usage metadata if available
+        const usageMetadata = response.usageMetadata || null;
       
       // Log usage in development only
       if (process.env.NODE_ENV === 'development') {
+          if (attempt > 0) {
+            console.log(`✅ Gemini success on attempt ${attempt + 1}/${maxRetries + 1}`);
+          }
         console.log(`Gemini Response (${modelName}) Usage:`, usageMetadata);
       }
       
-      return { text, usageMetadata }; // Return both
+        return { text, usageMetadata };
+        
     } catch (error) {
-      console.error(`Error generating content with Gemini (${modelName}):`, error);
-      throw new Error(`Failed to generate content with Gemini (${modelName})`);
+        lastError = error;
+        const isRetryableError = this._isRetryableError(error);
+        const isLastAttempt = attempt === maxRetries;
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`❌ Gemini attempt ${attempt + 1}/${maxRetries + 1} failed:`, error.message);
+          console.log(`🔄 Retryable error: ${isRetryableError}, Last attempt: ${isLastAttempt}`);
+        }
+        
+        // If it's not a retryable error or we've exhausted retries, throw immediately
+        if (!isRetryableError || isLastAttempt) {
+          console.error(`❌ Final Gemini error after ${attempt + 1} attempts (${modelName}):`, error);
+          break;
+        }
+        
+        // Calculate exponential backoff delay
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000; // Add jitter
+        console.log(`⏳ Retrying Gemini request in ${Math.round(delay)}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
+    
+    // If we get here, all retries failed
+    throw new Error(`Failed to generate content with Gemini (${modelName}) after ${maxRetries + 1} attempts: ${lastError.message}`);
+    }
+  
+  /**
+   * Determine if an error is retryable (transient)
+   * @param {Error} error - The error to check
+   * @returns {boolean} - True if the error should be retried
+   */
+  static _isRetryableError(error) {
+    // Check for specific error codes and messages that indicate transient issues
+    if (error.status) {
+      // HTTP status codes that are retryable
+      const retryableStatusCodes = [503, 502, 504, 429, 500]; // Service Unavailable, Bad Gateway, Gateway Timeout, Too Many Requests, Internal Server Error
+      if (retryableStatusCodes.includes(error.status)) {
+        return true;
+      }
+    }
+    
+    // Check error message for specific patterns
+    const retryableMessages = [
+      'overloaded',
+      'rate limit',
+      'timeout',
+      'temporary',
+      'try again',
+      'service unavailable',
+      'internal error',
+      'connection reset',
+      'network error'
+    ];
+    
+    const errorMessage = error.message?.toLowerCase() || '';
+    return retryableMessages.some(msg => errorMessage.includes(msg));
   }
   
   // --- Public Methods Using _generateWithUsage --- //
@@ -38,10 +102,11 @@ class GeminiService {
   /**
    * Generate simple content (backward compatible)
    * @param {string} prompt
+   * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
    * @returns {Promise<string>} - The generated text only
    */
-  static async generateContent(prompt) {
-    const { text } = await this._generateWithUsage(prompt, 'gemini-pro');
+  static async generateContent(prompt, maxRetries = 3) {
+    const { text } = await this._generateWithUsage(prompt, 'gemini-1.5-flash', maxRetries);
       return text;
   }
   
@@ -49,22 +114,24 @@ class GeminiService {
    * Generate chat response (history handled by caller sending full prompt)
    * This now calls the function that returns usage metadata
    * @param {string} fullPrompt - The combined history and new message
+   * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
    * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
    */
-  static async generateChatResponseFromPrompt(fullPrompt) {
+  static async generateChatResponseFromPrompt(fullPrompt, maxRetries = 3) {
      // We are using the testGeminiFlash model as decided earlier
-    return this._generateWithUsage(fullPrompt, 'gemini-1.5-flash'); 
+    return this._generateWithUsage(fullPrompt, 'gemini-1.5-flash', maxRetries); 
   }
 
   /**
    * Test Gemini 1.5 Flash model with a prompt
    * Returns text and usage metadata
    * @param {string} prompt 
+   * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
    * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
    */
-  static async testGeminiFlash(prompt) {
+  static async testGeminiFlash(prompt, maxRetries = 3) {
     // Use the internal method that returns metadata
-    return this._generateWithUsage(prompt, 'gemini-1.5-flash'); 
+    return this._generateWithUsage(prompt, 'gemini-1.5-flash', maxRetries); 
   }
   
   // Add more methods as needed, e.g., for specific tutoring tasks like explaining concepts, generating questions, etc.
@@ -77,9 +144,10 @@ class GeminiService {
    * @param {number} options.hoursPerDay - Average hours per day to study.
    * @param {Array<string>} [options.subtopics] - Specific subtopics to include.
    * @param {string} [options.goal] - The overall goal (e.g., 'pass the exam', 'understand the basics').
+   * @param {number} [options.maxRetries] - Maximum number of retry attempts (default: 3).
    * @returns {Promise<string>} - The generated study plan text.
    */
-  static async generateStudyPlan({ topic, durationDays, hoursPerDay, subtopics = [], goal = 'learn the material' }) {
+  static async generateStudyPlan({ topic, durationDays, hoursPerDay, subtopics = [], goal = 'learn the material', maxRetries = 3 }) {
     let prompt = `Create a detailed study plan for the topic "${topic}". \
 The plan should cover ${durationDays} days, with an estimated ${hoursPerDay} hours of study per day. \
 The main goal is to ${goal}.`;
@@ -91,22 +159,23 @@ The main goal is to ${goal}.`;
     prompt += `\
 Provide a day-by-day breakdown with specific tasks, estimated times, and suggested resources if possible. Make the plan realistic and actionable.`;
     
-    return this.generateContent(prompt);
+    return this.generateContent(prompt, maxRetries);
   }
   
   /**
    * Explains a concept in simple terms.
    * @param {string} concept - The concept to explain.
    * @param {string} [context] - Optional context (e.g., the course or subject).
+   * @param {number} [maxRetries] - Maximum number of retry attempts (default: 3).
    * @returns {Promise<string>} - The explanation text.
    */
-  static async explainConcept(concept, context = '') {
+  static async explainConcept(concept, context = '', maxRetries = 3) {
     let prompt = `Explain the concept "${concept}" in simple and easy-to-understand terms.`;
     if (context) {
       prompt += ` Assume the context is related to ${context}.`;
     }
     prompt += ` Use analogies if helpful.`;
-    return this.generateContent(prompt);
+    return this.generateContent(prompt, maxRetries);
   }
   
    /**
@@ -114,11 +183,12 @@ Provide a day-by-day breakdown with specific tasks, estimated times, and suggest
    * @param {string} topic - The topic for the questions.
    * @param {number} [count=5] - Number of questions to generate.
    * @param {string} [difficulty='medium'] - Difficulty level (e.g., 'easy', 'medium', 'hard').
+   * @param {number} [maxRetries=3] - Maximum number of retry attempts.
    * @returns {Promise<string>} - The generated questions text.
    */
-  static async generatePracticeQuestions(topic, count = 5, difficulty = 'medium') {
+  static async generatePracticeQuestions(topic, count = 5, difficulty = 'medium', maxRetries = 3) {
     const prompt = `Generate ${count} practice questions about "${topic}" at a ${difficulty} difficulty level. Include a mix of question types if possible (e.g., multiple choice, short answer).`;
-    return this.generateContent(prompt);
+    return this.generateContent(prompt, maxRetries);
   }
 
   /**

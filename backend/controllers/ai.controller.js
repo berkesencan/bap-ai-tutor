@@ -1,1122 +1,971 @@
-const { handleError } = require('../middleware/error.middleware');
-const GeminiService = require('../services/gemini.service');
-const aiService = require('../services/ai.service');
-const PDFService = require('../services/pdf.service');
-const admin = require('firebase-admin');
-const db = admin.firestore();
+// Main AI Controller - Orchestrates specialized AI controllers
+const ChatController = require('./ai/chat.controller');
+const ContentGenerationController = require('./ai/content-generation.controller');
+const AnalysisController = require('./ai/analysis.controller');
+const geminiService = require('../services/gemini.service');
 
 class AIController {
-  /**
-   * Generate a personalized study plan using Gemini
-   * @route POST /api/ai/study-plan
-   */
-  static async generateStudyPlan(req, res) {
-    try {
-      const { topic, durationDays, hoursPerDay, subtopics, goal } = req.body;
-      
-      if (!topic || !durationDays || !hoursPerDay) {
-        return res.status(400).json({ success: false, message: 'Missing required fields: topic, durationDays, hoursPerDay' });
-      }
-
-      const studyPlanText = await GeminiService.generateStudyPlan({
-        topic,
-        durationDays,
-        hoursPerDay,
-        subtopics: subtopics || [],
-        goal: goal || 'learn the material effectively'
-      });
-      
-      res.json({ success: true, data: { studyPlan: studyPlanText } });
-    } catch (error) {
-      handleError(error, res);
-    }
-  }
-
-  /**
-   * Explain a concept using Gemini
-   * @route POST /api/ai/explain
-   */
-  static async explainConcept(req, res) {
-    try {
-      const { concept, context } = req.body;
-      if (!concept) {
-        return res.status(400).json({ success: false, message: 'Missing required field: concept' });
-      }
-
-      const explanationText = await GeminiService.explainConcept(concept, context);
-      
-      res.json({ success: true, data: { explanation: explanationText } });
-    } catch (error) {
-      handleError(error, res);
-    }
-  }
-
-  /**
-   * Generate practice questions using Gemini
-   * @route POST /api/ai/practice-questions
-   */
-  static async generatePracticeQuestions(req, res) {
-    try {
-      const { topic, count, difficulty } = req.body;
-      if (!topic) {
-        return res.status(400).json({ success: false, message: 'Missing required field: topic' });
-      }
-
-      const questionsText = await GeminiService.generatePracticeQuestions(
-        topic, 
-        count ? parseInt(count) : 5,
-        difficulty || 'medium'
-      );
-      
-      res.json({ success: true, data: { questions: questionsText } });
-    } catch (error) {
-      handleError(error, res);
-    }
-  }
-
-  /**
-   * Handle a chat message using Gemini with classroom context
-   * @route POST /api/ai/chat
-   */
+  
+  // Chat and Conversation Management
   static async handleChatMessage(req, res) {
-    try {
-      const { history, message, classroomId, courseId } = req.body;
-      const userId = req.user.uid;
-      
-      if (!message) {
-        return res.status(400).json({ success: false, message: 'Missing required field: message' });
-      }
-      if (history && !Array.isArray(history)) {
-         return res.status(400).json({ success: false, message: 'Invalid history format: must be an array' });
-      }
-
-      // Use enhanced AI service with classroom context
-      const response = await aiService.answerQuestion({
-        userId,
-        question: message,
-        courseId: courseId || classroomId,
-        classroomId: classroomId,
-        context: history ? history.map(msg => {
-        const prefix = (msg.role === 'user' || msg.sender === 'user') ? 'User:' : 'AI:';
-        return `${prefix} ${msg.content || msg.text || msg.parts || ''}`;
-        }).join('\n') : ''
-      });
-      
-      res.json({ 
-        success: true, 
-        data: { 
-          response: response.answer,
-          materials: response.materials,
-          usageMetadata: response.usageMetadata
-        } 
-      });
-    } catch (error) {
-      handleError(error, res);
-    }
+    return ChatController.handleChatMessage(req, res);
   }
 
-  /**
-   * Get available classrooms for AI context
-   * @route GET /api/ai/classrooms
-   */
   static async getAvailableClassrooms(req, res) {
-    try {
-      const userId = req.user.uid;
-      const classrooms = await aiService.getAvailableClassrooms(userId);
-      
-      res.json({ 
-        success: true, 
-        data: classrooms
-      });
-    } catch (error) {
-      handleError(error, res);
-    }
+    return ChatController.getAvailableClassrooms(req, res);
   }
 
-  /**
-   * Get integrated materials for a classroom or course
-   * @route GET /api/ai/materials/:contextId
-   */
   static async getIntegratedMaterials(req, res) {
-    try {
-      const userId = req.user.uid;
-      const { contextId } = req.params;
-      const { type = 'classroom' } = req.query; // 'classroom' or 'course'
-      
-      const materials = await aiService.getIntegratedMaterials(userId, contextId, type);
-      
-      res.json({ 
-        success: true, 
-        data: materials
-      });
-    } catch (error) {
-      handleError(error, res);
-    }
+    return ChatController.getIntegratedMaterials(req, res);
   }
 
-  /**
-   * Test Gemini 1.5 Flash API - Now returns usage metadata
-   * @route POST /api/ai/test-gemini
-   */
   static async testGemini(req, res) {
-    try {
-      const { prompt } = req.body;
-      
-      if (!prompt) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Missing required field: prompt' 
-        });
-      }
-
-      console.log("Test Gemini API called with prompt:", prompt);
-      // Service function now returns { text, usageMetadata }
-      const { text, usageMetadata } = await GeminiService.testGeminiFlash(prompt); 
-      console.log("Response received from Gemini:", text.substring(0, 100) + "...");
-      
-      res.json({ 
-        success: true, 
-        data: { 
-          response: text,
-          model: 'gemini-1.5-flash',
-          usageMetadata: usageMetadata // Include usage metadata
-        } 
-      });
-    } catch (error) {
-      console.error('Test Gemini Error:', error);
-      handleError(error, res);
-    }
+    return ChatController.testGemini(req, res);
   }
 
-  // Interactive Activities Management
-  static async createActivity(req, res) {
-    try {
-      const { title, type, courseId, materials, settings } = req.body;
-      const userId = req.user.uid;
-
-      // Verify user has permission to create activities in this course
-      const courseRef = db.collection('courses').doc(courseId);
-      const courseDoc = await courseRef.get();
-      
-      if (!courseDoc.exists) {
-        return res.status(404).json({ error: 'Course not found' });
-      }
-
-      const courseData = courseDoc.data();
-      const userRole = courseData.members?.[userId]?.role;
-      
-      if (!['creator', 'admin', 'instructor'].includes(userRole)) {
-        return res.status(403).json({ error: 'Insufficient permissions to create activities' });
-      }
-
-      // Generate unique join code
-      const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      const activityData = {
-        title,
-        type,
-        courseId,
-        materials: materials || [],
-        settings: {
-          maxParticipants: settings?.maxParticipants || 30,
-          timeLimit: settings?.timeLimit || 20,
-          difficulty: settings?.difficulty || 'medium',
-          allowHints: settings?.allowHints !== false,
-          showLeaderboard: settings?.showLeaderboard !== false,
-          teamMode: settings?.teamMode || false,
-          aiModeration: settings?.aiModeration !== false,
-          ...settings
-        },
-        status: 'draft',
-        joinCode,
-        createdBy: userId,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        participants: [],
-        stats: {
-          totalParticipants: 0,
-          averageScore: 0,
-          completionRate: 0
-        }
-      };
-
-      const activityRef = await db.collection('activities').add(activityData);
-      
-      res.status(201).json({
-        success: true,
-        data: {
-          id: activityRef.id,
-          ...activityData,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      });
-    } catch (error) {
-      console.error('Error creating activity:', error);
-      res.status(500).json({ error: 'Failed to create activity' });
-    }
+  // Content Generation
+  static async generateStudyPlan(req, res) {
+    return ContentGenerationController.generateStudyPlan(req, res);
   }
 
-  static async getActivities(req, res) {
-    try {
-      const userId = req.user.uid;
-      const { courseId, status, type } = req.query;
-
-      let query = db.collection('activities');
-
-      // Filter by course if specified
-      if (courseId) {
-        query = query.where('courseId', '==', courseId);
-      }
-
-      // Filter by status if specified
-      if (status) {
-        query = query.where('status', '==', status);
-      }
-
-      // Filter by type if specified
-      if (type) {
-        query = query.where('type', '==', type);
-      }
-
-      const snapshot = await query.orderBy('createdAt', 'desc').get();
-      const activities = [];
-
-      for (const doc of snapshot.docs) {
-        const activityData = doc.data();
-        
-        // Check if user has access to this activity
-        const courseRef = db.collection('courses').doc(activityData.courseId);
-        const courseDoc = await courseRef.get();
-        
-        if (courseDoc.exists) {
-          const courseData = courseDoc.data();
-          const userRole = courseData.members?.[userId]?.role;
-          
-          if (userRole || activityData.createdBy === userId) {
-            activities.push({
-              id: doc.id,
-              ...activityData,
-              course: {
-                id: courseDoc.id,
-                code: courseData.code,
-                name: courseData.name
-              }
-            });
-          }
-        }
-      }
-
-      res.json({
-        success: true,
-        data: { activities }
-      });
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-      res.status(500).json({ error: 'Failed to fetch activities' });
-    }
+  static async explainConcept(req, res) {
+    return ContentGenerationController.explainConcept(req, res);
   }
 
-  static async getActivity(req, res) {
-    try {
-      const { activityId } = req.params;
-      const userId = req.user.uid;
-
-      const activityDoc = await db.collection('activities').doc(activityId).get();
-      
-      if (!activityDoc.exists) {
-        return res.status(404).json({ error: 'Activity not found' });
-      }
-
-      const activityData = activityDoc.data();
-      
-      // Check if user has access to this activity
-      const courseRef = db.collection('courses').doc(activityData.courseId);
-      const courseDoc = await courseRef.get();
-      
-      if (!courseDoc.exists) {
-        return res.status(404).json({ error: 'Course not found' });
-      }
-
-      const courseData = courseDoc.data();
-      const userRole = courseData.members?.[userId]?.role;
-      
-      if (!userRole && activityData.createdBy !== userId) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      res.json({
-        success: true,
-        data: {
-          id: activityDoc.id,
-          ...activityData,
-          course: {
-            id: courseDoc.id,
-            code: courseData.code,
-            name: courseData.name
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching activity:', error);
-      res.status(500).json({ error: 'Failed to fetch activity' });
-    }
-  }
-
-  static async updateActivity(req, res) {
-    try {
-      const { activityId } = req.params;
-      const userId = req.user.uid;
-      const updates = req.body;
-
-      const activityRef = db.collection('activities').doc(activityId);
-      const activityDoc = await activityRef.get();
-      
-      if (!activityDoc.exists) {
-        return res.status(404).json({ error: 'Activity not found' });
-      }
-
-      const activityData = activityDoc.data();
-      
-      // Check permissions
-      const courseRef = db.collection('courses').doc(activityData.courseId);
-      const courseDoc = await courseRef.get();
-      const courseData = courseDoc.data();
-      const userRole = courseData.members?.[userId]?.role;
-      
-      if (!['creator', 'admin', 'instructor'].includes(userRole) && activityData.createdBy !== userId) {
-        return res.status(403).json({ error: 'Insufficient permissions' });
-      }
-
-      const updateData = {
-        ...updates,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      };
-
-      await activityRef.update(updateData);
-      
-      res.json({
-        success: true,
-        data: { id: activityId, ...activityData, ...updateData }
-      });
-    } catch (error) {
-      console.error('Error updating activity:', error);
-      res.status(500).json({ error: 'Failed to update activity' });
-    }
-  }
-
-  static async startActivity(req, res) {
-    try {
-      const { activityId } = req.params;
-      const userId = req.user.uid;
-
-      const activityRef = db.collection('activities').doc(activityId);
-      const activityDoc = await activityRef.get();
-      
-      if (!activityDoc.exists) {
-        return res.status(404).json({ error: 'Activity not found' });
-      }
-
-      const activityData = activityDoc.data();
-      
-      // Check permissions
-      const courseRef = db.collection('courses').doc(activityData.courseId);
-      const courseDoc = await courseRef.get();
-      const courseData = courseDoc.data();
-      const userRole = courseData.members?.[userId]?.role;
-      
-      if (!['creator', 'admin', 'instructor'].includes(userRole) && activityData.createdBy !== userId) {
-        return res.status(403).json({ error: 'Insufficient permissions to start activity' });
-      }
-
-      // Update activity status to live
-      await activityRef.update({
-        status: 'live',
-        startedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      res.json({
-        success: true,
-        data: {
-          id: activityId,
-          status: 'live',
-          joinCode: activityData.joinCode,
-          message: 'Activity started successfully'
-        }
-      });
-    } catch (error) {
-      console.error('Error starting activity:', error);
-      res.status(500).json({ error: 'Failed to start activity' });
-    }
-  }
-
-  static async joinActivity(req, res) {
-    try {
-      const { joinCode } = req.body;
-      const userId = req.user.uid;
-
-      // Find activity by join code
-      const activitiesSnapshot = await db.collection('activities')
-        .where('joinCode', '==', joinCode.toUpperCase())
-        .where('status', '==', 'live')
-        .get();
-
-      if (activitiesSnapshot.empty) {
-        return res.status(404).json({ error: 'Activity not found or not currently live' });
-      }
-
-      const activityDoc = activitiesSnapshot.docs[0];
-      const activityData = activityDoc.data();
-
-      // Check if user is already a participant
-      if (activityData.participants?.includes(userId)) {
-        return res.json({
-          success: true,
-          data: {
-            activityId: activityDoc.id,
-            message: 'Already joined this activity'
-          }
-        });
-      }
-
-      // Check if activity is full
-      const currentParticipants = activityData.participants?.length || 0;
-      if (currentParticipants >= activityData.settings.maxParticipants) {
-        return res.status(400).json({ error: 'Activity is full' });
-      }
-
-      // Add user to participants
-      await activityDoc.ref.update({
-        participants: admin.firestore.FieldValue.arrayUnion(userId),
-        'stats.totalParticipants': admin.firestore.FieldValue.increment(1),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      res.json({
-        success: true,
-        data: {
-          activityId: activityDoc.id,
-          message: 'Successfully joined activity'
-        }
-      });
-    } catch (error) {
-      console.error('Error joining activity:', error);
-      res.status(500).json({ error: 'Failed to join activity' });
-    }
+  static async generatePracticeQuestions(req, res) {
+    return ContentGenerationController.generatePracticeQuestions(req, res);
   }
 
   static async generateActivityContent(req, res) {
-    try {
-      const { activityId } = req.params;
-      const { materialIds, difficulty, questionCount = 10 } = req.body;
-      const userId = req.user.uid;
-
-      const activityDoc = await db.collection('activities').doc(activityId).get();
-      
-      if (!activityDoc.exists) {
-        return res.status(404).json({ error: 'Activity not found' });
-      }
-
-      const activityData = activityDoc.data();
-      
-      // Check permissions
-      const courseRef = db.collection('courses').doc(activityData.courseId);
-      const courseDoc = await courseRef.get();
-      const courseData = courseDoc.data();
-      const userRole = courseData.members?.[userId]?.role;
-      
-      if (!['creator', 'admin', 'instructor'].includes(userRole) && activityData.createdBy !== userId) {
-        return res.status(403).json({ error: 'Insufficient permissions' });
-      }
-
-      // Get course materials
-      const materials = [];
-      for (const materialId of materialIds || activityData.materials) {
-        const materialDoc = await db.collection('courses').doc(activityData.courseId)
-          .collection('materials').doc(materialId).get();
-        
-        if (materialDoc.exists) {
-          materials.push(materialDoc.data());
-        }
-      }
-
-      if (materials.length === 0) {
-        return res.status(400).json({ error: 'No materials found for content generation' });
-      }
-
-      // Generate AI content based on activity type
-      let generatedContent;
-      const activityType = activityData.type;
-
-      switch (activityType) {
-        case 'ai-quiz-battle':
-          generatedContent = await AIController.generateQuizContent(materials, difficulty, questionCount);
-          break;
-        case 'concept-race':
-          generatedContent = await AIController.generateConceptRaceContent(materials, difficulty);
-          break;
-        case 'collaborative-solver':
-          generatedContent = await AIController.generateProblemSolvingContent(materials, difficulty);
-          break;
-        case 'mystery-case':
-          generatedContent = await AIController.generateCaseStudyContent(materials, difficulty);
-          break;
-        case 'debate-arena':
-          generatedContent = await AIController.generateDebateContent(materials, difficulty);
-          break;
-        case 'simulation-lab':
-          generatedContent = await AIController.generateSimulationContent(materials, difficulty);
-          break;
-        default:
-          return res.status(400).json({ error: 'Unsupported activity type' });
-      }
-
-      // Update activity with generated content
-      await db.collection('activities').doc(activityId).update({
-        generatedContent,
-        contentGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      res.json({
-        success: true,
-        data: {
-          activityId,
-          content: generatedContent,
-          message: 'Activity content generated successfully'
-        }
-      });
-    } catch (error) {
-      console.error('Error generating activity content:', error);
-      res.status(500).json({ error: 'Failed to generate activity content' });
-    }
+    return ContentGenerationController.generateActivityContent(req, res);
   }
 
-  // Helper functions for different activity types
-  static async generateQuizContent(materials, difficulty, questionCount) {
-    const materialTexts = materials.map(m => m.extractedText || m.content || '').join('\n\n');
-    
-    const prompt = `Based on the following course materials, generate ${questionCount} multiple-choice quiz questions at ${difficulty} difficulty level:
-
-${materialTexts}
-
-For each question, provide:
-1. Question text
-2. 4 multiple choice options (A, B, C, D)
-3. Correct answer
-4. Explanation of why the answer is correct
-5. Estimated time to answer (in seconds)
-6. Related concepts/topics
-
-Format as JSON array with this structure:
-{
-  "questions": [
-    {
-      "id": "q1",
-      "question": "Question text here",
-      "options": ["A. Option 1", "B. Option 2", "C. Option 3", "D. Option 4"],
-      "correctAnswer": "A",
-      "explanation": "Explanation here",
-      "timeLimit": 30,
-      "concepts": ["concept1", "concept2"],
-      "difficulty": "${difficulty}"
-    }
-  ]
-}`;
-
-    const response = await GeminiService.generateContent(prompt);
-    return JSON.parse(response);
-  }
-
-  static async generateConceptRaceContent(materials, difficulty) {
-    const materialTexts = materials.map(m => m.extractedText || m.content || '').join('\n\n');
-    
-    const prompt = `Based on the following course materials, create a concept race game at ${difficulty} difficulty:
-
-${materialTexts}
-
-Generate:
-1. Key concepts and their definitions
-2. Visual clues or descriptions
-3. Speed round questions
-4. Bonus challenges
-
-Format as JSON with this structure:
-{
-  "concepts": [
-    {
-      "id": "c1",
-      "name": "Concept Name",
-      "definition": "Definition here",
-      "visualClue": "Description or clue",
-      "difficulty": "${difficulty}"
-    }
-  ],
-  "speedRounds": [
-    {
-      "question": "Quick question",
-      "answer": "Answer",
-      "timeLimit": 10
-    }
-  ],
-  "bonusChallenges": [
-    {
-      "challenge": "Bonus challenge description",
-      "points": 50
-    }
-  ]
-}`;
-
-    const response = await GeminiService.generateContent(prompt);
-    return JSON.parse(response);
-  }
-
-  static async generateProblemSolvingContent(materials, difficulty) {
-    const materialTexts = materials.map(m => m.extractedText || m.content || '').join('\n\n');
-    
-    const prompt = `Based on the following course materials, create collaborative problem-solving scenarios at ${difficulty} difficulty:
-
-${materialTexts}
-
-Generate:
-1. Complex problems that require teamwork
-2. Step-by-step guidance
-3. Hints and tips
-4. Peer review criteria
-
-Format as JSON with problem scenarios, hints, and collaboration guidelines.`;
-
-    const response = await GeminiService.generateContent(prompt);
-    return JSON.parse(response);
-  }
-
-  static async generateCaseStudyContent(materials, difficulty) {
-    const materialTexts = materials.map(m => m.extractedText || m.content || '').join('\n\n');
-    
-    const prompt = `Based on the following course materials, create an interactive mystery case study at ${difficulty} difficulty:
-
-${materialTexts}
-
-Generate:
-1. Case study scenario
-2. Evidence pieces
-3. Decision points with branching paths
-4. Multiple endings based on choices
-
-Format as JSON with branching narrative structure.`;
-
-    const response = await GeminiService.generateContent(prompt);
-    return JSON.parse(response);
-  }
-
-  static async generateDebateContent(materials, difficulty) {
-    const materialTexts = materials.map(m => m.extractedText || m.content || '').join('\n\n');
-    
-    const prompt = `Based on the following course materials, create debate topics and structure at ${difficulty} difficulty:
-
-${materialTexts}
-
-Generate:
-1. Debate topics with pro/con positions
-2. Key arguments and counterarguments
-3. Fact-checking points
-4. Scoring criteria
-
-Format as JSON with debate structure and moderation guidelines.`;
-
-    const response = await GeminiService.generateContent(prompt);
-    return JSON.parse(response);
-  }
-
-  static async generateSimulationContent(materials, difficulty) {
-    const materialTexts = materials.map(m => m.extractedText || m.content || '').join('\n\n');
-    
-    const prompt = `Based on the following course materials, create interactive simulation scenarios at ${difficulty} difficulty:
-
-${materialTexts}
-
-Generate:
-1. Simulation parameters and variables
-2. Experiment scenarios
-3. Data collection points
-4. Analysis questions
-
-Format as JSON with simulation setup and analysis framework.`;
-
-    const response = await GeminiService.generateContent(prompt);
-    return JSON.parse(response);
-  }
-
-  /**
-   * Test endpoint to debug form parsing
-   * @route POST /api/ai/test-form
-   */
-  static async testFormParsing(req, res) {
-    try {
-      console.log('=== TEST FORM PARSING ===');
-      console.log('Request body:', req.body);
-      console.log('Request file:', req.file);
-      
-      let { questionPoints } = req.body;
-      console.log('Raw questionPoints:', questionPoints, typeof questionPoints);
-      
-      // Parse questionPoints if it's a JSON string
-      if (typeof questionPoints === 'string') {
-        try {
-          questionPoints = JSON.parse(questionPoints);
-          console.log('Parsed questionPoints:', questionPoints);
-        } catch (parseError) {
-          console.error('Error parsing questionPoints JSON:', parseError);
-          questionPoints = null;
-        }
-      }
-      
-      res.json({
-        success: true,
-        data: {
-          body: req.body,
-          questionPoints: questionPoints,
-          parsedCorrectly: Array.isArray(questionPoints)
-        }
-      });
-    } catch (error) {
-      console.error('Test form parsing error:', error);
-      res.status(500).json({ error: error.message });
-    }
-  }
-
-  /**
-   * Generate a practice exam using Gemini
-   * @route POST /api/ai/practice-exam
-   */
   static async generatePracticeExam(req, res) {
+    return ContentGenerationController.generatePracticeExam(req, res);
+  }
+
+  // Document Analysis
+  static async testFormParsing(req, res) {
+    return AnalysisController.testFormParsing(req, res);
+  }
+
+  static async downloadPDF(req, res) {
+    return AnalysisController.downloadPDF(req, res);
+  }
+
+  static async analyzeDocument(req, res) {
+    return AnalysisController.analyzeDocument(req, res);
+  }
+
+  static async batchAnalyzeDocuments(req, res) {
+    return AnalysisController.batchAnalyzeDocuments(req, res);
+  }
+
+  // Legacy Activity Methods (for backward compatibility)
+  static async createActivity(req, res) {
+    // Redirect to new activity controller
+    const ActivityController = require('./activity.controller');
+    const activityController = new ActivityController();
+    return activityController.createActivity(req, res);
+  }
+
+  static async getActivities(req, res) {
+    // Redirect to new activity controller
+    const ActivityController = require('./activity.controller');
+    const activityController = new ActivityController();
+    return activityController.getMyActivities(req, res);
+  }
+
+  static async getActivity(req, res) {
+    // Redirect to new activity controller
+    const ActivityController = require('./activity.controller');
+    const activityController = new ActivityController();
+    return activityController.getActivity(req, res);
+  }
+
+  static async updateActivity(req, res) {
+    // Redirect to new activity controller
+    const ActivityController = require('./activity.controller');
+    const activityController = new ActivityController();
+    return activityController.updateActivity(req, res);
+  }
+
+  static async startActivity(req, res) {
+    // Redirect to new activity controller
+    const ActivityController = require('./activity.controller');
+    const activityController = new ActivityController();
+    return activityController.startSession(req, res);
+  }
+
+  static async joinActivity(req, res) {
+    // Redirect to new activity controller
+    const ActivityController = require('./activity.controller');
+    const activityController = new ActivityController();
+    return activityController.joinActivity(req, res);
+  }
+
+  // Generate Neural Conquest topics WITHOUT 3D models (for topic selection phase)
+  static async generateNeuralConquestTopics(req, res) {
     try {
-      const { subject, numQuestions, difficulty, instructions, generatePDF } = req.body;
-      let { questionPoints } = req.body;
-      const pdfFile = req.file;
-      
-      // Parse questionPoints if it's a JSON string
-      if (typeof questionPoints === 'string') {
-        try {
-          questionPoints = JSON.parse(questionPoints);
-        } catch (parseError) {
-          console.error('Error parsing questionPoints JSON:', parseError);
-          questionPoints = null;
-        }
-      }
-      
-      // CRITICAL: Always ensure we have questionPoints - generate if not provided
-      const numQuestionsInt = numQuestions ? parseInt(numQuestions) : 10;
-      if (!questionPoints || !Array.isArray(questionPoints) || questionPoints.length !== numQuestionsInt) {
-        console.log('=== GENERATING POINTS ON BACKEND (FALLBACK) ===');
-        questionPoints = AIController.generatePointDistribution(numQuestionsInt);
-        console.log('Generated fallback points:', questionPoints);
-      }
-      
-      console.log('=== PRACTICE EXAM GENERATION START ===');
-      console.log('Request body:', { subject, numQuestions, difficulty, instructions, generatePDF, questionPoints });
-      console.log('Uploaded file:', pdfFile ? { 
-        filename: pdfFile.filename, 
-        originalname: pdfFile.originalname, 
-        size: pdfFile.size,
-        path: pdfFile.path 
-      } : 'No file uploaded');
-      
-      if (!subject) {
-        return res.status(400).json({ success: false, message: 'Missing required field: subject' });
-      }
-      
-      // STEP 1: Generate interactive questions 
-      console.log('=== GENERATING INTERACTIVE QUESTIONS ===');
-      let interactiveResult;
-      
-      if (pdfFile && pdfFile.path) {
-        // If PDF is uploaded, generate questions based on PDF CONTENT
-        console.log('=== USING PDF CONTENT FOR QUESTION GENERATION ===');
-        console.log('PDF file:', pdfFile.originalname, 'Size:', pdfFile.size);
-        
-        interactiveResult = await GeminiService.generatePracticeExam({
-          subject,
-          numQuestions: numQuestionsInt,
-          difficulty: difficulty || 'medium',
-          instructions: instructions || '',
-          pdfPath: pdfFile.path // Use PDF content to generate questions
-        });
-      } else {
-        // No PDF uploaded, generate general questions about the subject
-        console.log('=== GENERATING GENERAL QUESTIONS (NO PDF) ===');
-        
-        interactiveResult = await GeminiService.generatePracticeExam({
-          subject,
-          numQuestions: numQuestionsInt,
-          difficulty: difficulty || 'medium',
-          instructions: instructions || '',
-          pdfPath: null // No PDF, generate general questions
+      const { topicDescription, difficulty = 'medium', subjectArea } = req.body;
+
+      if (!topicDescription || topicDescription.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Topic description is required'
         });
       }
+
+      console.log(`🎯 Generating Neural Conquest topics for: ${topicDescription}`);
+
+      // Fix: Pass topicDescription (not subjectArea) to determineOptimalTopicCount
+      // Determine optimal topic count based on the actual description content
+      const optimalCount = AIController.determineOptimalTopicCount(topicDescription, 7); // Default 7 as fallback
+      console.log(`📊 Optimal topic count determined: ${optimalCount} for "${topicDescription}" (${difficulty})`);
+
+      // Generate comprehensive prompt for topics and questions
+      const prompt = `You are an expert educational content creator AND 3D modeling specialist. Generate exactly ${optimalCount} educational topics for Neural Conquest game based on: "${topicDescription}"
+
+🎯 NEURAL CONQUEST CONTEXT:
+- This is a turn-based strategy game where players conquer "neural nodes" (3D objects) by answering questions
+- Each topic becomes a 3D object that players can interact with in a brain-themed neural network
+- Objects will be generated using OpenAI Shap-E (text-to-3D AI model)
+- Topics should represent learnable concepts that can be visualized as distinct 3D objects
+
+📐 SHAP-E 3D MODELING REQUIREMENTS:
+Shap-E works best with VERY DETAILED, SPECIFIC descriptions that include:
+- Clear geometric shapes and proportions
+- Spatial relationships between parts
+- Visual characteristics (colors, textures, materials)
+- Scale references (size comparisons)
+- Structural details and components
+- Context and setting
+
+⚠️ AVOID: Vague terms like "detailed model" or "representation"
+✅ USE: Specific shapes, clear proportions, visual details, structural elements
+
+REQUIREMENTS:
+- Create exactly ${optimalCount} distinct educational topics/objects
+- Each topic should have clear educational value suitable for ${subjectArea || 'general education'}
+- Include difficulty progression from basic (1-2) to advanced (4-5)
+- Make topics engaging for interactive 3D neural network conquest
+- Each description MUST be optimized for Shap-E 3D generation
+
+FORMAT YOUR RESPONSE EXACTLY AS:
+
+TOPICS:
+[Topic 1]
+Name: [Clear, memorable topic name]
+Description: [CRITICAL: Write a detailed Shap-E prompt that describes the exact 3D object to generate. Include specific shapes, proportions, visual elements, colors, and structural details. Be as descriptive as possible for 3D modeling. Example: "a detailed miniature volcano model with a cone-shaped mountain featuring a circular crater at the top, visible lava flows cascading down the steep slopes, rocky textured surfaces with dark gray and brown colors, small trees dotting the base, and wispy smoke rising from the crater opening"]
+Concept: [Subject area - geography, history, science, technology, mathematics, art, biology, economics, literature, physics, chemistry]
+Difficulty: [1-5, with 1-2 being introductory, 3-4 intermediate, 5 advanced]
+Cost: [400-1200 synapse based on difficulty: 400-500 for diff 1-2, 600-800 for diff 3-4, 900-1200 for diff 5]
+Educational Value: [Specific learning outcomes - what students will understand after engaging with this topic]
+
+[Topic 2]
+Name: [Clear, memorable topic name]
+Description: [CRITICAL: Another detailed Shap-E prompt with specific 3D modeling instructions. Include exact shapes, measurements, colors, textures, and structural components. Make it visually distinct from other topics.]
+Concept: [Subject area]
+Difficulty: [1-5]
+Cost: [400-1200 based on difficulty]
+Educational Value: [Specific learning outcomes]
+
+[Continue for all ${optimalCount} topics - ensure each Description is a detailed Shap-E 3D modeling prompt...]
+
+QUESTIONS:
+Generate 15 multiple-choice questions covering these topics:
+
+[Question 1]
+Q: [Educational question related to the first few topics]
+A) [Option A]
+B) [Option B]
+C) [Option C] 
+D) [Option D]
+Correct: [A/B/C/D]
+Difficulty: [1-5]
+Topic: [Related topic name]
+
+[Continue for 15 questions total, covering all topics...]
+
+🎯 REMEMBER: The Description field is the most critical part - it becomes the Shap-E prompt that generates the 3D model. Make each one detailed, specific, and visually descriptive for optimal 3D generation results.`;
+
+      // Call Gemini AI with retry logic and improved error handling
+      console.log('🤖 Calling Gemini AI for topic generation...');
+      const aiResponse = await geminiService.generateContent(prompt, 5); // 5 retries for critical functionality
       
-      console.log('=== INTERACTIVE QUESTIONS GENERATED ===');
-      console.log('Result type:', typeof interactiveResult);
-      console.log('Result keys:', Object.keys(interactiveResult));
-      console.log('Text length:', interactiveResult.text ? interactiveResult.text.length : 'No text');
-      console.log('Text preview:', interactiveResult.text ? interactiveResult.text.substring(0, 200) + '...' : 'No text');
+      // DEBUG: Log the actual response
+      console.log('🔍 Gemini response type:', typeof aiResponse);
+      console.log('🔍 Gemini response length:', aiResponse?.length);
+      console.log('🔍 Gemini response preview:', aiResponse?.substring(0, 200));
       
-      // If result is a string, wrap it in { text: ... }
-      if (typeof interactiveResult === 'string') {
-        interactiveResult = { text: interactiveResult };
+      if (!aiResponse || typeof aiResponse !== 'string' || aiResponse.trim().length === 0) {
+        throw new Error('Empty or invalid response from Gemini AI');
       }
+      
+      console.log(`📝 Generated ${aiResponse.length} characters of content for Neural Conquest`);
 
-      // CRITICAL: Always add questionPoints to response for frontend interactive grading
-      interactiveResult.questionPoints = questionPoints;
-      console.log('=== ADDED POINTS TO RESPONSE FOR FRONTEND ===');
-      console.log('Points that will be sent to frontend:', questionPoints);
-
-      // STEP 2: Generate PDF with template formatting if requested
-      if (generatePDF === 'true' || generatePDF === true) {
-        console.log('=== PDF GENERATION REQUESTED ===');
-        console.log('Question points for PDF:', questionPoints);
+      // Parse the AI response into structured data
+      const parsedData = AIController.parseNeuralConquestResponse(aiResponse);
+      
+      // If parsing failed, create fallback topics based on the description
+      if (!parsedData.topics || parsedData.topics.length === 0) {
+        console.warn('⚠️ AI parsing failed, creating enhanced fallback topics');
+        const fallbackData = AIController.createEnhancedFallbackTopics(topicDescription, optimalCount);
         
-        let pdfContent = interactiveResult.text;
-        
-        // If we have a PDF template, generate formatted content for PDF
-        if (pdfFile && pdfFile.path) {
-          console.log('=== GENERATING PDF-FORMATTED CONTENT WITH TEMPLATE ===');
-          console.log('Template file path:', pdfFile.path);
-          console.log('Interactive questions to format:', interactiveResult.text.substring(0, 200) + '...');
-          console.log('Question points to include:', questionPoints);
-          
-          try {
-            const pdfFormattedResult = await GeminiService.generateFormattedExamFromTemplate({
-              subject,
-              numQuestions: numQuestionsInt,
-              difficulty: difficulty || 'medium',
-              instructions: instructions || '',
-              pdfPath: pdfFile.path,
-              interactiveQuestions: interactiveResult.text,
-              questionPoints: questionPoints // Pass points to formatting
-            });
-            
-            console.log('=== TEMPLATE FORMATTING RESULT ===');
-            console.log('Result type:', typeof pdfFormattedResult);
-            console.log('Result keys:', Object.keys(pdfFormattedResult || {}));
-            console.log('Has text:', !!pdfFormattedResult?.text);
-            console.log('Text length:', pdfFormattedResult?.text?.length || 0);
-            console.log('Full formatted content:', pdfFormattedResult?.text || 'NO CONTENT');
-            
-            if (pdfFormattedResult && pdfFormattedResult.text) {
-              pdfContent = pdfFormattedResult.text;
-              console.log('=== USING TEMPLATE-FORMATTED CONTENT ===');
-              console.log('Template content preview:', pdfContent.substring(0, 500) + '...');
-            } else {
-              console.log('=== TEMPLATE FORMATTING FAILED - NO TEXT RETURNED ===');
-            }
-          } catch (pdfFormatError) {
-            console.error('=== ERROR GENERATING PDF-FORMATTED CONTENT ===');
-            console.error('PDF Format Error details:', pdfFormatError);
-            console.error('PDF Format Error message:', pdfFormatError.message);
-            console.error('PDF Format Error stack:', pdfFormatError.stack);
-            // Fall back to using interactive content for PDF
-            console.log('Falling back to interactive content for PDF');
+        return res.json({
+          success: true,
+          data: {
+            topics: fallbackData.topics,
+            questions: fallbackData.questions,
+            totalTopics: fallbackData.topics.length,
+            optimalCount: optimalCount,
+            subjectArea: subjectArea || AIController.inferMainSubject(topicDescription),
+            difficulty: difficulty,
+            generated3DModels: false,
+            needsModelGeneration: true,
+            isFallback: true,
+            generatedAt: new Date().toISOString()
           }
-        } else {
-          console.log('=== NO TEMPLATE PROVIDED - USING CLEAN QUESTIONS ===');
-        }
-        
-        // CRITICAL: ALWAYS add points to PDF content (whether template or not)
-        if (pdfContent === interactiveResult.text) {
-          // If we're using the clean interactive content (no template or template failed), add points
-          console.log('=== ADDING POINTS TO CLEAN QUESTIONS FOR PDF ===');
-          pdfContent = AIController.addPointsToQuestions(interactiveResult.text, questionPoints);
-          console.log('PDF content with points length:', pdfContent.length);
-          console.log('PDF content with points preview:', pdfContent.substring(0, 200) + '...');
-        } else {
-          // Template was used - points should already be included by the template formatting
-          console.log('=== USING TEMPLATE-FORMATTED CONTENT (POINTS INCLUDED) ===');
-        }
-        
-        try {
-          console.log('Starting PDF generation with PDFService...');
-          console.log('Content to PDF service - type:', typeof pdfContent);
-          console.log('Content to PDF service - length:', pdfContent ? pdfContent.length : 'No content');
-          console.log('Content to PDF service - preview:', pdfContent ? pdfContent.substring(0, 100) + '...' : 'No content');
-          console.log('Subject:', subject);
-          console.log('Options:', { 
-            difficulty: difficulty || 'medium',
-            instructions: instructions || '',
-            numQuestions: numQuestionsInt,
-            questionPoints: questionPoints
-          });
-          
-          const pdfBuffer = await PDFService.generateExamPDF(
-            pdfContent, 
-            subject, 
-            { 
-              difficulty: difficulty || 'medium',
-              instructions: instructions || '',
-              numQuestions: numQuestionsInt,
-              questionPoints: questionPoints
-            }
-          );
-          
-          console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
-          
-          // Save PDF temporarily
-          const filename = `practice-exam-${subject.replace(/\s+/g, '-')}-${Date.now()}.pdf`;
-          console.log('Saving PDF with filename:', filename);
-          const pdfPath = await PDFService.savePDFToFile(pdfBuffer, filename);
-          console.log('PDF saved to:', pdfPath);
-          
-          interactiveResult.pdfDownloadUrl = `/api/ai/download-pdf/${filename}`;
-          interactiveResult.pdfGenerated = true;
-          
-          console.log('=== PDF GENERATION SUCCESSFUL ===');
-        } catch (pdfError) {
-          console.error('=== PDF GENERATION ERROR ===');
-          console.error('PDF Error details:', pdfError);
-          console.error('PDF Error message:', pdfError.message);
-          console.error('PDF Error stack:', pdfError.stack);
-          interactiveResult.pdfError = `Failed to generate PDF: ${pdfError.message}`;
-        }
-      }
-
-      // Clean up uploaded file if present
-      if (pdfFile) {
-        console.log('Cleaning up uploaded file:', pdfFile.path);
-        const fs = require('fs').promises;
-        await fs.unlink(pdfFile.path);
+        });
       }
       
-      console.log('=== SENDING RESPONSE ===');
-      console.log('Final result keys:', Object.keys(interactiveResult));
-      console.log('Final questionPoints in response:', interactiveResult.questionPoints);
-      res.json({ success: true, data: interactiveResult });
+      // IMPORTANT: DO NOT generate 3D models here - just return topic data for selection
+      console.log(`✅ Generated ${parsedData.topics.length} topics and ${parsedData.questions.length} questions for selection`);
+
+      return res.json({
+        success: true,
+        data: {
+          topics: parsedData.topics,
+          questions: parsedData.questions,
+          totalTopics: parsedData.topics.length,
+          optimalCount: optimalCount,
+          subjectArea: subjectArea || AIController.inferMainSubject(topicDescription),
+          difficulty: difficulty,
+          generated3DModels: false, // Key flag - no 3D models yet
+          needsModelGeneration: true, // Flag for frontend
+          generatedAt: new Date().toISOString()
+        }
+      });
+
     } catch (error) {
-      console.error('=== GENERAL ERROR ===');
-      console.error('Error details:', error);
-      handleError(error, res);
+      console.error('❌ Error generating Neural Conquest topics:', error);
+      // Always fall back to enhanced topics to avoid blocking UX
+      const fallbackCount = AIController.determineOptimalTopicCount(topicDescription, 7);
+      const fallbackData = AIController.createEnhancedFallbackTopics(topicDescription, fallbackCount);
+      return res.json({
+        success: true,
+        data: {
+          topics: fallbackData.topics,
+          questions: fallbackData.questions,
+          totalTopics: fallbackData.topics.length,
+          optimalCount: fallbackCount,
+          subjectArea: subjectArea || AIController.inferMainSubject(topicDescription),
+          difficulty: difficulty,
+          generated3DModels: false,
+          needsModelGeneration: true,
+          isFallback: true,
+          fallbackReason: error.message || 'AI generation failed; using fallback',
+          generatedAt: new Date().toISOString()
+        }
+      });
     }
   }
 
-  /**
-   * Helper function to generate point distribution (same logic as frontend)
-   */
-  static generatePointDistribution(numQuestions, totalPoints = 100) {
-    if (numQuestions <= 0) return [];
-    if (numQuestions === 1) return [totalPoints];
-    
-    // Generate random weights for each question
-    const weights = [];
-    for (let i = 0; i < numQuestions; i++) {
-      weights.push(Math.random() * 0.5 + 0.5); // Random between 0.5 and 1.0
+  // NEW: Generate 3D models for selected topics (called after user selection)
+  static async generate3DModelsForSelectedTopics(req, res) {
+    try {
+      const { selectedTopics, sessionData } = req.body;
+
+      if (!selectedTopics || !Array.isArray(selectedTopics) || selectedTopics.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Selected topics array is required'
+        });
+      }
+
+      console.log(`🎯 Generating 3D models for ${selectedTopics.length} selected topics...`);
+
+      // Initialize 3D model generator
+      const ThreeDModelGenerator = require('../services/3d-model-generator.service.js');
+      const modelGenerator = new ThreeDModelGenerator();
+
+      // Generate unique session ID for progress tracking
+      const sessionId = `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Prepare all object data for parallel generation
+      const objectsData = selectedTopics.map((topic, i) => ({
+            name: topic.name,
+            description: topic.description,
+            concept: topic.concept,
+            difficulty: topic.difficulty,
+            visualStyle: AIController.determineVisualStyle(topic.concept, topic.difficulty),
+        educationalContext: topic.educationalValue || topic.description,
+        sessionId: sessionId,
+        currentIndex: i + 1,
+        totalModels: selectedTopics.length,
+        topicIndex: i // For position calculation
+      }));
+
+      console.log(`🚀 Starting parallel Shap-E generation for ${objectsData.length} objects...`);
+
+      // Emit initial progress via WebSocket
+      if (global.io) {
+        global.io.emit('generation-progress', {
+          sessionId: sessionId,
+          current: 0,
+          total: selectedTopics.length,
+          stage: 'starting_parallel',
+          message: `Starting parallel generation of ${selectedTopics.length} 3D models...`
+        });
+      }
+
+      // Generate ALL models in parallel using Shap-E
+      const modelResults = await modelGenerator.generateMultiple3DModels(objectsData);
+
+      // Process results and create enhanced topics
+      const topicsWithModels = [];
+      const generationErrors = [];
+
+      for (let i = 0; i < selectedTopics.length; i++) {
+        const topic = selectedTopics[i];
+        const modelResult = modelResults[i];
+
+        if (modelResult.success) {
+          // Successful generation
+          const enhancedTopic = {
+            ...topic,
+            id: `topic_${i}`,
+            
+            // Real 3D model data from Shap-E
+            modelUrl: modelResult.modelUrl,
+            
+            // Enhanced metadata for Shap-E
+            metadata: {
+              hasCustomModel: true,
+              isCustomGenerated: true,
+              modelProvider: modelResult.modelProvider || 'OpenAI Shap-E',
+              quality: modelResult.quality,
+              generatedAt: modelResult.generatedAt,
+              fileSize: modelResult.fileSize,
+              shapEGenerated: true
+            },
+            
+            // 3D properties
+            model: {
+              position: AIController.calculateSpherePosition(i, selectedTopics.length),
+              scale: modelResult.scale || 1.0,
+              animations: modelResult.animations || ['rotate', 'glow'],
+              materials: modelResult.materials || ['shap_e_generated']
+            },
+            
+            // Game properties
+            cost: topic.cost || (400 + (topic.difficulty * 200)),
+            color: AIController.getConceptColor(topic.concept)
+          };
+
+          topicsWithModels.push(enhancedTopic);
+          console.log(`✅ Processed Shap-E model for: ${topic.name}`);
+
+        } else {
+          // Failed generation
+          console.error(`❌ Shap-E generation failed for ${topic.name}:`, modelResult.error);
+          
+          generationErrors.push({
+            topic: topic.name,
+            error: modelResult.error,
+            index: i
+          });
+
+          // Add topic without 3D model (will show error state in frontend)
+          const fallbackTopic = {
+            ...topic,
+            id: `topic_${i}`,
+            modelUrl: null,
+            metadata: {
+              hasCustomModel: false,
+              generationFailed: true,
+              error: modelResult.error,
+              shapEAttempted: true
+            },
+            model: {
+              position: AIController.calculateSpherePosition(i, selectedTopics.length)
+            },
+            cost: topic.cost || (400 + (topic.difficulty * 200)),
+            color: AIController.getConceptColor(topic.concept)
+          };
+
+          topicsWithModels.push(fallbackTopic);
+        }
+      }
+
+      // Emit completion progress via WebSocket
+      if (global.io) {
+        global.io.emit('generation-progress', {
+          sessionId: sessionId,
+          current: selectedTopics.length,
+          total: selectedTopics.length,
+          stage: 'completed',
+          message: `Parallel generation complete: ${topicsWithModels.filter(t => t.metadata.hasCustomModel).length} successful`
+        });
+      }
+
+      console.log(`🎉 3D model generation complete! Success: ${topicsWithModels.filter(t => t.metadata.hasCustomModel).length}/${selectedTopics.length}`);
+
+      return res.json({
+        success: true,
+        data: {
+          topics: topicsWithModels,
+          totalTopics: topicsWithModels.length,
+          successfulModels: topicsWithModels.filter(t => t.metadata.hasCustomModel).length,
+          failedModels: generationErrors.length,
+          errors: generationErrors,
+          generated3DModels: true, // Key flag - 3D models are ready
+          generatedAt: new Date().toISOString(),
+          sessionId: sessionId // Include session ID for frontend tracking
+        },
+        message: `Generated 3D models for ${topicsWithModels.filter(t => t.metadata.hasCustomModel).length} topics`
+      });
+
+    } catch (error) {
+      console.error('❌ Error generating 3D models for selected topics:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate 3D models',
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
-    
-    // Calculate total weight
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    
-    // Convert weights to points and ensure they sum to totalPoints
-    let points = weights.map(weight => Math.round((weight / totalWeight) * totalPoints));
-    
-    // Adjust for rounding errors
-    const currentTotal = points.reduce((sum, p) => sum + p, 0);
-    const difference = totalPoints - currentTotal;
-    
-    if (difference !== 0) {
-      // Add/subtract the difference to/from the largest point value
-      const maxIndex = points.indexOf(Math.max(...points));
-      points[maxIndex] += difference;
-    }
-    
-    // Ensure no question has less than 5 points or more than 40 points
-    points = points.map(p => Math.max(5, Math.min(40, p)));
-    
-    // Final adjustment to maintain total
-    const finalTotal = points.reduce((sum, p) => sum + p, 0);
-    const finalDifference = totalPoints - finalTotal;
-    if (finalDifference !== 0) {
-      const adjustIndex = points.indexOf(Math.max(...points));
-      points[adjustIndex] += finalDifference;
-    }
-    
-    return points;
   }
 
-  /**
-   * Helper function to add point values to clean questions
-   */
-  static addPointsToQuestions(questionsText, questionPoints) {
-    if (!questionPoints || questionPoints.length === 0) {
-      return questionsText;
+  // Determine optimal topic count based on subject matter
+  static determineOptimalTopicCount(description, targetCount) {
+    const lowerDesc = description.toLowerCase();
+    
+    // Specific subject mappings
+    if (lowerDesc.includes('continents')) return 7; // 7 continents
+    if (lowerDesc.includes('oceans')) return 5; // 5 oceans
+    if (lowerDesc.includes('solar system') || lowerDesc.includes('planets')) return 8; // 8 planets
+    if (lowerDesc.includes('world war')) return 6; // Major theaters/periods
+    if (lowerDesc.includes('calc') || lowerDesc.includes('calculus')) return 12; // Major calculus topics
+    if (lowerDesc.includes('algebra')) return 10; // Algebra fundamentals
+    if (lowerDesc.includes('geometry')) return 8; // Geometric concepts
+    if (lowerDesc.includes('chemistry') && lowerDesc.includes('periodic')) return 18; // Major element groups
+    if (lowerDesc.includes('biology') && lowerDesc.includes('systems')) return 11; // Body systems
+    
+    // Subject-based defaults
+    if (lowerDesc.includes('math') || lowerDesc.includes('calculus') || lowerDesc.includes('algebra')) {
+      return Math.min(15, Math.max(8, targetCount)); // Math needs more granular topics
+    }
+    if (lowerDesc.includes('geography') || lowerDesc.includes('countries')) {
+      return Math.min(10, Math.max(5, targetCount)); // Geography varies by scope
+    }
+    if (lowerDesc.includes('history')) {
+      return Math.min(8, Math.max(5, targetCount)); // History by periods/events
+    }
+    if (lowerDesc.includes('science')) {
+      return Math.min(12, Math.max(6, targetCount)); // Science by phenomena/concepts
     }
     
-    const lines = questionsText.split('\n');
-    const result = [];
-    let questionIndex = 0;
+    // Default to target with reasonable bounds
+    return Math.min(12, Math.max(5, targetCount));
+  }
+
+  // Create fallback topics when AI fails
+  static createFallbackTopics(description, count) {
+    const fallbackTopics = [];
+    
+    for (let i = 0; i < count; i++) {
+      fallbackTopics.push(AIController.createFallbackTopic(description, i));
+    }
+    
+    return { topics: fallbackTopics };
+  }
+
+  static createFallbackTopic(description, index) {
+    return {
+      name: `Learning Territory ${index + 1}`,
+      description: `Educational content related to ${description}`,
+      object3D: {
+        name: `Knowledge Crystal ${index + 1}`,
+        description: `A crystalline structure containing knowledge about ${description}. Made of translucent crystal with glowing energy veins.`,
+        concept: AIController.inferConcept(description, description),
+        visualStyle: 'stylized'
+      },
+      icon: ['🎯', '🏆', '⭐', '🎨', '🔬', '🌟', '💡'][index] || '🎯',
+      cost: 400 + (index * 200),
+      difficulty: Math.min(1 + Math.floor(index / 2), 5),
+      educationalValue: `Knowledge about ${description.split(' ').slice(0, 3).join(' ')}`
+    };
+  }
+
+  // Infer concept category from topic name/description
+  static inferConcept(topicName, description) {
+    const combined = `${topicName} ${description}`.toLowerCase();
+    
+    if (combined.includes('geography') || combined.includes('continents') || combined.includes('countries') || 
+        combined.includes('mountains') || combined.includes('rivers') || combined.includes('oceans')) {
+      return 'geography';
+    }
+    if (combined.includes('history') || combined.includes('ancient') || combined.includes('war') || 
+        combined.includes('civilization') || combined.includes('empire')) {
+      return 'history';
+    }
+    if (combined.includes('science') || combined.includes('physics') || combined.includes('chemistry') || 
+        combined.includes('biology') || combined.includes('atom') || combined.includes('molecule')) {
+      return 'science';
+    }
+    if (combined.includes('technology') || combined.includes('computer') || combined.includes('ai') || 
+        combined.includes('robot') || combined.includes('digital')) {
+      return 'technology';
+    }
+    if (combined.includes('math') || combined.includes('algebra') || combined.includes('geometry') || 
+        combined.includes('calculus') || combined.includes('equation')) {
+      return 'mathematics';
+    }
+    if (combined.includes('art') || combined.includes('painting') || combined.includes('sculpture') || 
+        combined.includes('music') || combined.includes('culture')) {
+      return 'art';
+    }
+    
+    return 'general';
+  }
+
+  // Sanitize topic name to create valid ID
+  static sanitizeId(name) {
+    return name.toLowerCase()
+               .replace(/[^a-z0-9\s]/g, '')
+               .replace(/\s+/g, '_')
+               .substring(0, 50);
+  }
+
+  // Helper method to parse Neural Conquest AI response
+  static parseNeuralConquestResponse(aiResponse) {
+    const topics = [];
+    const questions = [];
+
+    try {
+      // Split into sections
+      const sections = aiResponse.split(/TOPICS:|QUESTIONS:/i);
+      
+      if (sections.length >= 2) {
+        const topicsSection = sections[1];
+        const questionsSection = sections[2] || '';
+
+        // Parse topics
+        const topicBlocks = topicsSection.split(/\[Topic \d+\]/i).filter(block => block.trim());
+        
+        for (const block of topicBlocks) {
+          const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+          const topic = {};
+          
+          for (const line of lines) {
+            if (line.startsWith('Name:')) {
+              topic.name = line.replace('Name:', '').trim();
+            } else if (line.startsWith('Description:')) {
+              topic.description = line.replace('Description:', '').trim();
+            } else if (line.startsWith('Concept:')) {
+              topic.concept = line.replace('Concept:', '').trim();
+            } else if (line.startsWith('Difficulty:')) {
+              topic.difficulty = parseInt(line.replace('Difficulty:', '').trim()) || 1;
+            } else if (line.startsWith('Cost:')) {
+              topic.cost = parseInt(line.replace('Cost:', '').trim()) || 500;
+            } else if (line.startsWith('Educational Value:')) {
+              topic.educationalValue = line.replace('Educational Value:', '').trim();
+            }
+          }
+          
+          if (topic.name && topic.description) {
+            // Generate intelligent icon based on topic content
+            topic.icon = AIController.generateTopicIcon(topic.name, topic.description, topic.concept);
+            topics.push(topic);
+          }
+        }
+
+        // Parse questions
+        const questionBlocks = questionsSection.split(/\[Question \d+\]/i).filter(block => block.trim());
+        
+        for (const block of questionBlocks) {
+          const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+          const question = { options: [] };
+          
+          for (const line of lines) {
+            if (line.startsWith('Q:')) {
+              question.question = line.replace('Q:', '').trim();
+            } else if (line.match(/^[A-D]\)/)) {
+              const option = line.substring(2).trim();
+              const letter = line.charAt(0);
+              question.options.push({ letter, text: option });
+            } else if (line.startsWith('Correct:')) {
+              question.correct = line.replace('Correct:', '').trim();
+            } else if (line.startsWith('Difficulty:')) {
+              question.difficulty = parseInt(line.replace('Difficulty:', '').trim()) || 1;
+            } else if (line.startsWith('Topic:')) {
+              question.topic = line.replace('Topic:', '').trim();
+            }
+          }
+          
+          if (question.question && question.options.length === 4 && question.correct) {
+            questions.push(question);
+          }
+        }
+      }
+
+    } catch (parseError) {
+      console.warn('⚠️ Error parsing AI response, using fallback parsing', parseError);
+      
+      // Fallback: extract any topics we can find
+      const fallbackTopics = AIController.extractFallbackTopics(aiResponse);
+      topics.push(...fallbackTopics);
+    }
+
+    return { topics, questions };
+  }
+
+  // NEW: Generate intelligent icons based on topic content
+  static generateTopicIcon(name, description, concept) {
+    const combined = `${name} ${description}`.toLowerCase();
+    
+    // Geography-specific icons
+    if (combined.includes('africa') || combined.includes('sahara')) return '🌍';
+    if (combined.includes('asia') || combined.includes('himalaya') || combined.includes('china') || combined.includes('india')) return '🏔️';
+    if (combined.includes('europe') || combined.includes('alps') || combined.includes('mediterranean')) return '🏰';
+    if (combined.includes('north america') || combined.includes('america') || combined.includes('canada') || combined.includes('usa')) return '🗽';
+    if (combined.includes('south america') || combined.includes('amazon') || combined.includes('brazil') || combined.includes('andes')) return '🌿';
+    if (combined.includes('australia') || combined.includes('oceania') || combined.includes('pacific')) return '🦘';
+    if (combined.includes('antarctica') || combined.includes('arctic') || combined.includes('polar')) return '🐧';
+    
+    // Ocean and water features
+    if (combined.includes('ocean') || combined.includes('pacific') || combined.includes('atlantic') || combined.includes('indian ocean')) return '🌊';
+    if (combined.includes('river') || combined.includes('nile') || combined.includes('amazon river') || combined.includes('mississippi')) return '🏞️';
+    if (combined.includes('lake') || combined.includes('great lakes') || combined.includes('superior')) return '🏔️';
+    
+    // Mountain ranges
+    if (combined.includes('mountain') || combined.includes('peak') || combined.includes('everest') || combined.includes('k2')) return '⛰️';
+    if (combined.includes('himalaya') || combined.includes('alps') || combined.includes('rockies') || combined.includes('andes')) return '🏔️';
+    if (combined.includes('volcano') || combined.includes('volcanic')) return '🌋';
+    
+    // History-specific icons
+    if (combined.includes('egypt') || combined.includes('pyramid') || combined.includes('pharaoh')) return '🏛️';
+    if (combined.includes('rome') || combined.includes('roman') || combined.includes('caesar') || combined.includes('colosseum')) return '🏛️';
+    if (combined.includes('greece') || combined.includes('greek') || combined.includes('athens') || combined.includes('sparta')) return '🏛️';
+    if (combined.includes('medieval') || combined.includes('castle') || combined.includes('knight')) return '🏰';
+    if (combined.includes('empire') || combined.includes('kingdom') || combined.includes('dynasty')) return '👑';
+    if (combined.includes('war') || combined.includes('battle') || combined.includes('military')) return '⚔️';
+    if (combined.includes('ancient') || combined.includes('civilization')) return '🏺';
+    
+    // Science-specific icons
+    if (combined.includes('solar system') || combined.includes('planet') || combined.includes('space')) return '🪐';
+    if (combined.includes('mars') || combined.includes('red planet')) return '🔴';
+    if (combined.includes('earth') || combined.includes('blue planet')) return '🌍';
+    if (combined.includes('moon') || combined.includes('lunar')) return '🌙';
+    if (combined.includes('sun') || combined.includes('solar')) return '☀️';
+    if (combined.includes('star') || combined.includes('galaxy')) return '⭐';
+    if (combined.includes('atom') || combined.includes('molecule') || combined.includes('chemistry')) return '⚛️';
+    if (combined.includes('dna') || combined.includes('genetics') || combined.includes('biology')) return '🧬';
+    if (combined.includes('cell') || combined.includes('microscope')) return '🔬';
+    if (combined.includes('physics') || combined.includes('energy') || combined.includes('force')) return '⚡';
+    
+    // Mathematics-specific icons
+    if (combined.includes('calculus') || combined.includes('integral') || combined.includes('derivative')) return '∫';
+    if (combined.includes('algebra') || combined.includes('equation') || combined.includes('variable')) return '📐';
+    if (combined.includes('geometry') || combined.includes('triangle') || combined.includes('circle')) return '📐';
+    if (combined.includes('statistics') || combined.includes('probability') || combined.includes('data')) return '📊';
+    if (combined.includes('number') || combined.includes('prime') || combined.includes('fibonacci')) return '🔢';
+    
+    // Technology-specific icons
+    if (combined.includes('computer') || combined.includes('programming') || combined.includes('code')) return '💻';
+    if (combined.includes('artificial intelligence') || combined.includes('ai') || combined.includes('machine learning')) return '🤖';
+    if (combined.includes('internet') || combined.includes('web') || combined.includes('network')) return '🌐';
+    if (combined.includes('robot') || combined.includes('automation')) return '🤖';
+    
+    // Art and culture icons
+    if (combined.includes('music') || combined.includes('symphony') || combined.includes('composer')) return '🎵';
+    if (combined.includes('painting') || combined.includes('artist') || combined.includes('canvas')) return '🎨';
+    if (combined.includes('sculpture') || combined.includes('statue')) return '🗿';
+    if (combined.includes('literature') || combined.includes('book') || combined.includes('novel')) return '📚';
+    
+    // Fallback icons based on concept
+    const conceptIcons = {
+      geography: '🌍',
+      history: '🏛️', 
+      science: '🔬',
+      technology: '💻',
+      mathematics: '📐',
+      art: '🎨',
+      biology: '🧬',
+      general: '🏆'
+    };
+    
+    return conceptIcons[concept] || '🏆';
+  }
+
+  // Fallback topic extraction if structured parsing fails
+  static extractFallbackTopics(text) {
+    const topics = [];
+    const lines = text.split('\n');
     
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
-      // Check if this line starts a new question
-      const questionMatch = line.match(/^(\d+)\.\s*(.*)/);
-      if (questionMatch && questionIndex < questionPoints.length) {
-        const questionNum = questionMatch[1];
-        const questionText = questionMatch[2];
-        const points = questionPoints[questionIndex];
-        
-        // Add the question with points
-        result.push(`${questionNum}. ${questionText} [${points} points]`);
-        questionIndex++;
-      } else {
-        // Keep the line as is
-        result.push(line);
+      const line = lines[i].trim();
+      if (line.includes('Name:') || line.match(/\d+\./)) {
+        const name = line.replace(/^\d+\./, '').replace('Name:', '').trim();
+        if (name.length > 3) {
+          topics.push({
+            name: name.substring(0, 50),
+            description: `Educational topic: ${name}`,
+            concept: 'general',
+            difficulty: Math.floor(Math.random() * 3) + 1,
+            cost: 400 + (Math.floor(Math.random() * 3) * 200),
+            educationalValue: `Learn about ${name}`
+          });
+        }
       }
     }
     
-    return result.join('\n');
+    return topics.slice(0, 8); // Limit fallback topics
   }
 
-  /**
-   * Download generated PDF
-   * @route GET /api/ai/download-pdf/:filename
-   */
-  static async downloadPDF(req, res) {
-    try {
-      const { filename } = req.params;
-      const path = require('path');
-      const fs = require('fs').promises;
+  // Additional helper methods for 3D model generation
+  static determineVisualStyle(concept, difficulty) {
+    const styleMap = {
+      geography: difficulty > 3 ? 'realistic' : 'stylized',
+      history: 'historical',
+      science: difficulty > 2 ? 'scientific' : 'futuristic',
+      technology: 'futuristic',
+      mathematics: 'abstract',
+      art: 'artistic',
+      biology: 'organic'
+    };
+    
+    return styleMap[concept] || 'realistic';
+  }
+
+  static calculateSpherePosition(index, total) {
+    const radius = 10; // Distance from center
+    const angle = (index / total) * 2 * Math.PI;
+    
+    return {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle * 0.5) * 2, // Add some vertical variation
+      z: Math.sin(angle) * radius
+    };
+  }
+
+  static getConceptColor(concept) {
+    const colorMap = {
+      geography: '#4A90E2', // Blue
+      history: '#D4AF37', // Gold
+      science: '#7ED321', // Green
+      technology: '#BD10E0', // Purple
+      mathematics: '#F5A623', // Orange
+      art: '#E91E63', // Pink
+      biology: '#4CAF50', // Light Green
+      general: '#9013FE' // Default Purple
+    };
+    
+    return colorMap[concept] || colorMap.general;
+  }
+
+  // NEW: Enhanced fallback topic generation based on description analysis
+  static createEnhancedFallbackTopics(description, count) {
+    const mainSubject = AIController.inferMainSubject(description);
+    const topics = [];
+    const questions = [];
+
+    // Create subject-specific topics based on description
+    const topicTemplates = AIController.getTopicTemplates(mainSubject, description);
+    
+    for (let i = 0; i < count; i++) {
+      const template = topicTemplates[i % topicTemplates.length];
+      const difficulty = Math.min(Math.floor(i / 2) + 1, 5);
       
-      // Validate filename to prevent directory traversal
-      if (!filename || filename.includes('..') || !filename.endsWith('.pdf')) {
-        return res.status(400).json({ error: 'Invalid filename' });
+      topics.push({
+        name: template.name.replace('{i}', i + 1),
+        description: template.description,
+        concept: mainSubject,
+        difficulty: difficulty,
+        cost: 400 + (difficulty * 150),
+        educationalValue: template.educationalValue,
+        icon: template.icon
+      });
+
+      // Generate related questions
+      if (i < 15) { // Generate up to 15 questions
+        questions.push({
+          question: template.sampleQuestion.replace('{i}', i + 1),
+          options: template.sampleOptions,
+          correct: template.correctAnswer,
+          difficulty: difficulty,
+          topic: template.name.replace('{i}', i + 1)
+        });
       }
-      
-      const filePath = path.join(__dirname, '../uploads', filename);
-      
-      // Check if file exists
-      try {
-        await fs.access(filePath);
-      } catch (error) {
-        return res.status(404).json({ error: 'PDF file not found' });
-      }
-      
-      // Set headers for PDF download
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      
-      // Stream the file
-      const fileBuffer = await fs.readFile(filePath);
-      res.send(fileBuffer);
-      
-      // Clean up the file after a delay (optional)
-      setTimeout(async () => {
-        await PDFService.cleanupPDF(filePath);
-      }, 60000); // Delete after 1 minute
-      
-    } catch (error) {
-      console.error('PDF download error:', error);
-      res.status(500).json({ error: 'Failed to download PDF' });
     }
+
+    return { topics, questions };
+  }
+
+  // Infer main subject from description
+  static inferMainSubject(description) {
+    const lowerDesc = description.toLowerCase();
+    
+    if (lowerDesc.includes('geography') || lowerDesc.includes('continents') || lowerDesc.includes('countries') || 
+        lowerDesc.includes('mountains') || lowerDesc.includes('rivers') || lowerDesc.includes('oceans')) {
+      return 'geography';
+    }
+    if (lowerDesc.includes('history') || lowerDesc.includes('ancient') || lowerDesc.includes('war') || 
+        lowerDesc.includes('civilization') || lowerDesc.includes('empire') || lowerDesc.includes('historical')) {
+      return 'history';
+    }
+    if (lowerDesc.includes('science') || lowerDesc.includes('physics') || lowerDesc.includes('chemistry') || 
+        lowerDesc.includes('biology') || lowerDesc.includes('atom') || lowerDesc.includes('molecule')) {
+      return 'science';
+    }
+    if (lowerDesc.includes('space') || lowerDesc.includes('planets') || lowerDesc.includes('astronomy') || 
+        lowerDesc.includes('solar system') || lowerDesc.includes('astronaut')) {
+      return 'science';
+    }
+    if (lowerDesc.includes('technology') || lowerDesc.includes('computer') || lowerDesc.includes('ai') || 
+        lowerDesc.includes('robot') || lowerDesc.includes('digital')) {
+      return 'technology';
+    }
+    if (lowerDesc.includes('math') || lowerDesc.includes('algebra') || lowerDesc.includes('geometry') || 
+        lowerDesc.includes('calculus') || lowerDesc.includes('equation')) {
+      return 'mathematics';
+    }
+    if (lowerDesc.includes('art') || lowerDesc.includes('painting') || lowerDesc.includes('sculpture') || 
+        lowerDesc.includes('music') || lowerDesc.includes('culture')) {
+      return 'art';
+    }
+    
+    return 'general';
+  }
+
+  // Get topic templates based on subject and description
+  static getTopicTemplates(subject, description) {
+    const templates = {
+      geography: [
+        {
+          name: "Continent Explorer {i}",
+          description: "Explore the unique features, climate, and cultures of major continents",
+          educationalValue: "Learn about continental geography, climate zones, and cultural diversity",
+          icon: "🌍",
+          sampleQuestion: "Which continent is known for the Sahara Desert?",
+          sampleOptions: [
+            { letter: 'A', text: 'Africa' },
+            { letter: 'B', text: 'Asia' },
+            { letter: 'C', text: 'Australia' },
+            { letter: 'D', text: 'South America' }
+          ],
+          correctAnswer: 'A'
+        },
+        {
+          name: "Ocean Territory {i}",
+          description: "Discover the mysteries of Earth's vast oceans and marine ecosystems",
+          educationalValue: "Understand ocean geography, marine life, and climate impact",
+          icon: "🌊",
+          sampleQuestion: "Which is the largest ocean on Earth?",
+          sampleOptions: [
+            { letter: 'A', text: 'Atlantic' },
+            { letter: 'B', text: 'Pacific' },
+            { letter: 'C', text: 'Indian' },
+            { letter: 'D', text: 'Arctic' }
+          ],
+          correctAnswer: 'B'
+        },
+        {
+          name: "Mountain Range {i}",
+          description: "Scale the world's highest peaks and understand geological formations",
+          educationalValue: "Learn about mountain formation, elevation, and geological processes",
+          icon: "🏔️",
+          sampleQuestion: "What is the highest mountain peak in the world?",
+          sampleOptions: [
+            { letter: 'A', text: 'K2' },
+            { letter: 'B', text: 'Mount Everest' },
+            { letter: 'C', text: 'Denali' },
+            { letter: 'D', text: 'Mont Blanc' }
+          ],
+          correctAnswer: 'B'
+        }
+      ],
+      history: [
+        {
+          name: "Ancient Civilization {i}",
+          description: "Explore the rise and achievements of ancient civilizations",
+          educationalValue: "Understand historical developments, culture, and societal structures",
+          icon: "🏛️",
+          sampleQuestion: "Which ancient civilization built the pyramids?",
+          sampleOptions: [
+            { letter: 'A', text: 'Greeks' },
+            { letter: 'B', text: 'Romans' },
+            { letter: 'C', text: 'Egyptians' },
+            { letter: 'D', text: 'Babylonians' }
+          ],
+          correctAnswer: 'C'
+        },
+        {
+          name: "Historical Empire {i}",
+          description: "Study the expansion and influence of major historical empires",
+          educationalValue: "Learn about empire building, trade routes, and cultural exchange",
+          icon: "👑",
+          sampleQuestion: "Which empire was known as the largest contiguous land empire?",
+          sampleOptions: [
+            { letter: 'A', text: 'Roman Empire' },
+            { letter: 'B', text: 'Mongol Empire' },
+            { letter: 'C', text: 'British Empire' },
+            { letter: 'D', text: 'Ottoman Empire' }
+          ],
+          correctAnswer: 'B'
+        }
+      ],
+      science: [
+        {
+          name: "Planetary System {i}",
+          description: "Journey through our solar system and discover planetary characteristics",
+          educationalValue: "Understand planetary science, orbital mechanics, and space exploration",
+          icon: "🪐",
+          sampleQuestion: "Which planet is known as the Red Planet?",
+          sampleOptions: [
+            { letter: 'A', text: 'Venus' },
+            { letter: 'B', text: 'Mars' },
+            { letter: 'C', text: 'Jupiter' },
+            { letter: 'D', text: 'Saturn' }
+          ],
+          correctAnswer: 'B'
+        },
+        {
+          name: "Scientific Discovery {i}",
+          description: "Explore groundbreaking scientific discoveries and their impact",
+          educationalValue: "Learn about scientific method, discoveries, and technological advancement",
+          icon: "🔬",
+          sampleQuestion: "Who developed the theory of relativity?",
+          sampleOptions: [
+            { letter: 'A', text: 'Isaac Newton' },
+            { letter: 'B', text: 'Albert Einstein' },
+            { letter: 'C', text: 'Galileo Galilei' },
+            { letter: 'D', text: 'Nikola Tesla' }
+          ],
+          correctAnswer: 'B'
+        }
+      ],
+      general: [
+        {
+          name: "Knowledge Territory {i}",
+          description: "Explore diverse educational topics and expand your learning horizons",
+          educationalValue: "Gain broad knowledge across multiple academic disciplines",
+          icon: "🎯",
+          sampleQuestion: "What is the most abundant gas in Earth's atmosphere?",
+          sampleOptions: [
+            { letter: 'A', text: 'Oxygen' },
+            { letter: 'B', text: 'Nitrogen' },
+            { letter: 'C', text: 'Carbon Dioxide' },
+            { letter: 'D', text: 'Hydrogen' }
+          ],
+          correctAnswer: 'B'
+        }
+      ]
+    };
+
+    return templates[subject] || templates.general;
   }
 }
 
-module.exports = AIController; 
+module.exports = AIController;

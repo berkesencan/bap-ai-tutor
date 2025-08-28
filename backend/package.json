@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "concurrently \"nodemon index.js\" \".venv/bin/python services/shap-e-api.py\"",
+    "start:shap-e": "python services/shap-e-api.py"
   },
   "keywords": [],
   "author": "",
@@ -12,26 +13,28 @@
   "description": "",
   "dependencies": {
     "@google/generative-ai": "^0.15.0",
-    "axios": "^1.8.4",
+    "axios": "^1.10.0",
     "axios-cookiejar-support": "^5.0.5",
     "canvas": "^3.1.2",
-    "chartjs-node-canvas": "^5.0.0",
-    "cheerio": "^1.0.0",
+    "cheerio": "^1.1.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "express-validator": "^7.0.1",
     "firebase-admin": "^12.0.0",
+    "form-data": "^4.0.3",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
-    "pdfkit": "^0.17.1",
     "node-cron": "^4.1.1",
+    "pdfkit": "^0.17.1",
+    "socket.io": "^4.8.1",
     "tough-cookie": "^5.1.2",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "concurrently": "^8.0.1",
+    "nodemon": "^2.0.22"
   }
 }

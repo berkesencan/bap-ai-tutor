@@ -533,23 +533,181 @@ export const processPracticeExam = async (form) => {
 // Download PDF file
 export const downloadPDF = async (filename) => {
   try {
-    console.log('=== DOWNLOADING PDF ===');
-    console.log('Filename:', filename);
-    
-    // Use testApiClient since the download route is unprotected
-    const response = await testApiClient.get(`/ai/download-pdf/${filename}`, {
-      responseType: 'blob',
+    const response = await apiClient.get(`/assignments/download/${filename}`, {
+      responseType: 'blob'
     });
-    
-    console.log('=== PDF DOWNLOAD RESPONSE ===');
-    console.log('Response received, blob size:', response.data.size);
-    
-    return response.data; // Returns blob
+    return response.data;
   } catch (error) {
-    console.log('=== PDF DOWNLOAD ERROR ===');
-    console.error('Download error:', error);
     return handleApiError(error);
   }
+};
+
+// Neural Conquest Game API Functions
+export const startNeuralConquestGame = async (playerName, settings = {}) => {
+  try {
+    const response = await apiClient.post('/activities/neural-conquest/start', {
+      playerName,
+      settings
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const joinNeuralConquestGame = async (sessionId, playerName) => {
+  try {
+    const response = await apiClient.post(`/activities/neural-conquest/join/${sessionId}`, {
+      playerName
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getNeuralConquestSession = async (sessionId) => {
+  try {
+    const response = await apiClient.get(`/activities/neural-conquest/session/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const saveNeuralConquestGameState = async (sessionId, gameState) => {
+  try {
+    const response = await apiClient.post('/activities/neural-conquest/save', {
+      sessionId,
+      gameState
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getNeuralConquestContent = async () => {
+  try {
+    const response = await apiClient.get('/activities/neural-conquest/content');
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Start multiplayer Neural Conquest game
+export const startNeuralConquestMultiplayer = async (gameConfig) => {
+  try {
+    const response = await apiClient.post('/activities/neural-conquest/multiplayer', gameConfig);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Join multiplayer Neural Conquest game
+export const joinNeuralConquestMultiplayer = async (gameId, playerInfo) => {
+  try {
+    const response = await apiClient.post(`/activities/neural-conquest/multiplayer/${gameId}/join`, playerInfo);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Get multiplayer game state
+export const getNeuralConquestMultiplayerState = async (gameId, playerId = null) => {
+  try {
+    const params = playerId ? { playerId } : {};
+    const response = await apiClient.get(`/activities/neural-conquest/multiplayer/${gameId}`, { params });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Submit turn in multiplayer game
+export const submitNeuralConquestMultiplayerTurn = async (gameId, turnData) => {
+  try {
+    const response = await apiClient.post(`/activities/neural-conquest/multiplayer/${gameId}/turn`, turnData);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Enhanced Neural Conquest API endpoints
+export const neuralConquestAPI = {
+  // Get available topics for Neural Conquest
+  getAvailableTopics: () => apiClient.get('/activities/neural-conquest/topics'),
+  
+  // Start new game with enhanced 3D features
+  startNewGame: (data) => apiClient.post('/activities/neural-conquest/start', data),
+  
+  // Get session with full 3D territory data
+  getSession: (sessionId) => apiClient.get(`/activities/neural-conquest/session/${sessionId}`),
+  
+  // Answer question with enhanced rewards
+  answerQuestion: (data) => apiClient.post('/activities/neural-conquest/answer', data),
+  
+  // Move to territory in 3D space
+  moveToTerritory: (data) => apiClient.post('/activities/neural-conquest/move', data),
+  
+  // Conquer territory with 3D effects
+  conquerTerritory: (data) => apiClient.post('/activities/neural-conquest/conquer', data),
+  
+  // Save game state with 3D data
+  saveGameState: (data) => apiClient.post('/activities/neural-conquest/save', data),
+  
+  // Get nearby territories for movement
+  getNearbyTerritories: (sessionId, territoryId) => 
+    apiClient.get(`/activities/neural-conquest/nearby/${sessionId}/${territoryId}`),
+
+  // Timer
+  startTimer: (sessionId) => apiClient.post('/activities/neural-conquest/timer/start', { sessionId }),
+  pauseTimer: (sessionId) => apiClient.post('/activities/neural-conquest/timer/pause', { sessionId }),
+  getTimer: (sessionId) => apiClient.get(`/activities/neural-conquest/timer/${sessionId}`),
+
+  // Invitations
+  searchUsers: (q) => apiClient.get('/activities/neural-conquest/invite/search', { params: { q } }),
+  invitePlayers: (gameId, payload) => apiClient.post(`/activities/neural-conquest/multiplayer/${gameId}/invite`, payload),
+
+  // Territory question start
+  startTerritoryQuestion: (sessionId, territoryId) => apiClient.post('/activities/neural-conquest/question/start', { sessionId, territoryId }),
+
+  // Deletions
+  deleteSingleSession: (sessionId) => apiClient.delete(`/activities/neural-conquest/session/${sessionId}`),
+  deleteOrLeaveMultiplayer: (gameId) => apiClient.delete(`/activities/neural-conquest/multiplayer/${gameId}`),
+}
+
+// Convenient API object for all functions
+export const api = {
+  // Neural Conquest functions
+  getNeuralConquestTopics: neuralConquestAPI.getAvailableTopics,
+  startNeuralConquest: neuralConquestAPI.startNewGame,
+  getNeuralConquestSession: neuralConquestAPI.getSession,
+  answerNeuralConquestQuestion: neuralConquestAPI.answerQuestion,
+  moveToNeuralConquestTerritory: neuralConquestAPI.moveToTerritory,
+  conquerNeuralConquestTerritory: neuralConquestAPI.conquerTerritory,
+  saveNeuralConquestState: neuralConquestAPI.saveGameState,
+  
+  // Legacy Neural Conquest functions (for backward compatibility)
+  startNeuralConquestGame,
+  joinNeuralConquestGame,
+  getNeuralConquestContent,
+  
+  // Other API functions
+  testGemini,
+  generateStudyPlan,
+  explainConcept,
+  generatePracticeQuestions,
+  postChatMessage,
+  getCourses,
+  createCourse,
+  getAssignmentsForCourse,
+  getAllAssignments,
+  processPracticeExam,
 };
 
 export default apiClient; 

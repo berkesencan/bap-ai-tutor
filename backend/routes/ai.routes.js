@@ -168,6 +168,12 @@ router.post('/activities/:activityId/start', auth, AIController.startActivity);
 router.post('/activities/join', auth, AIController.joinActivity);
 router.post('/activities/:activityId/generate-content', auth, AIController.generateActivityContent);
 
+// Generate Neural Conquest topics from description
+router.post('/neural-conquest-topics', auth, AIController.generateNeuralConquestTopics);
+
+// NEW: Generate 3D models for selected topics (after user selection)
+router.post('/generate-3d-models', auth, AIController.generate3DModelsForSelectedTopics);
+
 // NOTE: Routes related to the previous custom chat/quiz implementation 
 // (e.g., /chat/:sessionId, /quiz/generate, /quiz/:quizId/submit) 
 // have been removed as they are superseded or need redesign with Gemini.
