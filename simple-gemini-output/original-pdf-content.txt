@@ -1,0 +1,139 @@
+CSCI-UA.0480-051: Parallel Computing Midterm Exam (Oct
+19th, 2021)
+Your Name
+Total: 100 points
+Important Notes - READ BEFORE SOLVING THE EXAM
+• If you perceive any ambiguity in any of the questions, state your assumptions clearly and solve the
+problem based on your assumptions. We will grade both your solutions and your assumptions.
+• This exam is take-home.
+• The exam is posted, on Brightspace, at the beginning of the Oct 19th lecture.
+• You have up to 23 hours and 55 minutes from the beginning of the Oct 19th lecture to submit on
+Brightspace (in the assignments section).
+• You are allowed only one submission, unlike assignments and labs.
+• Your answers must be very focused. You may be penalized for wrong answers and for putting
+irrelevant information in your answers.
+• You must upload a pdf file.
+• Your answer sheet must have a cover page (as indicated below) and one problem answer per page
+(e.g. problem 1 in separate page, problem 2 in another separate page, etc).
+• This exam has 4 problems totaling 100 points.
+• The very first page of your answer is the cover page and must contain:
+– Your Last Name
+– Your First Name
+– Your NetID
+– Copy and paste the honor code shown in the rectangle at the bottom of this page.
+Honor code (copy and paste what is typed in red below, to the first page of your exam)
+• You may use the textbook, slides, and any notes you have. But you may not use the internet.
+• You may NOT use communication tools to collaborate with other humans. This includes but is
+not limited to G-Chat, Messenger, E-mail, etc.
+• Do not try to search for answers on the internet it will show in your answer, and you will earn an
+immediate grade of 0.
+• Anyone found sharing answers or communicating with another student during the exam period will
+earn an immediate grade of 0.
+• “I understand the ground rules and agree to abide by them. I will not share answers or assist
+another student during this exam, nor will I seek assistance from another student or attempt to
+view their answers.”
+
+1
+
+Problem 1
+Assume we have the following task flow graph where every node is a task and an arrow from a task to
+another means dependencies. For example, task b cannot start before task a is done. (Insert DAG here)
+Suppose we have two types of cores: type 1 and type 2. The following table shows the time taken by
+each task, in nanoseconds, if executed on a core of type 1 and if executed on a core of type 2.
+Task Time Taken on core type 1 Time Taken on core type 2
+a
+5
+5
+b
+10
+5
+c
+15
+20
+d
+5
+5
+e
+10
+5
+5 points If we use all cores of type 1, what will be the span (indicate tasks and total time) of the DAG?
+5 points If we use all cores of type 2, what will be the span (indicate tasks and total time) of the DAG?
+15 points What will be the smallest number of cores, of any type, that gives the best speedup compared to
+using a single core of type 1? You can use a mix of any cores (e.g. two cores of type 1 and one core
+of type 2, etc). In your solution, indicate which task will run on which core, the total number of
+cores you will use for each type, the total execution times (for parallel version and the sequential
+version running on core of type 1), and the speedup (relative to sequential execution on core of
+type 1).
+10 points Suppose we use only cores of type 1. What is the smallest number of cores to get the highest
+speedup? Calculate that speedup. Then, if you are allowed to remove only one arrow from the
+DAG, while keeping the DAG a legal one, what will be that arrow to give a better speedup than
+the one you just calculated? If there are several solutions, pick one solution, and calculate the new
+speedup. If there are no solutions, state so, and give no more than two lines of explanation as to
+why there is no solution.
+
+Problem 2
+5 points For each one of the following designs, indicate whether it is SISD, SIMD, MISD, or MIMD. No
+justification needed. Note: If the design fits more than one category, then pick the more general
+one. For example, MIMD can execute as SIMD if all the instructions are the same. The more
+general is MIMD so pick MIMD not SIMD.
+(a) single core with superscalar capability but without speculative execution and without hyperthreading technology
+(b) single core with superscalar capability and speculative execution but without hyperthreading
+technology
+(c) single core with superscalar capability, speculative execution, and hyperthreading technology
+(d) multicore chip where each core has pipelining only
+(e) multicore chip where some cores have pipelining only while other cores have superscalar capability without hyperthreading technology
+5 points Indicate whether each statement below is true (T) or false (F). No justification needed.
+(a) We can have a core with superscalar capability but without speculative execution.
+(b) In a core with hyperthreading technology, instructions can come from different threads belonging to the same process but not from threads belonging to different processes.
+(c) MISD is implemented in real life in GPUs even though multicore can do the same job.
+(d) If we have two processes, with one thread each, executing on a shared memory machine, there
+is no coherence overhead that can result from their execution.
+(e) If we have two processes, with multiple threads each, executing on a shared memory machine,
+there is no coherence overhead that can result from their execution.
+
+2
+
+5 points If we have a multicore processor with eight cores, and two-way hyperthreading each, what is the
+largest number of processes that can execute at the same time? Explain your answer with no more
+than two sentences.
+
+Problem 3
+1. Suppose you have an algorithm with four tasks that can be executed in parallel.
+6 points What are the characteristics of those tasks that can make you decide to implement the program
+as one process with four threads as opposed to four processes with one thread each? State
+two characteristics to get full credit.
+4 points With four parallel tasks, it may seem that four cores will give the best speedup over sequential
+code. However, there may be cases where less than four cores can give the same speedup as
+the four cores. Give a brief description of such a case in no more than 2-3 lines.
+4 points If we have two implementations of the same algorithm and we found that one implementation
+has higher efficiency than the other. Does that always mean that the implementation with higher
+efficiency will always be faster? Justify in two sentences.
+2. We have two different implementations of the same algorithm. The first implementation has one
+million instructions where half of them are floating-point instructions, and the other half are integer
+instructions. The second implementation has two million instructions where all of them are integer
+instructions. Suppose a floating-point instruction takes 10 cycles while an integer instruction
+takes one cycle. We execute these two implementations on a 2GHz machine. Assume single-core
+processor, where this core is SISD.
+6 points What is the MIPS of each implementation?
+6 points What is the CPI of each implementation?
+6 points What is the total execution time of each implementation?
+8 points State which implementation is better based on each of the following measurements: instruction
+count, MIPS, CPI, and execution time.
+
+Problem 4
+For problem 4, assume we have one communicator: MPI COMM WORLD. Suppose we have four processes. Each process has two arrays, of five integers each, A and B. B is declared as int B[5] but is
+not initialized and A is initialized as follows: process 0: int A[5] = {1, 2, 3, 4, 5}; process 1: int
+A[5] = {11, 12, 13, 14, 15}; process 2: int A[5] = {6, 7, 8, 9, 10}; process 3: int A[5] =
+{16, 17, 18, 19, 20};
+3 points Write one MPI command that, if executed by all the four processes, the B arrays at each process
+will be: process 0: int B[5] = {34, 38, 42, 46, 50}; process 1: int B[5] = {34, 38, 42,
+46, 50}; process 2: int B[5] = {34, 38, 42, 46, 50}; process 3: int B[5] = {34, 38, 42,
+46, 50};
+3 points Write one MPI command that, if executed by all the four processes, the A arrays at each process
+will be: process 0: int A[5] = {6, 7, 8, 9, 10}; process 1: int A[5] = {6, 7, 8, 9, 10};
+process 2: int A[5] = {6, 7, 8, 9, 10}; process 3: int A[5] = {6, 7, 8, 9, 10};
+4 points Why MPI Bcast() does not have an argument for the tag in a way similar to MPI send()?
+
+3
+
+

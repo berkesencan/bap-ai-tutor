@@ -1,0 +1,47 @@
+PDF FORMAT ANALYSIS REPORT
+Generated: 2025-07-01T21:52:50.357Z
+
+=== FONT ANALYSIS ===
+Original Font Sizes: 21, 18, 17, 14, 10
+Generated Font Sizes: 31, 26, 15
+
+Original Colors: #000000, #ff0000
+Generated Colors: #000000
+
+Original Font Families: TimesNewRomanPS, SymbolMT, ArialMT
+Generated Font Families: ZLKRIC+CMBX12, VZDKWN+SFRM1728, RSVYMG+CMR10
+
+=== STRUCTURE ANALYSIS ===
+Original Headers: CSCI-UA.0480-051:&#160;Parallel&#160;Computing&#160; | Midterm&#160;Exam&#160;(Mar&#160;14 | Total:&#160;100&#160;points&#160;
+Generated Headers: 
+
+Original Red Text: color:#ff0000;}
+	.ft04{font-size:17px;font-family:SymbolMT;color:#000000;}
+	.ft05{font-size:17px;font-family:ArialMT;color:#000000;}
+	.ft06{font-size:10px;font-family:TimesNewRomanPS;color:#000000;}
+	.ft07{font-size:17px;font-family:TimesNewRomanPSMT;color:#000000;}
+	.ft08{font-size:17px;font-family:BCDEEE+Wingdings;color:#000000;}
+	.ft09{font-size:18px;font-family:TimesNewRomanPS;color:#000000;}
+	.ft010{font-size:17px;line-height:18px;font-family:TimesNewRomanPS;color:#000000;}
+	.ft011{font-size:17px;line-height:19px;font-family:TimesNewRomanPS;color:#000000;}
+	.ft012{font-size:17px;line-height:19px;font-family:TimesNewRomanPSMT;color:#000000;}
+	.ft013{font-size:17px;line-height:18px;font-family:TimesNewRomanPSMT;color:#000000;}
+	.ft014{font-size:17px;line-height:22px;font-family:TimesNewRomanPS;color:#000000;}
+Generated Red Text: 
+
+=== LAYOUT ANALYSIS ===
+Original Uses Absolute Positioning: true
+Generated Uses Absolute Positioning: true
+
+=== RECOMMENDATIONS ===
+❌ CRITICAL: Missing red text formatting. Original has red warnings, generated does not.
+❌ FONT ISSUE: Generated PDF has fewer font sizes than original. Missing size hierarchy.
+❌ COLOR ISSUE: Generated PDF missing some colors from original.
+⚠️  HEADERS: Header count mismatch. Original=3, Generated=0
+
+=== NEXT STEPS ===
+1. Compare the side-by-side HTML view to identify visual differences
+2. Update LaTeX template to match original formatting exactly
+3. Ensure red text is properly implemented with \color{red}
+4. Verify font size hierarchy matches original (21px, 18px, 17px, etc.)
+5. Test with different PDFs to ensure consistency

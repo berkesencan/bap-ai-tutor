@@ -1,0 +1,192 @@
+{
+  "questions": "Q1a) (a) Explain the difference between a cache miss and a TLB miss in 1-2 sentences.\n\nQ1b) (b) What is the purpose of a write-back cache? Explain in 1-2 sentences.\n\nQ1c) (c) Briefly describe the concept of false sharing in a shared-memory system and how it can negatively impact performance.\n\nQ1d) (d) What is the difference between strong and weak scaling in parallel computing?\n\nQ2a) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(a) What is the critical path in this DAG? What is the minimum execution time for this program?\n\nQ2b) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(b) Suppose we have two processors. Schedule the tasks to minimize execution time. What is the execution time with two processors?\n\nQ2c) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(c) What is the speedup achieved with two processors compared to sequential execution?\n\nQ3a) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(a) What is the likely output of this code? Explain why.\n\nQ3b) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(b) How could you modify the code to ensure the correct sum is calculated?\n\nQ3c) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(c) Explain the concept of a race condition in the context of this example.\n\nQ4a) (a) Describe Amdahl's Law and its implications for the scalability of parallel programs.\n\nQ4b) (b) Describe Gustafson's Law and how it differs from Amdahl's Law.\n\nQ5a) Consider a system with 8 cores. A program runs in 10 seconds sequentially. After parallelization, the parallel portion takes 2 seconds, while the sequential portion remains at 1 second.\n\n(a) What is the speedup using Amdahl's Law?\n\nQ5b) Consider a system with 8 cores. A program runs in 10 seconds sequentially. After parallelization, the parallel portion takes 2 seconds, while the sequential portion remains at 1 second.\n\n(b) What is the efficiency?\n\nQ6a) (a) Explain the concept of load balancing in parallel programming. Give an example where poor load balancing can significantly impact performance.\n\nQ6b) (b) Discuss different strategies for achieving good load balancing.\n\nQ7a) (a) Describe the difference between data parallelism and task parallelism. Give examples of each.\n\nQ7b) (b) What are some common challenges associated with parallel programming?\n\nQ8a) Consider the following MPI code snippet: c++ #include <mpi.h> #include <iostream> int main(int argc, char** argv) MPI_Init(&argc, &argv); int rank, size; MPI_Comm_rank(MPI_COMM_WORLD, &rank); MPI_Comm_size(MPI_COMM_WORLD, &size); int data = rank; MPI_Send(&data, 1, MPI_INT, (rank + 1) % size, 0, MPI_COMM_WORLD); MPI_Recv(&data, 1, MPI_INT, (rank - 1 + size) % size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); std::cout << \"Process \" << rank << \" received: \" << data << std::endl; MPI_Finalize(); return 0;\n\n(a) Describe the communication pattern in this code.\n\nQ8b) Consider the following MPI code snippet: c++ #include <mpi.h> #include <iostream> int main(int argc, char** argv) MPI_Init(&argc, &argv); int rank, size; MPI_Comm_rank(MPI_COMM_WORLD, &rank); MPI_Comm_size(MPI_COMM_WORLD, &size); int data = rank; MPI_Send(&data, 1, MPI_INT, (rank + 1) % size, 0, MPI_COMM_WORLD); MPI_Recv(&data, 1, MPI_INT, (rank - 1 + size) % size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); std::cout << \"Process \" << rank << \" received: \" << data << std::endl; MPI_Finalize(); return 0;\n\n(b) What would be the output if this code is run with 4 processes?\n\nQ9a) (a) Explain the role of synchronization primitives in parallel programming. Give examples of common synchronization primitives.\n\nQ9b) (b) Describe a situation where deadlock can occur in a parallel program.\n\nQ10a) (a) What are the advantages and disadvantages of using threads versus processes for parallel programming?\n\nQ10b) (b) Discuss the trade-offs between using shared memory and distributed memory for parallel computing.",
+  "parsedQuestions": [
+    {
+      "id": 1,
+      "question": "Q1a) (a) Explain the difference between a cache miss and a TLB miss in 1-2 sentences.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q1b) (b) What is the purpose of a write-back cache? Explain in 1-2 sentences.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q1c) (c) Briefly describe the concept of false sharing in a shared-memory system and how it can negatively impact performance.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q1d) (d) What is the difference between strong and weak scaling in parallel computing?",
+      "points": 6
+    },
+    {
+      "id": 5,
+      "question": "Q2a) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(a) What is the critical path in this DAG? What is the minimum execution time for this program?",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q2b) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(b) Suppose we have two processors. Schedule the tasks to minimize execution time. What is the execution time with two processors?",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q2c) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(c) What is the speedup achieved with two processors compared to sequential execution?",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q3a) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(a) What is the likely output of this code? Explain why.",
+      "points": 8
+    },
+    {
+      "id": 9,
+      "question": "Q3b) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(b) How could you modify the code to ensure the correct sum is calculated?",
+      "points": 7
+    },
+    {
+      "id": 10,
+      "question": "Q3c) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(c) Explain the concept of a race condition in the context of this example.",
+      "points": 10
+    }
+  ],
+  "interactiveQuestions": [
+    {
+      "id": 1,
+      "question": "Q1a) (a) Explain the difference between a cache miss and a TLB miss in 1-2 sentences.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q1b) (b) What is the purpose of a write-back cache? Explain in 1-2 sentences.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q1c) (c) Briefly describe the concept of false sharing in a shared-memory system and how it can negatively impact performance.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q1d) (d) What is the difference between strong and weak scaling in parallel computing?",
+      "points": 6
+    },
+    {
+      "id": 5,
+      "question": "Q2a) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(a) What is the critical path in this DAG? What is the minimum execution time for this program?",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q2b) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(b) Suppose we have two processors. Schedule the tasks to minimize execution time. What is the execution time with two processors?",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q2c) Consider a parallel program with the following task dependencies represented as a directed acyclic graph (DAG): Tasks: A, B, C, D, E, F Dependencies: A->C, B->C, C->D, C->E, D->F, E->F Execution times (in milliseconds): A: 5, B: 3, C: 7, D: 4, E: 6, F: 2\n\n(c) What is the speedup achieved with two processors compared to sequential execution?",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q3a) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(a) What is the likely output of this code? Explain why.",
+      "points": 8
+    },
+    {
+      "id": 9,
+      "question": "Q3b) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(b) How could you modify the code to ensure the correct sum is calculated?",
+      "points": 7
+    },
+    {
+      "id": 10,
+      "question": "Q3c) Consider the following OpenMP code: c++ #include <omp.h> #include <iostream> int main() int x = 0; #pragma omp parallel for num_threads(4) for (int i = 0; i < 10; i++) { x += i; std::cout << \"Final value of x: \" << x << std::endl; return 0; }\n\n(c) Explain the concept of a race condition in the context of this example.",
+      "points": 10
+    },
+    {
+      "id": 11,
+      "question": "Q4a) (a) Describe Amdahl's Law and its implications for the scalability of parallel programs.",
+      "points": 10
+    },
+    {
+      "id": 12,
+      "question": "Q4b) (b) Describe Gustafson's Law and how it differs from Amdahl's Law.",
+      "points": 10
+    },
+    {
+      "id": 13,
+      "question": "Q5a) Consider a system with 8 cores. A program runs in 10 seconds sequentially. After parallelization, the parallel portion takes 2 seconds, while the sequential portion remains at 1 second.\n\n(a) What is the speedup using Amdahl's Law?",
+      "points": 10
+    },
+    {
+      "id": 14,
+      "question": "Q5b) Consider a system with 8 cores. A program runs in 10 seconds sequentially. After parallelization, the parallel portion takes 2 seconds, while the sequential portion remains at 1 second.\n\n(b) What is the efficiency?",
+      "points": 10
+    },
+    {
+      "id": 15,
+      "question": "Q6a) (a) Explain the concept of load balancing in parallel programming. Give an example where poor load balancing can significantly impact performance.",
+      "points": 12
+    },
+    {
+      "id": 16,
+      "question": "Q6b) (b) Discuss different strategies for achieving good load balancing.",
+      "points": 8
+    },
+    {
+      "id": 17,
+      "question": "Q7a) (a) Describe the difference between data parallelism and task parallelism. Give examples of each.",
+      "points": 10
+    },
+    {
+      "id": 18,
+      "question": "Q7b) (b) What are some common challenges associated with parallel programming?",
+      "points": 10
+    },
+    {
+      "id": 19,
+      "question": "Q8a) Consider the following MPI code snippet: c++ #include <mpi.h> #include <iostream> int main(int argc, char** argv) MPI_Init(&argc, &argv); int rank, size; MPI_Comm_rank(MPI_COMM_WORLD, &rank); MPI_Comm_size(MPI_COMM_WORLD, &size); int data = rank; MPI_Send(&data, 1, MPI_INT, (rank + 1) % size, 0, MPI_COMM_WORLD); MPI_Recv(&data, 1, MPI_INT, (rank - 1 + size) % size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); std::cout << \"Process \" << rank << \" received: \" << data << std::endl; MPI_Finalize(); return 0;\n\n(a) Describe the communication pattern in this code.",
+      "points": 10
+    },
+    {
+      "id": 20,
+      "question": "Q8b) Consider the following MPI code snippet: c++ #include <mpi.h> #include <iostream> int main(int argc, char** argv) MPI_Init(&argc, &argv); int rank, size; MPI_Comm_rank(MPI_COMM_WORLD, &rank); MPI_Comm_size(MPI_COMM_WORLD, &size); int data = rank; MPI_Send(&data, 1, MPI_INT, (rank + 1) % size, 0, MPI_COMM_WORLD); MPI_Recv(&data, 1, MPI_INT, (rank - 1 + size) % size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); std::cout << \"Process \" << rank << \" received: \" << data << std::endl; MPI_Finalize(); return 0;\n\n(b) What would be the output if this code is run with 4 processes?",
+      "points": 10
+    },
+    {
+      "id": 21,
+      "question": "Q9a) (a) Explain the role of synchronization primitives in parallel programming. Give examples of common synchronization primitives.",
+      "points": 10
+    },
+    {
+      "id": 22,
+      "question": "Q9b) (b) Describe a situation where deadlock can occur in a parallel program.",
+      "points": 10
+    },
+    {
+      "id": 23,
+      "question": "Q10a) (a) What are the advantages and disadvantages of using threads versus processes for parallel programming?",
+      "points": 10
+    },
+    {
+      "id": 24,
+      "question": "Q10b) (b) Discuss the trade-offs between using shared memory and distributed memory for parallel computing.",
+      "points": 10
+    }
+  ],
+  "questionPoints": [
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10
+  ],
+  "subject": "Parallel Computing",
+  "difficulty": "medium",
+  "pdfPath": "backend/uploads/simple-exam-1754523743761.pdf"
+}

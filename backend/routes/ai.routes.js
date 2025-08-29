@@ -132,8 +132,8 @@ router.post('/test-gemini', AIController.testGemini);
 // Test form parsing (for debugging)
 router.post('/test-form', upload.single('pdf'), AIController.testFormParsing);
 
-// Generate practice exam
-router.post('/practice-exam', upload.single('pdf'), AIController.generatePracticeExam);
+// NOTE: practice-exam route removed to avoid conflict with unprotected route in index.js
+// The unprotected route in index.js handles: POST /api/ai/practice-exam
 
 // Download PDF
 router.get('/download-pdf/:filename', AIController.downloadPDF);

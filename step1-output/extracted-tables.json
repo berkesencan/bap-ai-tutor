@@ -1,0 +1,65 @@
+[
+  {
+    "tableIndex": 0,
+    "type": "structured_table",
+    "data": [
+      [
+        "▪",
+        "A",
+        "5",
+        "5"
+      ],
+      [
+        "▪",
+        "B",
+        "10",
+        "5"
+      ],
+      [
+        "▪",
+        "C",
+        "20",
+        "30"
+      ],
+      [
+        "D",
+        "30",
+        "25"
+      ],
+      [
+        "-",
+        "E",
+        "10",
+        "15"
+      ],
+      [
+        "•",
+        "F",
+        "10",
+        "5"
+      ],
+      [
+        "•",
+        "G",
+        "5",
+        "10"
+      ],
+      [
+        "•",
+        "You may use the textbook, slides, the class recorded lectures, the information in the"
+      ],
+      [
+        "•",
+        "You may NOT use communication tools to collaborate with other humans. This includes"
+      ],
+      [
+        "•",
+        "You cannot use LLMs such as chatGPT, Gemini, Bard, etc."
+      ]
+    ],
+    "metadata": {
+      "rows": 10,
+      "columns": 4
+    }
+  }
+]

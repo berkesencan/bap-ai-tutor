@@ -1,12 +1,12 @@
-// Main AI Controller - Orchestrates specialized AI controllers
+// Main AI Controller - Orchestrates specialized controllers
+const NeuralConquestController = require('./neural-conquest.controller');
+const PracticeExamController = require('./practice-exam.controller');
 const ChatController = require('./ai/chat.controller');
 const ContentGenerationController = require('./ai/content-generation.controller');
 const AnalysisController = require('./ai/analysis.controller');
-const geminiService = require('../services/gemini.service');
 
 class AIController {
-  
-  // Chat and Conversation Management
+  // ---------- Chat and Conversation Management ----------
   static async handleChatMessage(req, res) {
     return ChatController.handleChatMessage(req, res);
   }
@@ -23,7 +23,7 @@ class AIController {
     return ChatController.testGemini(req, res);
   }
 
-  // Content Generation
+  // ---------- Content Generation ----------
   static async generateStudyPlan(req, res) {
     return ContentGenerationController.generateStudyPlan(req, res);
   }
@@ -40,11 +40,21 @@ class AIController {
     return ContentGenerationController.generateActivityContent(req, res);
   }
 
+  // Practice Exam - delegate to dedicated controller
   static async generatePracticeExam(req, res) {
-    return ContentGenerationController.generatePracticeExam(req, res);
+    return PracticeExamController.generatePracticeExam(req, res);
   }
 
-  // Document Analysis
+  // Neural Conquest - delegate endpoints to dedicated controller
+  static async generateNeuralConquestTopics(req, res) {
+    return NeuralConquestController.generateNeuralConquestTopics(req, res);
+  }
+
+  static async generate3DModelsForSelectedTopics(req, res) {
+    return NeuralConquestController.generate3DModelsForSelectedTopics(req, res);
+  }
+
+  // ---------- Document Analysis ----------
   static async testFormParsing(req, res) {
     return AnalysisController.testFormParsing(req, res);
   }
@@ -61,911 +71,435 @@ class AIController {
     return AnalysisController.batchAnalyzeDocuments(req, res);
   }
 
-  // Legacy Activity Methods (for backward compatibility)
+  // ---------- Legacy Activity Methods (for backward compatibility) ----------
   static async createActivity(req, res) {
-    // Redirect to new activity controller
     const ActivityController = require('./activity.controller');
     const activityController = new ActivityController();
     return activityController.createActivity(req, res);
   }
 
   static async getActivities(req, res) {
-    // Redirect to new activity controller
     const ActivityController = require('./activity.controller');
     const activityController = new ActivityController();
     return activityController.getMyActivities(req, res);
   }
 
   static async getActivity(req, res) {
-    // Redirect to new activity controller
     const ActivityController = require('./activity.controller');
     const activityController = new ActivityController();
     return activityController.getActivity(req, res);
   }
 
   static async updateActivity(req, res) {
-    // Redirect to new activity controller
     const ActivityController = require('./activity.controller');
     const activityController = new ActivityController();
     return activityController.updateActivity(req, res);
   }
 
   static async startActivity(req, res) {
-    // Redirect to new activity controller
     const ActivityController = require('./activity.controller');
     const activityController = new ActivityController();
     return activityController.startSession(req, res);
   }
 
   static async joinActivity(req, res) {
-    // Redirect to new activity controller
     const ActivityController = require('./activity.controller');
     const activityController = new ActivityController();
     return activityController.joinActivity(req, res);
   }
 
-  // Generate Neural Conquest topics WITHOUT 3D models (for topic selection phase)
-  static async generateNeuralConquestTopics(req, res) {
-    try {
-      const { topicDescription, difficulty = 'medium', subjectArea } = req.body;
+  // ---------- Shared utilities preserved from original AIController ----------
 
-      if (!topicDescription || topicDescription.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Topic description is required'
-        });
+  /**
+   * Extract detailed layout info from HTML (used elsewhere in pipeline)
+   */
+  static extractDetailedLayoutInfo(htmlContent) {
+    if (!htmlContent) return 'No layout information available';
+    const fontSizes = [...htmlContent.matchAll(/font-size:(\d+)px/g)].map(m => parseInt(m[1]));
+    const uniqueFontSizes = [...new Set(fontSizes)].sort((a, b) => b - a);
+    const colors = [...htmlContent.matchAll(/color:(#[0-9a-fA-F]{6})/g)].map(m => m[1]);
+    const uniqueColors = [...new Set(colors)];
+    const fontFamilies = [...htmlContent.matchAll(/font-family:([^;]+)/g)].map(m => m[1]);
+    const uniqueFontFamilies = [...new Set(fontFamilies)];
+    const boldPatterns = htmlContent.match(/<b[^>]*>.*?<\/b>/g) || [];
+    const positionedElements = htmlContent.match(/position:absolute;top:\d+px;left:\d+px/g) || [];
+    const layoutElements = [];
+    const lines = htmlContent.split('\n');
+    for (const line of lines) {
+      if (line.includes('CSCI-UA.0480') || line.includes('Midterm Exam') || line.includes('Total:') || line.includes('Important Notes') || line.includes('Problem 1') || line.includes('Problem 2') || line.includes('Problem 3') || line.includes('Problem 4') || line.includes('Honor code') || line.includes('font-size:21px') || line.includes('font-size:18px') || line.includes('color:#ff0000')) {
+        layoutElements.push(line.trim());
       }
-
-      console.log(`🎯 Generating Neural Conquest topics for: ${topicDescription}`);
-
-      // Fix: Pass topicDescription (not subjectArea) to determineOptimalTopicCount
-      // Determine optimal topic count based on the actual description content
-      const optimalCount = AIController.determineOptimalTopicCount(topicDescription, 7); // Default 7 as fallback
-      console.log(`📊 Optimal topic count determined: ${optimalCount} for "${topicDescription}" (${difficulty})`);
-
-      // Generate comprehensive prompt for topics and questions
-      const prompt = `You are an expert educational content creator AND 3D modeling specialist. Generate exactly ${optimalCount} educational topics for Neural Conquest game based on: "${topicDescription}"
-
-🎯 NEURAL CONQUEST CONTEXT:
-- This is a turn-based strategy game where players conquer "neural nodes" (3D objects) by answering questions
-- Each topic becomes a 3D object that players can interact with in a brain-themed neural network
-- Objects will be generated using OpenAI Shap-E (text-to-3D AI model)
-- Topics should represent learnable concepts that can be visualized as distinct 3D objects
-
-📐 SHAP-E 3D MODELING REQUIREMENTS:
-Shap-E works best with VERY DETAILED, SPECIFIC descriptions that include:
-- Clear geometric shapes and proportions
-- Spatial relationships between parts
-- Visual characteristics (colors, textures, materials)
-- Scale references (size comparisons)
-- Structural details and components
-- Context and setting
-
-⚠️ AVOID: Vague terms like "detailed model" or "representation"
-✅ USE: Specific shapes, clear proportions, visual details, structural elements
-
-REQUIREMENTS:
-- Create exactly ${optimalCount} distinct educational topics/objects
-- Each topic should have clear educational value suitable for ${subjectArea || 'general education'}
-- Include difficulty progression from basic (1-2) to advanced (4-5)
-- Make topics engaging for interactive 3D neural network conquest
-- Each description MUST be optimized for Shap-E 3D generation
-
-FORMAT YOUR RESPONSE EXACTLY AS:
-
-TOPICS:
-[Topic 1]
-Name: [Clear, memorable topic name]
-Description: [CRITICAL: Write a detailed Shap-E prompt that describes the exact 3D object to generate. Include specific shapes, proportions, visual elements, colors, and structural details. Be as descriptive as possible for 3D modeling. Example: "a detailed miniature volcano model with a cone-shaped mountain featuring a circular crater at the top, visible lava flows cascading down the steep slopes, rocky textured surfaces with dark gray and brown colors, small trees dotting the base, and wispy smoke rising from the crater opening"]
-Concept: [Subject area - geography, history, science, technology, mathematics, art, biology, economics, literature, physics, chemistry]
-Difficulty: [1-5, with 1-2 being introductory, 3-4 intermediate, 5 advanced]
-Cost: [400-1200 synapse based on difficulty: 400-500 for diff 1-2, 600-800 for diff 3-4, 900-1200 for diff 5]
-Educational Value: [Specific learning outcomes - what students will understand after engaging with this topic]
-
-[Topic 2]
-Name: [Clear, memorable topic name]
-Description: [CRITICAL: Another detailed Shap-E prompt with specific 3D modeling instructions. Include exact shapes, measurements, colors, textures, and structural components. Make it visually distinct from other topics.]
-Concept: [Subject area]
-Difficulty: [1-5]
-Cost: [400-1200 based on difficulty]
-Educational Value: [Specific learning outcomes]
-
-[Continue for all ${optimalCount} topics - ensure each Description is a detailed Shap-E 3D modeling prompt...]
-
-QUESTIONS:
-Generate 15 multiple-choice questions covering these topics:
-
-[Question 1]
-Q: [Educational question related to the first few topics]
-A) [Option A]
-B) [Option B]
-C) [Option C] 
-D) [Option D]
-Correct: [A/B/C/D]
-Difficulty: [1-5]
-Topic: [Related topic name]
-
-[Continue for 15 questions total, covering all topics...]
-
-🎯 REMEMBER: The Description field is the most critical part - it becomes the Shap-E prompt that generates the 3D model. Make each one detailed, specific, and visually descriptive for optimal 3D generation results.`;
-
-      // Call Gemini AI with retry logic and improved error handling
-      console.log('🤖 Calling Gemini AI for topic generation...');
-      const aiResponse = await geminiService.generateContent(prompt, 5); // 5 retries for critical functionality
-      
-      // DEBUG: Log the actual response
-      console.log('🔍 Gemini response type:', typeof aiResponse);
-      console.log('🔍 Gemini response length:', aiResponse?.length);
-      console.log('🔍 Gemini response preview:', aiResponse?.substring(0, 200));
-      
-      if (!aiResponse || typeof aiResponse !== 'string' || aiResponse.trim().length === 0) {
-        throw new Error('Empty or invalid response from Gemini AI');
-      }
-      
-      console.log(`📝 Generated ${aiResponse.length} characters of content for Neural Conquest`);
-
-      // Parse the AI response into structured data
-      const parsedData = AIController.parseNeuralConquestResponse(aiResponse);
-      
-      // If parsing failed, create fallback topics based on the description
-      if (!parsedData.topics || parsedData.topics.length === 0) {
-        console.warn('⚠️ AI parsing failed, creating enhanced fallback topics');
-        const fallbackData = AIController.createEnhancedFallbackTopics(topicDescription, optimalCount);
-        
-        return res.json({
-          success: true,
-          data: {
-            topics: fallbackData.topics,
-            questions: fallbackData.questions,
-            totalTopics: fallbackData.topics.length,
-            optimalCount: optimalCount,
-            subjectArea: subjectArea || AIController.inferMainSubject(topicDescription),
-            difficulty: difficulty,
-            generated3DModels: false,
-            needsModelGeneration: true,
-            isFallback: true,
-            generatedAt: new Date().toISOString()
-          }
-        });
-      }
-      
-      // IMPORTANT: DO NOT generate 3D models here - just return topic data for selection
-      console.log(`✅ Generated ${parsedData.topics.length} topics and ${parsedData.questions.length} questions for selection`);
-
-      return res.json({
-        success: true,
-        data: {
-          topics: parsedData.topics,
-          questions: parsedData.questions,
-          totalTopics: parsedData.topics.length,
-          optimalCount: optimalCount,
-          subjectArea: subjectArea || AIController.inferMainSubject(topicDescription),
-          difficulty: difficulty,
-          generated3DModels: false, // Key flag - no 3D models yet
-          needsModelGeneration: true, // Flag for frontend
-          generatedAt: new Date().toISOString()
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Error generating Neural Conquest topics:', error);
-      // Always fall back to enhanced topics to avoid blocking UX
-      const fallbackCount = AIController.determineOptimalTopicCount(topicDescription, 7);
-      const fallbackData = AIController.createEnhancedFallbackTopics(topicDescription, fallbackCount);
-      return res.json({
-        success: true,
-        data: {
-          topics: fallbackData.topics,
-          questions: fallbackData.questions,
-          totalTopics: fallbackData.topics.length,
-          optimalCount: fallbackCount,
-          subjectArea: subjectArea || AIController.inferMainSubject(topicDescription),
-          difficulty: difficulty,
-          generated3DModels: false,
-          needsModelGeneration: true,
-          isFallback: true,
-          fallbackReason: error.message || 'AI generation failed; using fallback',
-          generatedAt: new Date().toISOString()
-        }
-      });
     }
+    const detailedInfo = `DETAILED LAYOUT ANALYSIS:\n\nFONT SIZE HIERARCHY:\n${uniqueFontSizes.map(size => `- ${size}px: ${size >= 21 ? 'Main headers' : size >= 18 ? 'Problem headers' : size >= 17 ? 'Body text' : 'Small text'}`).join('\n')}\n\nCOLOR SCHEME:\n- Black body text (standard)\n- Red warning text (for important notes)\n\nFONT FAMILIES:\n- Standard system fonts for academic documents\n\nLAYOUT ELEMENTS FOUND:\n${layoutElements.slice(0, 10).join('\n')}\n\nFORMATTING REQUIREMENTS:\n1. Use appropriate font sizes for headers and body text\n2. Apply red color to warning text\n3. Use bold formatting for headers\n4. Maintain proper spacing and alignment\n5. Include proper margins and page layout`;
+    return detailedInfo;
   }
 
-  // NEW: Generate 3D models for selected topics (called after user selection)
-  static async generate3DModelsForSelectedTopics(req, res) {
+  // Universal extraction and distribution helpers (kept here for reuse by practice-exam controller)
+  static extractQuestionsFromLatex(latexContent) {
+    const questions = [];
     try {
-      const { selectedTopics, sessionData } = req.body;
+      const cleanLatexText = (text) => {
+        return text
+          .replace(/\\item\s*/g, '')
+          .replace(/\\item\s*\[[a-z]\]\s*/g, '')
+          .replace(/\\item\s*\[.*?\]\s*/g, '')
+          .replace(/\$([^$]+)\$/g, (match, mathContent) => {
+            return mathContent
+              .replace(/\\log_(\d+)/g, 'log₍$1₎')
+              .replace(/\\log_\{(\d+)\}/g, 'log₍$1₎')
+              .replace(/\^(\d+)/g, '⁽$1⁾')
+              .replace(/\^\{([^}]+)}/g, '⁽$1⁾')
+              .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+              .replace(/\\sum_\{([^}]+)\}\^([^\s]+)/g, 'Σ($1 to $2)')
+              .replace(/\\mathbb\{([^}]+)\}/g, '$1')
+              .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+              .replace(/\\sqrt/g, '√')
+              .replace(/\\infty/g, '∞')
+              .replace(/\\Theta/g, 'Θ')
+              .replace(/\\Omega/g, 'Ω')
+              .replace(/\\omega/g, 'ω')
+              .replace(/\\ge/g, '≥')
+              .replace(/\\le/g, '≤')
+              .replace(/\\neq/g, '≠')
+              .replace(/\\to/g, '→')
+              .replace(/\\lim/g, 'lim')
+              .replace(/\\log/g, 'log');
+          })
+          .replace(/\\begin\{verbatim\}([\s\S]*?)\\end\{verbatim\}/g, (m, c) => `\n[CODE SNIPPET]\n${c}\n[/CODE SNIPPET]\n`)
+          .replace(/\\begin\{tabular\}([\s\S]*?)\\end\{tabular\}/g, (m, c) => `\n[TABLE]\n${c}\n[/TABLE]\n`)
+          .replace(/\\begin\{tikzpicture\}([\s\S]*?)\\end\{tikzpicture\}/g, (m, c) => `\n[DIAGRAM]\n${c}\n[/DIAGRAM]\n`)
+          .replace(/\\begin\{lstlisting\}([\s\S]*?)\\end\{lstlisting\}/g, (m, c) => `\n[CODE SNIPPET]\n${c}\n[/CODE SNIPPET]\n`)
+          .replace(/\\begin\{([^}]+)\}([\s\S]*?)\\end\{\1\}/g, '$2')
+          .replace(/\\textbf\{([^}]+)\}/g, '$1')
+          .replace(/\\emph\{([^}]+)\}/g, '$1')
+          .replace(/\\section\*?\{([^}]+)\}/g, '$1')
+          .replace(/\\subsection\*?\{([^}]+)\}/g, '$1')
+          .replace(/\\[a-zA-Z]+\*?\{[^}]*\}/g, '')
+          .replace(/\\[a-zA-Z]+\*/g, '')
+          .replace(/\\[a-zA-Z]+/g, '')
+          .replace(/\{([^}]*)\}/g, '$1')
+          .replace(/\\\\/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
 
-      if (!selectedTopics || !Array.isArray(selectedTopics) || selectedTopics.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Selected topics array is required'
-        });
+      const examQuestions = this.extractExamFormat(latexContent, cleanLatexText);
+      if (examQuestions.length > 0) return examQuestions;
+      const homeworkQuestions = this.extractHomeworkFormat(latexContent, cleanLatexText);
+      if (homeworkQuestions.length > 0) return homeworkQuestions;
+      const numberedQuestions = this.extractNumberedFormat(latexContent, cleanLatexText);
+      if (numberedQuestions.length > 0) return numberedQuestions;
+      const itemQuestions = this.extractItemFormat(latexContent, cleanLatexText);
+      if (itemQuestions.length > 0) return itemQuestions;
+      const heuristicQuestions = this.extractHeuristicFormat(latexContent, cleanLatexText);
+      if (heuristicQuestions.length > 0) return heuristicQuestions;
+    } catch (error) {
+      console.error('❌ Error in universal extraction:', error);
+    }
+    return questions;
+  }
+
+  static extractExamFormat(latexContent, cleanLatexText) {
+    const questions = [];
+    if (!latexContent.includes('\\section*{Problem') && !latexContent.includes('\\section{Problem')) return questions;
+    const problemSections = latexContent.split(/\\section\*?\{Problem \d+\}/);
+    for (let i = 1; i < problemSections.length; i++) {
+      const problemContent = problemSections[i];
+      const lines = problemContent.split('\n');
+      let questionNumber = i;
+      let mainQuestionContext = '';
+      let foundFirstSubPart = false;
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex].trim();
+        if (line.match(/^\\section/)) break;
+        const subPartMatch1 = line.match(/^([a-z])\.\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
+        const subPartMatch2 = line.match(/^\(([a-z])\)\s*(.*)/);
+        const subPartMatch3 = line.match(/^\[([a-z])\.\]\s*(?:\[(\n?\d+)(?:\s*points?)?\]\s*)?(.*)/i);
+        const subPartMatch = subPartMatch1 || subPartMatch2 || subPartMatch3;
+        if (subPartMatch) { foundFirstSubPart = true; break; }
+        else if (!foundFirstSubPart && line.length > 0) {
+          if (mainQuestionContext.length > 0) mainQuestionContext += ' ';
+          mainQuestionContext += line;
+        }
       }
-
-      console.log(`🎯 Generating 3D models for ${selectedTopics.length} selected topics...`);
-
-      // Initialize 3D model generator
-      const ThreeDModelGenerator = require('../services/3d-model-generator.service.js');
-      const modelGenerator = new ThreeDModelGenerator();
-
-      // Generate unique session ID for progress tracking
-      const sessionId = `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // Prepare all object data for parallel generation
-      const objectsData = selectedTopics.map((topic, i) => ({
-            name: topic.name,
-            description: topic.description,
-            concept: topic.concept,
-            difficulty: topic.difficulty,
-            visualStyle: AIController.determineVisualStyle(topic.concept, topic.difficulty),
-        educationalContext: topic.educationalValue || topic.description,
-        sessionId: sessionId,
-        currentIndex: i + 1,
-        totalModels: selectedTopics.length,
-        topicIndex: i // For position calculation
-      }));
-
-      console.log(`🚀 Starting parallel Shap-E generation for ${objectsData.length} objects...`);
-
-      // Emit initial progress via WebSocket
-      if (global.io) {
-        global.io.emit('generation-progress', {
-          sessionId: sessionId,
-          current: 0,
-          total: selectedTopics.length,
-          stage: 'starting_parallel',
-          message: `Starting parallel generation of ${selectedTopics.length} 3D models...`
-        });
+      let currentSubPart = '';
+      let subPartLetter = '';
+      let subPartPoints = null;
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex].trim();
+        if (line.match(/^\\section/)) break;
+        const subPartMatch1 = line.match(/^([a-z])\.\s*\((\d+)\)\s*(.*)/i) || line.match(/^([a-z])\.\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
+        const subPartMatch2 = line.match(/^\(([a-z])\)\s*(.*)/);
+        const subPartMatch3 = line.match(/^\[([a-z])\.\]\s*(?:\[(\n?\d+)(?:\s*points?)?\]\s*)?(.*)/i);
+        const subPartMatch = subPartMatch1 || subPartMatch2 || subPartMatch3;
+        if (subPartMatch) {
+          if (currentSubPart.trim() && subPartLetter) {
+            const cleanSubPartText = cleanLatexText(currentSubPart);
+            if (cleanSubPartText.length > 10) {
+              const cleanMainContext = cleanLatexText(mainQuestionContext);
+              const fullQuestionText = cleanMainContext + (cleanMainContext.length > 0 ? '\n\n' : '') + `(${subPartLetter}) ${cleanSubPartText}`;
+              questions.push({ text: `Q${questionNumber}${subPartLetter}) ${fullQuestionText}`, points: subPartPoints });
+            }
+          }
+          if (subPartMatch1) { subPartLetter = subPartMatch1[1]; subPartPoints = parseInt(subPartMatch1[2]); currentSubPart = subPartMatch1[3]; }
+          else if (subPartMatch2) { subPartLetter = subPartMatch2[1]; subPartPoints = null; currentSubPart = subPartMatch2[2]; }
+          else if (subPartMatch3) { subPartLetter = subPartMatch3[1]; subPartPoints = subPartMatch3[2] ? parseInt(subPartMatch3[2]) : null; currentSubPart = subPartMatch3[3]; }
+        } else if (subPartLetter && line.length > 0) {
+          currentSubPart += ' ' + line;
+        } else if (!subPartLetter && line.length > 0) {
+          if (lineIndex === 0 || currentSubPart.length === 0) currentSubPart += line; else currentSubPart += ' ' + line;
+        }
       }
+      if (currentSubPart.trim() && subPartLetter) {
+        const cleanSubPartText = cleanLatexText(currentSubPart);
+        if (cleanSubPartText.length > 10) {
+          const cleanMainContext = cleanLatexText(mainQuestionContext);
+          const fullQuestionText = cleanMainContext + (cleanMainContext.length > 0 ? '\n\n' : '') + `(${subPartLetter}) ${cleanSubPartText}`;
+          questions.push({ text: `Q${questionNumber}${subPartLetter}) ${fullQuestionText}`, points: subPartPoints });
+        }
+      } else if (currentSubPart.trim() && !subPartLetter) {
+        const cleanText = cleanLatexText(currentSubPart);
+        if (cleanText.length > 20) questions.push({ text: `Q${questionNumber}) ${cleanText}`, points: null });
+      }
+    }
+    return questions;
+  }
 
-      // Generate ALL models in parallel using Shap-E
-      const modelResults = await modelGenerator.generateMultiple3DModels(objectsData);
+  static extractHomeworkFormat(latexContent, cleanLatexText) {
+    const questions = [];
+    if (!latexContent.includes('\\begin{enumerate}')) return questions;
+    const beginIndex = latexContent.indexOf('\\begin{enumerate}');
+    if (beginIndex === -1) return questions;
+    let currentPos = beginIndex + '\\begin{enumerate}'.length;
+    let level = 1;
+    let endIndex = -1;
+    while (currentPos < latexContent.length && level > 0) {
+      const beginMatch = latexContent.indexOf('\\begin{enumerate}', currentPos);
+      const endMatch = latexContent.indexOf('\\end{enumerate}', currentPos);
+      if (endMatch === -1) break;
+      if (beginMatch !== -1 && beginMatch < endMatch) { level++; currentPos = beginMatch + '\\begin{enumerate}'.length; }
+      else { level--; if (level === 0) { endIndex = endMatch; break; } currentPos = endMatch + '\\end{enumerate}'.length; }
+    }
+    if (endIndex === -1) return questions;
+    const startContent = beginIndex + '\\begin{enumerate}'.length;
+    const mainEnumerateContent = latexContent.substring(startContent, endIndex);
+    const mainItems = this.extractMainItems(mainEnumerateContent);
+    let questionNumber = 1;
+    mainItems.forEach(mainItem => {
+      const nestedEnumerateMatch = mainItem.match(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/);
+      if (nestedEnumerateMatch) {
+        const mainQuestionContext = mainItem.replace(/\\begin\{enumerate\}[\s\S]*?\\end\{enumerate\}/, '').trim();
+        const cleanMainContext = cleanLatexText(mainQuestionContext);
+        const nestedContent = nestedEnumerateMatch[1];
+        const subItems = nestedContent.match(/\\item\s*(.*?)(?=\\item|$)/gs) || [];
+        subItems.forEach((subItem, subIndex) => {
+          const cleanSubItemText = cleanLatexText(subItem);
+          if (cleanSubItemText.length > 5) {
+            const subPart = String.fromCharCode(97 + subIndex);
+            const fullQuestionText = cleanMainContext + (cleanMainContext.length > 0 ? '\n\n' : '') + `(${subPart}) ${cleanSubItemText}`;
+            questions.push({ text: `Q${questionNumber}${subPart}) ${fullQuestionText}`, points: null });
+          }
+        });
+        questionNumber++;
+      } else {
+        const cleanText = cleanLatexText(mainItem);
+        if (cleanText.length > 20) { questions.push({ text: `Q${questionNumber}) ${cleanText}`, points: null }); questionNumber++; }
+      }
+    });
+    return questions;
+  }
 
-      // Process results and create enhanced topics
-      const topicsWithModels = [];
-      const generationErrors = [];
+  static extractNumberedFormat(latexContent, cleanLatexText) {
+    const questions = [];
+    const lines = latexContent.split('\n');
+    let currentQuestion = '';
+    let questionNumber = 0;
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      const numberMatch = trimmedLine.match(/^(\d+)\.\s*(.*)/);
+      if (numberMatch) {
+        if (currentQuestion.trim() && questionNumber > 0) {
+          const cleanText = cleanLatexText(currentQuestion);
+          if (cleanText.length > 20) questions.push({ text: `Q${questionNumber}) ${cleanText}`, points: null });
+        }
+        questionNumber = parseInt(numberMatch[1]);
+        currentQuestion = numberMatch[2];
+      } else if (questionNumber > 0 && trimmedLine.length > 0) {
+        currentQuestion += ' ' + trimmedLine;
+      }
+    }
+    if (currentQuestion.trim() && questionNumber > 0) {
+      const cleanText = cleanLatexText(currentQuestion);
+      if (cleanText.length > 20) questions.push({ text: `Q${questionNumber}) ${cleanText}`, points: null });
+    }
+    return questions;
+  }
 
-      for (let i = 0; i < selectedTopics.length; i++) {
-        const topic = selectedTopics[i];
-        const modelResult = modelResults[i];
-
-        if (modelResult.success) {
-          // Successful generation
-          const enhancedTopic = {
-            ...topic,
-            id: `topic_${i}`,
-            
-            // Real 3D model data from Shap-E
-            modelUrl: modelResult.modelUrl,
-            
-            // Enhanced metadata for Shap-E
-            metadata: {
-              hasCustomModel: true,
-              isCustomGenerated: true,
-              modelProvider: modelResult.modelProvider || 'OpenAI Shap-E',
-              quality: modelResult.quality,
-              generatedAt: modelResult.generatedAt,
-              fileSize: modelResult.fileSize,
-              shapEGenerated: true
-            },
-            
-            // 3D properties
-            model: {
-              position: AIController.calculateSpherePosition(i, selectedTopics.length),
-              scale: modelResult.scale || 1.0,
-              animations: modelResult.animations || ['rotate', 'glow'],
-              materials: modelResult.materials || ['shap_e_generated']
-            },
-            
-            // Game properties
-            cost: topic.cost || (400 + (topic.difficulty * 200)),
-            color: AIController.getConceptColor(topic.concept)
-          };
-
-          topicsWithModels.push(enhancedTopic);
-          console.log(`✅ Processed Shap-E model for: ${topic.name}`);
-
+  static extractItemFormat(latexContent, cleanLatexText) {
+    const questions = [];
+    const itemMatches = latexContent.match(/\\item[^\\]*(?:\\[^i][^t][^e][^m][^\\]*)*(?=\\item|\\end|$)/gs);
+    if (itemMatches) {
+      let mainQuestionContext = '';
+      let mainQuestionNumber = 0;
+      for (let i = 0; i < itemMatches.length; i++) {
+        const item = itemMatches[i];
+        const cleanText = cleanLatexText(item);
+        if (cleanText.length <= 10 || cleanText.toLowerCase().includes('honor code')) continue;
+        const subPartMatch = cleanText.match(/^\[\(([a-z])\)\]\s*(.*)/);
+        if (subPartMatch) {
+          const subPartLetter = subPartMatch[1];
+          const subPartText = subPartMatch[2];
+          if (subPartLetter === 'a') {
+            if (i > 0) {
+              const previousItem = itemMatches[i - 1];
+              const previousCleanText = cleanLatexText(previousItem);
+              const isPreviousSubPart = previousCleanText.match(/^\[\(([a-z])\)\]/);
+              if (!isPreviousSubPart && previousCleanText.length > 20) {
+                mainQuestionContext = previousCleanText;
+              }
+            }
+            mainQuestionNumber++;
+          }
+          const fullQuestionText = mainQuestionContext + (mainQuestionContext.length > 0 ? '\n\n' : '') + `(${subPartLetter}) ${subPartText}`;
+          questions.push({ text: `Q${mainQuestionNumber}${subPartLetter}) ${fullQuestionText}`, points: null });
         } else {
-          // Failed generation
-          console.error(`❌ Shap-E generation failed for ${topic.name}:`, modelResult.error);
-          
-          generationErrors.push({
-            topic: topic.name,
-            error: modelResult.error,
-            index: i
-          });
-
-          // Add topic without 3D model (will show error state in frontend)
-          const fallbackTopic = {
-            ...topic,
-            id: `topic_${i}`,
-            modelUrl: null,
-            metadata: {
-              hasCustomModel: false,
-              generationFailed: true,
-              error: modelResult.error,
-              shapEAttempted: true
-            },
-            model: {
-              position: AIController.calculateSpherePosition(i, selectedTopics.length)
-            },
-            cost: topic.cost || (400 + (topic.difficulty * 200)),
-            color: AIController.getConceptColor(topic.concept)
-          };
-
-          topicsWithModels.push(fallbackTopic);
+          const nextItem = i < itemMatches.length - 1 ? itemMatches[i + 1] : null;
+          if (nextItem) {
+            const nextCleanText = cleanLatexText(nextItem);
+            const isNextSubPart = nextCleanText.match(/^\[\(([a-z])\)\]/);
+            if (isNextSubPart) { continue; }
+          }
+          mainQuestionNumber++;
+          questions.push({ text: `Q${mainQuestionNumber}) ${cleanText}`, points: null });
         }
       }
-
-      // Emit completion progress via WebSocket
-      if (global.io) {
-        global.io.emit('generation-progress', {
-          sessionId: sessionId,
-          current: selectedTopics.length,
-          total: selectedTopics.length,
-          stage: 'completed',
-          message: `Parallel generation complete: ${topicsWithModels.filter(t => t.metadata.hasCustomModel).length} successful`
-        });
-      }
-
-      console.log(`🎉 3D model generation complete! Success: ${topicsWithModels.filter(t => t.metadata.hasCustomModel).length}/${selectedTopics.length}`);
-
-      return res.json({
-        success: true,
-        data: {
-          topics: topicsWithModels,
-          totalTopics: topicsWithModels.length,
-          successfulModels: topicsWithModels.filter(t => t.metadata.hasCustomModel).length,
-          failedModels: generationErrors.length,
-          errors: generationErrors,
-          generated3DModels: true, // Key flag - 3D models are ready
-          generatedAt: new Date().toISOString(),
-          sessionId: sessionId // Include session ID for frontend tracking
-        },
-        message: `Generated 3D models for ${topicsWithModels.filter(t => t.metadata.hasCustomModel).length} topics`
-      });
-
-    } catch (error) {
-      console.error('❌ Error generating 3D models for selected topics:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to generate 3D models',
-        error: error.message,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
+      return questions;
     }
+    return questions;
   }
 
-  // Determine optimal topic count based on subject matter
-  static determineOptimalTopicCount(description, targetCount) {
-    const lowerDesc = description.toLowerCase();
-    
-    // Specific subject mappings
-    if (lowerDesc.includes('continents')) return 7; // 7 continents
-    if (lowerDesc.includes('oceans')) return 5; // 5 oceans
-    if (lowerDesc.includes('solar system') || lowerDesc.includes('planets')) return 8; // 8 planets
-    if (lowerDesc.includes('world war')) return 6; // Major theaters/periods
-    if (lowerDesc.includes('calc') || lowerDesc.includes('calculus')) return 12; // Major calculus topics
-    if (lowerDesc.includes('algebra')) return 10; // Algebra fundamentals
-    if (lowerDesc.includes('geometry')) return 8; // Geometric concepts
-    if (lowerDesc.includes('chemistry') && lowerDesc.includes('periodic')) return 18; // Major element groups
-    if (lowerDesc.includes('biology') && lowerDesc.includes('systems')) return 11; // Body systems
-    
-    // Subject-based defaults
-    if (lowerDesc.includes('math') || lowerDesc.includes('calculus') || lowerDesc.includes('algebra')) {
-      return Math.min(15, Math.max(8, targetCount)); // Math needs more granular topics
-    }
-    if (lowerDesc.includes('geography') || lowerDesc.includes('countries')) {
-      return Math.min(10, Math.max(5, targetCount)); // Geography varies by scope
-    }
-    if (lowerDesc.includes('history')) {
-      return Math.min(8, Math.max(5, targetCount)); // History by periods/events
-    }
-    if (lowerDesc.includes('science')) {
-      return Math.min(12, Math.max(6, targetCount)); // Science by phenomena/concepts
-    }
-    
-    // Default to target with reasonable bounds
-    return Math.min(12, Math.max(5, targetCount));
-  }
-
-  // Create fallback topics when AI fails
-  static createFallbackTopics(description, count) {
-    const fallbackTopics = [];
-    
-    for (let i = 0; i < count; i++) {
-      fallbackTopics.push(AIController.createFallbackTopic(description, i));
-    }
-    
-    return { topics: fallbackTopics };
-  }
-
-  static createFallbackTopic(description, index) {
-    return {
-      name: `Learning Territory ${index + 1}`,
-      description: `Educational content related to ${description}`,
-      object3D: {
-        name: `Knowledge Crystal ${index + 1}`,
-        description: `A crystalline structure containing knowledge about ${description}. Made of translucent crystal with glowing energy veins.`,
-        concept: AIController.inferConcept(description, description),
-        visualStyle: 'stylized'
-      },
-      icon: ['🎯', '🏆', '⭐', '🎨', '🔬', '🌟', '💡'][index] || '🎯',
-      cost: 400 + (index * 200),
-      difficulty: Math.min(1 + Math.floor(index / 2), 5),
-      educationalValue: `Knowledge about ${description.split(' ').slice(0, 3).join(' ')}`
-    };
-  }
-
-  // Infer concept category from topic name/description
-  static inferConcept(topicName, description) {
-    const combined = `${topicName} ${description}`.toLowerCase();
-    
-    if (combined.includes('geography') || combined.includes('continents') || combined.includes('countries') || 
-        combined.includes('mountains') || combined.includes('rivers') || combined.includes('oceans')) {
-      return 'geography';
-    }
-    if (combined.includes('history') || combined.includes('ancient') || combined.includes('war') || 
-        combined.includes('civilization') || combined.includes('empire')) {
-      return 'history';
-    }
-    if (combined.includes('science') || combined.includes('physics') || combined.includes('chemistry') || 
-        combined.includes('biology') || combined.includes('atom') || combined.includes('molecule')) {
-      return 'science';
-    }
-    if (combined.includes('technology') || combined.includes('computer') || combined.includes('ai') || 
-        combined.includes('robot') || combined.includes('digital')) {
-      return 'technology';
-    }
-    if (combined.includes('math') || combined.includes('algebra') || combined.includes('geometry') || 
-        combined.includes('calculus') || combined.includes('equation')) {
-      return 'mathematics';
-    }
-    if (combined.includes('art') || combined.includes('painting') || combined.includes('sculpture') || 
-        combined.includes('music') || combined.includes('culture')) {
-      return 'art';
-    }
-    
-    return 'general';
-  }
-
-  // Sanitize topic name to create valid ID
-  static sanitizeId(name) {
-    return name.toLowerCase()
-               .replace(/[^a-z0-9\s]/g, '')
-               .replace(/\s+/g, '_')
-               .substring(0, 50);
-  }
-
-  // Helper method to parse Neural Conquest AI response
-  static parseNeuralConquestResponse(aiResponse) {
-    const topics = [];
+  static extractHeuristicFormat(latexContent, cleanLatexText) {
     const questions = [];
-
-    try {
-      // Split into sections
-      const sections = aiResponse.split(/TOPICS:|QUESTIONS:/i);
-      
-      if (sections.length >= 2) {
-        const topicsSection = sections[1];
-        const questionsSection = sections[2] || '';
-
-        // Parse topics
-        const topicBlocks = topicsSection.split(/\[Topic \d+\]/i).filter(block => block.trim());
-        
-        for (const block of topicBlocks) {
-          const lines = block.split('\n').map(line => line.trim()).filter(line => line);
-          const topic = {};
-          
-          for (const line of lines) {
-            if (line.startsWith('Name:')) {
-              topic.name = line.replace('Name:', '').trim();
-            } else if (line.startsWith('Description:')) {
-              topic.description = line.replace('Description:', '').trim();
-            } else if (line.startsWith('Concept:')) {
-              topic.concept = line.replace('Concept:', '').trim();
-            } else if (line.startsWith('Difficulty:')) {
-              topic.difficulty = parseInt(line.replace('Difficulty:', '').trim()) || 1;
-            } else if (line.startsWith('Cost:')) {
-              topic.cost = parseInt(line.replace('Cost:', '').trim()) || 500;
-            } else if (line.startsWith('Educational Value:')) {
-              topic.educationalValue = line.replace('Educational Value:', '').trim();
-            }
-          }
-          
-          if (topic.name && topic.description) {
-            // Generate intelligent icon based on topic content
-            topic.icon = AIController.generateTopicIcon(topic.name, topic.description, topic.concept);
-            topics.push(topic);
-          }
+    const lines = latexContent.split('\n');
+    let currentQuestion = '';
+    let questionCount = 0;
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('\\') || trimmedLine.startsWith('%')) continue;
+      if (trimmedLine.match(/^[a-z]\)|^[a-z]\./i) || trimmedLine.match(/question|problem|what|how|why|explain|describe|calculate|find|solve/i)) {
+        if (currentQuestion.trim()) {
+          const cleanText = cleanLatexText(currentQuestion);
+          if (cleanText.length > 30) { questionCount++; questions.push({ text: `Q${questionCount}) ${cleanText}`, points: null }); }
         }
-
-        // Parse questions
-        const questionBlocks = questionsSection.split(/\[Question \d+\]/i).filter(block => block.trim());
-        
-        for (const block of questionBlocks) {
-          const lines = block.split('\n').map(line => line.trim()).filter(line => line);
-          const question = { options: [] };
-          
-          for (const line of lines) {
-            if (line.startsWith('Q:')) {
-              question.question = line.replace('Q:', '').trim();
-            } else if (line.match(/^[A-D]\)/)) {
-              const option = line.substring(2).trim();
-              const letter = line.charAt(0);
-              question.options.push({ letter, text: option });
-            } else if (line.startsWith('Correct:')) {
-              question.correct = line.replace('Correct:', '').trim();
-            } else if (line.startsWith('Difficulty:')) {
-              question.difficulty = parseInt(line.replace('Difficulty:', '').trim()) || 1;
-            } else if (line.startsWith('Topic:')) {
-              question.topic = line.replace('Topic:', '').trim();
-            }
-          }
-          
-          if (question.question && question.options.length === 4 && question.correct) {
-            questions.push(question);
-          }
-        }
+        currentQuestion = trimmedLine;
+      } else if (currentQuestion && trimmedLine.length > 0) {
+        currentQuestion += ' ' + trimmedLine;
       }
-
-    } catch (parseError) {
-      console.warn('⚠️ Error parsing AI response, using fallback parsing', parseError);
-      
-      // Fallback: extract any topics we can find
-      const fallbackTopics = AIController.extractFallbackTopics(aiResponse);
-      topics.push(...fallbackTopics);
     }
-
-    return { topics, questions };
+    if (currentQuestion.trim()) {
+      const cleanText = cleanLatexText(currentQuestion);
+      if (cleanText.length > 30) { questionCount++; questions.push({ text: `Q${questionCount}) ${cleanText}`, points: null }); }
+    }
+    return questions;
   }
 
-  // NEW: Generate intelligent icons based on topic content
-  static generateTopicIcon(name, description, concept) {
-    const combined = `${name} ${description}`.toLowerCase();
-    
-    // Geography-specific icons
-    if (combined.includes('africa') || combined.includes('sahara')) return '🌍';
-    if (combined.includes('asia') || combined.includes('himalaya') || combined.includes('china') || combined.includes('india')) return '🏔️';
-    if (combined.includes('europe') || combined.includes('alps') || combined.includes('mediterranean')) return '🏰';
-    if (combined.includes('north america') || combined.includes('america') || combined.includes('canada') || combined.includes('usa')) return '🗽';
-    if (combined.includes('south america') || combined.includes('amazon') || combined.includes('brazil') || combined.includes('andes')) return '🌿';
-    if (combined.includes('australia') || combined.includes('oceania') || combined.includes('pacific')) return '🦘';
-    if (combined.includes('antarctica') || combined.includes('arctic') || combined.includes('polar')) return '🐧';
-    
-    // Ocean and water features
-    if (combined.includes('ocean') || combined.includes('pacific') || combined.includes('atlantic') || combined.includes('indian ocean')) return '🌊';
-    if (combined.includes('river') || combined.includes('nile') || combined.includes('amazon river') || combined.includes('mississippi')) return '🏞️';
-    if (combined.includes('lake') || combined.includes('great lakes') || combined.includes('superior')) return '🏔️';
-    
-    // Mountain ranges
-    if (combined.includes('mountain') || combined.includes('peak') || combined.includes('everest') || combined.includes('k2')) return '⛰️';
-    if (combined.includes('himalaya') || combined.includes('alps') || combined.includes('rockies') || combined.includes('andes')) return '🏔️';
-    if (combined.includes('volcano') || combined.includes('volcanic')) return '🌋';
-    
-    // History-specific icons
-    if (combined.includes('egypt') || combined.includes('pyramid') || combined.includes('pharaoh')) return '🏛️';
-    if (combined.includes('rome') || combined.includes('roman') || combined.includes('caesar') || combined.includes('colosseum')) return '🏛️';
-    if (combined.includes('greece') || combined.includes('greek') || combined.includes('athens') || combined.includes('sparta')) return '🏛️';
-    if (combined.includes('medieval') || combined.includes('castle') || combined.includes('knight')) return '🏰';
-    if (combined.includes('empire') || combined.includes('kingdom') || combined.includes('dynasty')) return '👑';
-    if (combined.includes('war') || combined.includes('battle') || combined.includes('military')) return '⚔️';
-    if (combined.includes('ancient') || combined.includes('civilization')) return '🏺';
-    
-    // Science-specific icons
-    if (combined.includes('solar system') || combined.includes('planet') || combined.includes('space')) return '🪐';
-    if (combined.includes('mars') || combined.includes('red planet')) return '🔴';
-    if (combined.includes('earth') || combined.includes('blue planet')) return '🌍';
-    if (combined.includes('moon') || combined.includes('lunar')) return '🌙';
-    if (combined.includes('sun') || combined.includes('solar')) return '☀️';
-    if (combined.includes('star') || combined.includes('galaxy')) return '⭐';
-    if (combined.includes('atom') || combined.includes('molecule') || combined.includes('chemistry')) return '⚛️';
-    if (combined.includes('dna') || combined.includes('genetics') || combined.includes('biology')) return '🧬';
-    if (combined.includes('cell') || combined.includes('microscope')) return '🔬';
-    if (combined.includes('physics') || combined.includes('energy') || combined.includes('force')) return '⚡';
-    
-    // Mathematics-specific icons
-    if (combined.includes('calculus') || combined.includes('integral') || combined.includes('derivative')) return '∫';
-    if (combined.includes('algebra') || combined.includes('equation') || combined.includes('variable')) return '📐';
-    if (combined.includes('geometry') || combined.includes('triangle') || combined.includes('circle')) return '📐';
-    if (combined.includes('statistics') || combined.includes('probability') || combined.includes('data')) return '📊';
-    if (combined.includes('number') || combined.includes('prime') || combined.includes('fibonacci')) return '🔢';
-    
-    // Technology-specific icons
-    if (combined.includes('computer') || combined.includes('programming') || combined.includes('code')) return '💻';
-    if (combined.includes('artificial intelligence') || combined.includes('ai') || combined.includes('machine learning')) return '🤖';
-    if (combined.includes('internet') || combined.includes('web') || combined.includes('network')) return '🌐';
-    if (combined.includes('robot') || combined.includes('automation')) return '🤖';
-    
-    // Art and culture icons
-    if (combined.includes('music') || combined.includes('symphony') || combined.includes('composer')) return '🎵';
-    if (combined.includes('painting') || combined.includes('artist') || combined.includes('canvas')) return '🎨';
-    if (combined.includes('sculpture') || combined.includes('statue')) return '🗿';
-    if (combined.includes('literature') || combined.includes('book') || combined.includes('novel')) return '📚';
-    
-    // Fallback icons based on concept
-    const conceptIcons = {
-      geography: '🌍',
-      history: '🏛️', 
-      science: '🔬',
-      technology: '💻',
-      mathematics: '📐',
-      art: '🎨',
-      biology: '🧬',
-      general: '🏆'
-    };
-    
-    return conceptIcons[concept] || '🏆';
-  }
-
-  // Fallback topic extraction if structured parsing fails
-  static extractFallbackTopics(text) {
-    const topics = [];
-    const lines = text.split('\n');
-    
+  static extractMainItems(enumerateContent) {
+    const items = [];
+    let nestedLevel = 0;
+    let currentItem = '';
+    let itemizeBulletLevel = 0;
+    const lines = enumerateContent.split('\n');
+    let isInMainItem = false;
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.includes('Name:') || line.match(/\d+\./)) {
-        const name = line.replace(/^\d+\./, '').replace('Name:', '').trim();
-        if (name.length > 3) {
-          topics.push({
-            name: name.substring(0, 50),
-            description: `Educational topic: ${name}`,
-            concept: 'general',
-            difficulty: Math.floor(Math.random() * 3) + 1,
-            cost: 400 + (Math.floor(Math.random() * 3) * 200),
-            educationalValue: `Learn about ${name}`
-          });
-        }
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      if (trimmedLine.includes('\\begin{enumerate}')) nestedLevel++;
+      if (trimmedLine.includes('\\end{enumerate}')) nestedLevel--;
+      if (trimmedLine.includes('\\begin{itemize}')) itemizeBulletLevel++;
+      if (trimmedLine.includes('\\end{itemize}')) itemizeBulletLevel--;
+      if (nestedLevel === 0 && itemizeBulletLevel === 0 && trimmedLine.match(/^\\item\s/)) {
+        if (isInMainItem && currentItem.trim()) items.push(currentItem.trim());
+        currentItem = line;
+        isInMainItem = true;
+      } else if (isInMainItem) {
+        currentItem += '\n' + line;
       }
     }
-    
-    return topics.slice(0, 8); // Limit fallback topics
+    if (isInMainItem && currentItem.trim()) items.push(currentItem.trim());
+    return items;
   }
 
-  // Additional helper methods for 3D model generation
-  static determineVisualStyle(concept, difficulty) {
-    const styleMap = {
-      geography: difficulty > 3 ? 'realistic' : 'stylized',
-      history: 'historical',
-      science: difficulty > 2 ? 'scientific' : 'futuristic',
-      technology: 'futuristic',
-      mathematics: 'abstract',
-      art: 'artistic',
-      biology: 'organic'
-    };
-    
-    return styleMap[concept] || 'realistic';
-  }
-
-  static calculateSpherePosition(index, total) {
-    const radius = 10; // Distance from center
-    const angle = (index / total) * 2 * Math.PI;
-    
-    return {
-      x: Math.cos(angle) * radius,
-      y: Math.sin(angle * 0.5) * 2, // Add some vertical variation
-      z: Math.sin(angle) * radius
-    };
-  }
-
-  static getConceptColor(concept) {
-    const colorMap = {
-      geography: '#4A90E2', // Blue
-      history: '#D4AF37', // Gold
-      science: '#7ED321', // Green
-      technology: '#BD10E0', // Purple
-      mathematics: '#F5A623', // Orange
-      art: '#E91E63', // Pink
-      biology: '#4CAF50', // Light Green
-      general: '#9013FE' // Default Purple
-    };
-    
-    return colorMap[concept] || colorMap.general;
-  }
-
-  // NEW: Enhanced fallback topic generation based on description analysis
-  static createEnhancedFallbackTopics(description, count) {
-    const mainSubject = AIController.inferMainSubject(description);
-    const topics = [];
-    const questions = [];
-
-    // Create subject-specific topics based on description
-    const topicTemplates = AIController.getTopicTemplates(mainSubject, description);
-    
-    for (let i = 0; i < count; i++) {
-      const template = topicTemplates[i % topicTemplates.length];
-      const difficulty = Math.min(Math.floor(i / 2) + 1, 5);
-      
-      topics.push({
-        name: template.name.replace('{i}', i + 1),
-        description: template.description,
-        concept: mainSubject,
-        difficulty: difficulty,
-        cost: 400 + (difficulty * 150),
-        educationalValue: template.educationalValue,
-        icon: template.icon
-      });
-
-      // Generate related questions
-      if (i < 15) { // Generate up to 15 questions
-        questions.push({
-          question: template.sampleQuestion.replace('{i}', i + 1),
-          options: template.sampleOptions,
-          correct: template.correctAnswer,
-          difficulty: difficulty,
-          topic: template.name.replace('{i}', i + 1)
-        });
+  static distributePointsUniversally(extractedQuestions, frontendPointDistribution, requestedNumQuestions) {
+    const distributedQuestions = [];
+    const questionsToUse = Math.min(extractedQuestions.length, requestedNumQuestions);
+    const selectedQuestions = extractedQuestions.slice(0, questionsToUse);
+    const hasExplicitPoints = selectedQuestions.some(q => q.points !== null && q.points > 0);
+    if (hasExplicitPoints) {
+      for (let i = 0; i < selectedQuestions.length; i++) {
+        const question = selectedQuestions[i];
+        distributedQuestions.push({ id: i + 1, question: question.text, points: question.points > 0 ? question.points : (frontendPointDistribution[i % frontendPointDistribution.length] || 10) });
+      }
+    } else if (frontendPointDistribution.length > 0) {
+      for (let i = 0; i < selectedQuestions.length; i++) {
+        const question = selectedQuestions[i];
+        distributedQuestions.push({ id: i + 1, question: question.text, points: frontendPointDistribution[i % frontendPointDistribution.length] || Math.round(100 / requestedNumQuestions) });
+      }
+    } else {
+      const questionsByComplexity = selectedQuestions.map((q, idx) => ({ index: idx, text: q.text, complexity: this.assessQuestionComplexity(q.text), isSubPart: q.text.match(/Q\d+[a-z]\)/) ? true : false }));
+      const totalComplexity = questionsByComplexity.reduce((sum, q) => sum + q.complexity, 0);
+      const basePointValue = Math.round(100 / selectedQuestions.length);
+      for (let i = 0; i < selectedQuestions.length; i++) {
+        const question = selectedQuestions[i];
+        const complexityInfo = questionsByComplexity[i];
+        let points;
+        if (totalComplexity > 0) points = Math.max(basePointValue, Math.round((complexityInfo.complexity / totalComplexity) * 100));
+        else points = basePointValue;
+        points = Math.max(points, complexityInfo.isSubPart ? 3 : 5);
+        distributedQuestions.push({ id: i + 1, question: question.text, points });
       }
     }
-
-    return { topics, questions };
+    return distributedQuestions;
   }
 
-  // Infer main subject from description
-  static inferMainSubject(description) {
-    const lowerDesc = description.toLowerCase();
-    
-    if (lowerDesc.includes('geography') || lowerDesc.includes('continents') || lowerDesc.includes('countries') || 
-        lowerDesc.includes('mountains') || lowerDesc.includes('rivers') || lowerDesc.includes('oceans')) {
-      return 'geography';
+  static distributePointsForInteractive(extractedQuestions, frontendPointDistribution) {
+    const distributedQuestions = [];
+    const allQuestions = extractedQuestions;
+    const hasExplicitPoints = allQuestions.some(q => q.points !== null && q.points > 0);
+    if (hasExplicitPoints) {
+      for (let i = 0; i < allQuestions.length; i++) {
+        const question = allQuestions[i];
+        distributedQuestions.push({ id: i + 1, question: question.text, points: question.points > 0 ? question.points : (frontendPointDistribution[i % frontendPointDistribution.length] || 10) });
+      }
+    } else {
+      const basePointValue = Math.max(5, Math.round(100 / allQuestions.length));
+      for (let i = 0; i < allQuestions.length; i++) {
+        const question = allQuestions[i];
+        let points = basePointValue;
+        if (question.text.match(/Q\d+[a-z]\)/)) points = Math.max(3, Math.round(basePointValue * 0.8));
+        else if (question.text.match(/prove|derive|analyze|explain why|justify/i)) points = Math.max(basePointValue, Math.round(basePointValue * 1.5));
+        if (frontendPointDistribution.length > 0) points = frontendPointDistribution[i % frontendPointDistribution.length] || points;
+        distributedQuestions.push({ id: i + 1, question: question.text, points });
+      }
     }
-    if (lowerDesc.includes('history') || lowerDesc.includes('ancient') || lowerDesc.includes('war') || 
-        lowerDesc.includes('civilization') || lowerDesc.includes('empire') || lowerDesc.includes('historical')) {
-      return 'history';
-    }
-    if (lowerDesc.includes('science') || lowerDesc.includes('physics') || lowerDesc.includes('chemistry') || 
-        lowerDesc.includes('biology') || lowerDesc.includes('atom') || lowerDesc.includes('molecule')) {
-      return 'science';
-    }
-    if (lowerDesc.includes('space') || lowerDesc.includes('planets') || lowerDesc.includes('astronomy') || 
-        lowerDesc.includes('solar system') || lowerDesc.includes('astronaut')) {
-      return 'science';
-    }
-    if (lowerDesc.includes('technology') || lowerDesc.includes('computer') || lowerDesc.includes('ai') || 
-        lowerDesc.includes('robot') || lowerDesc.includes('digital')) {
-      return 'technology';
-    }
-    if (lowerDesc.includes('math') || lowerDesc.includes('algebra') || lowerDesc.includes('geometry') || 
-        lowerDesc.includes('calculus') || lowerDesc.includes('equation')) {
-      return 'mathematics';
-    }
-    if (lowerDesc.includes('art') || lowerDesc.includes('painting') || lowerDesc.includes('sculpture') || 
-        lowerDesc.includes('music') || lowerDesc.includes('culture')) {
-      return 'art';
-    }
-    
-    return 'general';
+    return distributedQuestions;
   }
 
-  // Get topic templates based on subject and description
-  static getTopicTemplates(subject, description) {
-    const templates = {
-      geography: [
-        {
-          name: "Continent Explorer {i}",
-          description: "Explore the unique features, climate, and cultures of major continents",
-          educationalValue: "Learn about continental geography, climate zones, and cultural diversity",
-          icon: "🌍",
-          sampleQuestion: "Which continent is known for the Sahara Desert?",
-          sampleOptions: [
-            { letter: 'A', text: 'Africa' },
-            { letter: 'B', text: 'Asia' },
-            { letter: 'C', text: 'Australia' },
-            { letter: 'D', text: 'South America' }
-          ],
-          correctAnswer: 'A'
-        },
-        {
-          name: "Ocean Territory {i}",
-          description: "Discover the mysteries of Earth's vast oceans and marine ecosystems",
-          educationalValue: "Understand ocean geography, marine life, and climate impact",
-          icon: "🌊",
-          sampleQuestion: "Which is the largest ocean on Earth?",
-          sampleOptions: [
-            { letter: 'A', text: 'Atlantic' },
-            { letter: 'B', text: 'Pacific' },
-            { letter: 'C', text: 'Indian' },
-            { letter: 'D', text: 'Arctic' }
-          ],
-          correctAnswer: 'B'
-        },
-        {
-          name: "Mountain Range {i}",
-          description: "Scale the world's highest peaks and understand geological formations",
-          educationalValue: "Learn about mountain formation, elevation, and geological processes",
-          icon: "🏔️",
-          sampleQuestion: "What is the highest mountain peak in the world?",
-          sampleOptions: [
-            { letter: 'A', text: 'K2' },
-            { letter: 'B', text: 'Mount Everest' },
-            { letter: 'C', text: 'Denali' },
-            { letter: 'D', text: 'Mont Blanc' }
-          ],
-          correctAnswer: 'B'
-        }
-      ],
-      history: [
-        {
-          name: "Ancient Civilization {i}",
-          description: "Explore the rise and achievements of ancient civilizations",
-          educationalValue: "Understand historical developments, culture, and societal structures",
-          icon: "🏛️",
-          sampleQuestion: "Which ancient civilization built the pyramids?",
-          sampleOptions: [
-            { letter: 'A', text: 'Greeks' },
-            { letter: 'B', text: 'Romans' },
-            { letter: 'C', text: 'Egyptians' },
-            { letter: 'D', text: 'Babylonians' }
-          ],
-          correctAnswer: 'C'
-        },
-        {
-          name: "Historical Empire {i}",
-          description: "Study the expansion and influence of major historical empires",
-          educationalValue: "Learn about empire building, trade routes, and cultural exchange",
-          icon: "👑",
-          sampleQuestion: "Which empire was known as the largest contiguous land empire?",
-          sampleOptions: [
-            { letter: 'A', text: 'Roman Empire' },
-            { letter: 'B', text: 'Mongol Empire' },
-            { letter: 'C', text: 'British Empire' },
-            { letter: 'D', text: 'Ottoman Empire' }
-          ],
-          correctAnswer: 'B'
-        }
-      ],
-      science: [
-        {
-          name: "Planetary System {i}",
-          description: "Journey through our solar system and discover planetary characteristics",
-          educationalValue: "Understand planetary science, orbital mechanics, and space exploration",
-          icon: "🪐",
-          sampleQuestion: "Which planet is known as the Red Planet?",
-          sampleOptions: [
-            { letter: 'A', text: 'Venus' },
-            { letter: 'B', text: 'Mars' },
-            { letter: 'C', text: 'Jupiter' },
-            { letter: 'D', text: 'Saturn' }
-          ],
-          correctAnswer: 'B'
-        },
-        {
-          name: "Scientific Discovery {i}",
-          description: "Explore groundbreaking scientific discoveries and their impact",
-          educationalValue: "Learn about scientific method, discoveries, and technological advancement",
-          icon: "🔬",
-          sampleQuestion: "Who developed the theory of relativity?",
-          sampleOptions: [
-            { letter: 'A', text: 'Isaac Newton' },
-            { letter: 'B', text: 'Albert Einstein' },
-            { letter: 'C', text: 'Galileo Galilei' },
-            { letter: 'D', text: 'Nikola Tesla' }
-          ],
-          correctAnswer: 'B'
-        }
-      ],
-      general: [
-        {
-          name: "Knowledge Territory {i}",
-          description: "Explore diverse educational topics and expand your learning horizons",
-          educationalValue: "Gain broad knowledge across multiple academic disciplines",
-          icon: "🎯",
-          sampleQuestion: "What is the most abundant gas in Earth's atmosphere?",
-          sampleOptions: [
-            { letter: 'A', text: 'Oxygen' },
-            { letter: 'B', text: 'Nitrogen' },
-            { letter: 'C', text: 'Carbon Dioxide' },
-            { letter: 'D', text: 'Hydrogen' }
-          ],
-          correctAnswer: 'B'
-        }
-      ]
-    };
-
-    return templates[subject] || templates.general;
+  static assessQuestionComplexity(questionText) {
+    let complexity = 1;
+    if (questionText.length > 200) complexity += 2; else if (questionText.length > 100) complexity += 1;
+    const mathIndicators = questionText.match(/[Θθ∞≥≤→∑√⁽⁾₍₎]/g);
+    if (mathIndicators) complexity += Math.min(mathIndicators.length * 0.5, 3);
+    const codeIndicators = questionText.match(/algorithm|function|code|implement|complexity|runtime|proof|theorem/gi);
+    if (codeIndicators) complexity += Math.min(codeIndicators.length * 0.8, 4);
+    const multiPartIndicators = questionText.match(/\b(a\)|b\)|c\)|d\)|part|section|step)\b/gi);
+    if (multiPartIndicators) complexity += Math.min(multiPartIndicators.length * 0.3, 2);
+    if (questionText.match(/prove|derive|analyze|explain why|justify/i)) complexity += 3;
+    else if (questionText.match(/calculate|compute|find|solve/i)) complexity += 2;
+    else if (questionText.match(/list|identify|name|select/i)) complexity += 1;
+    return Math.round(complexity);
   }
 }
 
 module.exports = AIController;
+
+ 

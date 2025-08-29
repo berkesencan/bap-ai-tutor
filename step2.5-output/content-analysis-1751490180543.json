@@ -1,0 +1,27 @@
+{
+  "subject": "Calculus",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": false,
+  "hasMathEquations": true,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": false,
+  "detectedElements": [
+    "Mathematical equations (from LaTeX)"
+  ],
+  "codeLanguages": [],
+  "diagramTypes": [],
+  "tableStructures": [],
+  "mathNotations": [
+    "Summations/Integrals"
+  ],
+  "contentTopics": [],
+  "questionTypes": [],
+  "academicPatterns": [
+    "advanced-math (1 instances)"
+  ],
+  "technicalTerms": [],
+  "complexityLevel": "basic"
+}

@@ -1,0 +1,67 @@
+DETAILED FORMAT COMPARISON REPORT
+Generated: 2025-07-01T22:08:01.058Z
+
+=== FONT SIZE ANALYSIS ===
+Original Font Sizes: 21, 18, 17, 14, 10 px
+Generated Font Sizes: 26, 22, 18 px
+
+Font Size Match: NO
+
+=== COLOR ANALYSIS ===
+Original Colors: #000000, #ff0000
+Generated Colors: #1a1a1a, #333333, #ff7f00, #4169e1
+
+Red Text Present: NO
+
+=== TEXT ELEMENT COUNTS ===
+Original Text Elements: 1
+Generated Text Elements: 137
+
+Original Red Text: 0
+Generated Red Text: 0
+
+Original Headers: 0
+Generated Headers: 6
+
+=== DETAILED FONT CLASS MAPPING ===
+ORIGINAL FONT CLASSES:
+ft00: 21px, #000000, TimesNewRomanPS
+ft01: 14px, #000000, TimesNewRomanPS
+ft02: 17px, #000000, TimesNewRomanPS
+ft03: 17px, #ff0000, TimesNewRomanPS
+ft04: 17px, #000000, SymbolMT
+ft05: 17px, #000000, ArialMT
+ft06: 10px, #000000, TimesNewRomanPS
+ft07: 17px, #000000, TimesNewRomanPSMT
+ft08: 17px, #000000, BCDEEE+Wingdings
+ft09: 18px, #000000, TimesNewRomanPS
+ft015: 18px, #000000, TimesNewRomanPSMT
+ft017: 18px, #000000, TimesNewRomanPS
+
+GENERATED FONT CLASSES:
+ft00: 26px, #1a1a1a, TGXMWR+CMBX12
+ft01: 22px, #333333, TGXMWR+CMBX12
+ft02: 18px, #333333, TGXMWR+CMBX12
+ft03: 18px, #333333, WLYEWB+CMR12
+ft04: 18px, #ff7f00, TGXMWR+CMBX12
+ft05: 18px, #333333, TWWQBJ+SFRM1200
+ft06: 18px, #4169e1, TGXMWR+CMBX12
+ft07: 18px, #333333, TZVWCF+CMTT12
+
+=== RED TEXT CONTENT COMPARISON ===
+ORIGINAL RED TEXT:
+
+
+GENERATED RED TEXT:
+
+
+=== RECOMMENDED FIXES ===
+1. Update font sizes to match original: 21, 18, 17, 14, 10 px
+
+2. Red text count is adequate
+
+3. Ensure LaTeX template uses:
+   - \fontsize{21}{25}\selectfont\bfseries for main headers
+   - \fontsize{18}{22}\selectfont\bfseries for problem headers
+   - \fontsize{17}{19}\selectfont for body text
+   - {\color{red}\textbf{text}} for all warning text

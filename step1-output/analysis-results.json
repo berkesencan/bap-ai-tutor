@@ -1,0 +1,151 @@
+{
+  "summary": {
+    "pdfPath": "midterm-fall21.pdf",
+    "textLength": 8322,
+    "htmlLength": 37124,
+    "pageCount": 1,
+    "fontSizes": [
+      21,
+      18,
+      17,
+      15,
+      13,
+      10
+    ],
+    "colors": [
+      "#000000",
+      "#ff0000"
+    ],
+    "tableCount": 1,
+    "imageCount": 10,
+    "errors": []
+  },
+  "tables": [
+    {
+      "type": "structured_table",
+      "rows": 8,
+      "columns": 6,
+      "data": [
+        [
+          "",
+          "1.",
+          "2.",
+          "If you perceive any ambiguity in any of the questions, state your assumptions clearly",
+          "single core with superscalar capability but without speculative execution and",
+          "[4] With four parallel tasks, it may seem that four cores will give the best speedup"
+        ],
+        [
+          "2.",
+          "single core with superscalar capability and speculative execution but without"
+        ],
+        [
+          "",
+          "This exam is take-home."
+        ],
+        [
+          "",
+          "3.",
+          "The exam is posted, on Brightspace, at the beginning of the Oct 19",
+          "single core with superscalar capability, speculative execution, and hyperthreading",
+          "th",
+          "lecture."
+        ],
+        [
+          "",
+          "You have up to 23 hours and 55 minutes from the beginning of the Oct 19",
+          "th",
+          "lecture"
+        ],
+        [
+          "4.",
+          "to submit on Brightspace  (in the assignments section).",
+          "multicore chip where each core has pipelining only"
+        ],
+        [
+          "",
+          "5.",
+          "You are allowed only one submission, unlike assignments and labs.",
+          "multicore chip where some cores have pipelining only while other cores have"
+        ],
+        [
+          "",
+          "Your answers must be very focused. You may be penalized for wrong answers and"
+        ]
+      ],
+      "htmlTable": "<p>Table structure not supported</p>",
+      "position": {
+        "top": 242,
+        "left": 162
+      },
+      "description": "Extracted Table Data"
+    }
+  ],
+  "images": [
+    {
+      "type": "background",
+      "index": 0,
+      "src": "page-1-1751419428308-v8q6ou.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 1,
+      "src": "page-2-1751419428308-v8q6ou.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 2,
+      "src": "page-3-1751419428308-v8q6ou.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 3,
+      "src": "page-4-1751419428308-v8q6ou.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 4,
+      "src": "page-5-1751419428308-v8q6ou.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "inline",
+      "index": 0,
+      "src": "page-1-1751419428308-v8q6ou.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 1,
+      "src": "page-2-1751419428308-v8q6ou.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 2,
+      "src": "page-3-1751419428308-v8q6ou.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 3,
+      "src": "page-4-1751419428308-v8q6ou.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 4,
+      "src": "page-5-1751419428308-v8q6ou.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    }
+  ],
+  "timestamp": "2025-07-02T01:23:48.507Z"
+}

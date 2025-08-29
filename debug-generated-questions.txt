@@ -1,0 +1,34 @@
+1.  A parallel program uses MPI_COMM_WORLD with three processes (0, 1, 2).  The processes execute the following code:
+
+```c++
+int x, y, z;
+if (my_rank == 0) {
+  x = 10; y = 5; z = 2;
+  MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD);
+  MPI_Recv(&z, 1, MPI_INT, 2, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+} else if (my_rank == 1) {
+  x = 0; y = 15; z = 0;
+  MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD);
+} else { // my_rank == 2
+  x = 0; y = 0; z = 20;
+  MPI_Send(&z, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
+  MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+}
+```
+
+After execution, what are the final values of `x`, `y`, and `z` in each process (P0, P1, P2)?  Show your work.
+
+
+2. Consider a system with two types of CPUs (A and B).  The execution times for tasks X, Y, and Z are shown below:
+
+| Task | CPU Type A (seconds) | CPU Type B (seconds) |
+|---|---|---|
+| X | 5 | 8 |
+| Y | 12 | 6 |
+| Z | 7 | 10 |
+
+Tasks X and Y must complete before Z can begin.  What is the minimum number of each type of CPU required to minimize the overall completion time? Show the task assignment to the CPUs, and what is the overall execution time?
+
+
+3.  We have an embarrassingly parallel application processing 100 independent tasks.  Each task takes 2 seconds to complete on a single core.  We have access to a computer cluster with varying numbers of cores: 10, 20, 40, and 80 cores.  Ignoring communication overhead, calculate the execution time (in seconds) for each core configuration. Plot the speedup versus the number of cores.  Does this application exhibit good scalability (i.e., does speedup increase linearly with the number of cores)?  Explain your answer.

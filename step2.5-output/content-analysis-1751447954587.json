@@ -1,0 +1,51 @@
+{
+  "subject": "parallel-computing",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": true,
+  "hasCodeSnippets": true,
+  "hasMathEquations": false,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": false,
+  "detectedElements": [
+    "Tables (from LaTeX)",
+    "Code snippets (from LaTeX)"
+  ],
+  "codeLanguages": [
+    "C/C++",
+    "MPI/OpenMP"
+  ],
+  "diagramTypes": [],
+  "tableStructures": [
+    "LaTeX Table 1",
+    "LaTeX Table 2",
+    "LaTeX Table 3"
+  ],
+  "mathNotations": [],
+  "contentTopics": [
+    "programming (5 mentions)"
+  ],
+  "questionTypes": [
+    "theoretical (5 instances)",
+    "analytical (2 instances)",
+    "practical (4 instances)",
+    "problem-solving (1 instances)"
+  ],
+  "academicPatterns": [
+    "industry-practice (1 instances)"
+  ],
+  "technicalTerms": [
+    "CSCI",
+    "READ",
+    "BEFORE",
+    "SOLVING",
+    "EXAM",
+    "take-home",
+    "NetID",
+    "eight-core",
+    "ill-in",
+    "our-way"
+  ],
+  "complexityLevel": "basic"
+}

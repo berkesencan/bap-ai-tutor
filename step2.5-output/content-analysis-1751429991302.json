@@ -1,0 +1,22 @@
+{
+  "subject": "algorithms",
+  "hasDAGs": false,
+  "hasCircuits": true,
+  "hasTables": false,
+  "hasCodeSnippets": false,
+  "hasMathEquations": true,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": true,
+  "detectedElements": [
+    "Circuit diagrams",
+    "Algorithm pseudocode",
+    "Mathematical equations"
+  ],
+  "codeLanguages": [],
+  "diagramTypes": [
+    "circuits"
+  ],
+  "tableStructures": [],
+  "mathNotations": []
+}

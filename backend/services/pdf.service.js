@@ -1,26 +1,96 @@
 const PDFDocument = require('pdfkit');
 const fs = require('fs').promises;
 const path = require('path');
+const { exec } = require('child_process');
+const LaTeXPDFAnalyzer = require('./latex-pdf-analyzer');
 
 /**
- * Service for generating PDF documents
+ * Service for generating PDF documents with professional formatting
  */
 class PDFService {
   /**
-   * Generate a PDF from exam content
+   * Generate a PDF from exam content using LaTeX when template is available
    * @param {string} examContent - The exam content text
    * @param {string} subject - The subject/course name
-   * @param {object} options - Additional options like difficulty, etc.
+   * @param {object} options - Additional options like difficulty, uploadedPdfPath, etc.
    * @returns {Promise<Buffer>} - PDF buffer
    */
   static async generateExamPDF(examContent, subject, options = {}) {
+    console.log('=== PDF GENERATION START ===');
+    console.log('Content length:', examContent ? examContent.length : 'No content');
+    console.log('Subject:', subject);
+    console.log('Options:', options);
+    console.log('Uploaded PDF template path:', options.uploadedPdfPath || 'None');
+    
+    // Check if we have an uploaded PDF template for LaTeX-based generation
+    if (options.uploadedPdfPath && await this.fileExists(options.uploadedPdfPath)) {
+      console.log('=== USING LATEX-BASED PDF GENERATION ===');
+      return this.generateLaTeXBasedPDF(examContent, subject, options);
+    } else {
+      console.log('=== USING TRADITIONAL PDFKIT GENERATION ===');
+      return this.generateTraditionalPDF(examContent, subject, options);
+    }
+  }
+
+  /**
+   * Generate PDF using LaTeX approach with uploaded template
+   * @param {string} examContent - The exam content text
+   * @param {string} subject - The subject/course name
+   * @param {object} options - Additional options
+   * @returns {Promise<Buffer>} - PDF buffer
+   */
+  static async generateLaTeXBasedPDF(examContent, subject, options = {}) {
+    try {
+      console.log('=== LATEX-BASED PDF GENERATION ===');
+      
+      // Step 1: Analyze uploaded PDF for formatting
+      console.log('📄 Step 1: Analyzing uploaded PDF formatting...');
+      const formatAnalysis = await LaTeXPDFAnalyzer.analyzePDFFormatting(options.uploadedPdfPath);
+      console.log('✅ PDF format analysis completed');
+      
+      // Step 2: Generate LaTeX document
+      console.log('📝 Step 2: Converting content to LaTeX...');
+      const latexDocument = LaTeXPDFAnalyzer.generateLaTeXDocument(
+        examContent, 
+        subject, 
+        formatAnalysis, 
+        options.questionPoints || []
+      );
+      console.log('✅ LaTeX document generated');
+      
+      // Step 3: Compile LaTeX to PDF
+      console.log('🔧 Step 3: Compiling LaTeX to PDF...');
+      const filename = `latex-exam-${subject.replace(/\s+/g, '-')}-${Date.now()}`;
+      
+      // Compile LaTeX to actual PDF
+      const pdfPath = await LaTeXPDFAnalyzer.compileLaTeXToPDF(latexDocument, filename);
+      console.log('✅ LaTeX compiled to PDF:', pdfPath);
+      
+      // Read the compiled PDF file and return as buffer
+      const fs = require('fs');
+      const pdfBuffer = fs.readFileSync(pdfPath);
+      console.log('✅ PDF buffer created, size:', pdfBuffer.length);
+      
+      return pdfBuffer;
+      
+    } catch (error) {
+      console.error('❌ LaTeX-based PDF generation failed:', error);
+      console.log('🔄 Falling back to traditional PDF generation...');
+      return this.generateTraditionalPDF(examContent, subject, options);
+    }
+  }
+
+  /**
+   * Generate PDF using traditional PDFKit approach
+   * @param {string} examContent - The exam content text
+   * @param {string} subject - The subject/course name
+   * @param {object} options - Additional options
+   * @returns {Promise<Buffer>} - PDF buffer
+   */
+  static async generateTraditionalPDF(examContent, subject, options = {}) {
     return new Promise((resolve, reject) => {
       try {
-        console.log('=== PDF GENERATION START ===');
-        console.log('Content length:', examContent ? examContent.length : 'No content');
-        console.log('Content type:', typeof examContent);
-        console.log('Subject:', subject);
-        console.log('Options:', options);
+        console.log('=== TRADITIONAL PDF GENERATION START ===');
         
         // Check if content is valid
         if (!examContent || typeof examContent !== 'string') {
@@ -90,9 +160,9 @@ class PDFService {
 
         // Add content with academic formatting
         try {
-          console.log('About to call addAcademicFormattedContent...');
-          this.addAcademicFormattedContent(doc, sanitizedContent, subject, options);
-          console.log('addAcademicFormattedContent completed successfully');
+          console.log('About to call addProfessionalContent...');
+          this.addProfessionalContent(doc, sanitizedContent, subject, options);
+          console.log('addProfessionalContent completed successfully');
           console.log('Ending PDF document...');
           doc.end();
         } catch (contentError) {
@@ -107,52 +177,56 @@ class PDFService {
   }
 
   /**
-   * Add academic-style formatted content to the PDF document
+   * Check if a file exists
+   * @param {string} filePath - Path to check
+   * @returns {Promise<boolean>} - Whether file exists
+   */
+  static async fileExists(filePath) {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Add professional content matching the uploaded exam format
    * @param {PDFDocument} doc - The PDF document
    * @param {string} content - The content to add
    * @param {string} subject - The subject name
    * @param {object} options - Additional options
    */
-  static addAcademicFormattedContent(doc, content, subject, options) {
+  static addProfessionalContent(doc, content, subject, options) {
     try {
-      console.log('=== ADDING ACADEMIC FORMATTED CONTENT ===');
+      console.log('=== ADDING PROFESSIONAL CONTENT ===');
       
-      // Check if content is already template-formatted (from Gemini template matching)
+      // Check if content is already template-formatted
       const isTemplateFormatted = content.includes('CSCI-') || 
                                  content.includes('Midterm Exam') ||
                                  content.includes('Total:') ||
                                  content.includes('Important Notes') ||
                                  content.includes('READ BEFORE') ||
-                                 content.match(/^[A-Z]{3,4}-[A-Z]{2}\.\d{4}-\d{3}:/m) ||
-                                 content.includes('Honor code') ||
-                                 content.includes('points]') || // Points already formatted
-                                 content.includes('pts)') ||
-                                 content.includes('Problem \\d+') ||
-                                 content.match(/^\d+\.\s+.*\[\d+\s+points?\]/m); // Question with points
-      
-      console.log('Template formatted content detected:', isTemplateFormatted);
-      console.log('Content preview for detection:', content.substring(0, 300));
+                                 content.match(/^[A-Z]{3,4}-[A-Z]{2}\.\d{4}-\d{3}:/m);
       
       if (isTemplateFormatted) {
-        // Content is already properly formatted by Gemini template matching
-        console.log('Using template-formatted content directly');
+        console.log('Using template-formatted content');
         this.addTemplateFormattedContent(doc, content);
       } else {
-        // Content needs standard academic formatting
         console.log('Using standard academic formatting');
         this.addStandardAcademicContent(doc, content, subject, options);
       }
       
-      console.log('=== ACADEMIC CONTENT FORMATTING COMPLETED ===');
+      console.log('=== PROFESSIONAL CONTENT FORMATTING COMPLETED ===');
     } catch (error) {
-      console.error('=== ERROR IN ACADEMIC FORMATTED CONTENT ===');
+      console.error('=== ERROR IN PROFESSIONAL CONTENT ===');
       console.error('Error details:', error);
       throw error;
     }
   }
 
   /**
-   * Add template-formatted content directly (when Gemini has already formatted it)
+   * Add template-formatted content with professional styling
    * @param {PDFDocument} doc - The PDF document
    * @param {string} content - The pre-formatted content
    */
@@ -160,101 +234,565 @@ class PDFService {
     console.log('=== ADDING TEMPLATE-FORMATTED CONTENT ===');
     
     const lines = content.split('\n');
-    let currentY = doc.y;
+    let inCodeBlock = false;
+    let inTable = false;
+    let tableData = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
       
       if (!trimmedLine) {
-        doc.moveDown(0.3);
+        // Empty line - end table if we're in one
+        if (inTable) {
+          this.renderProfessionalTable(doc, tableData);
+          inTable = false;
+          tableData = [];
+          doc.moveDown(0.5);
+        } else {
+          doc.moveDown(0.4);
+        }
         continue;
       }
 
       // Check if we need a new page
-      if (doc.y > doc.page.height - 100) {
+      if (doc.y > doc.page.height - 120) {
         doc.addPage();
       }
 
-      // Course code header (e.g., CSCI-UA.0480-051: Parallel Computing)
-      if (trimmedLine.match(/^[A-Z]{3,4}-[A-Z]{2}\.\d{4}-\d{3}:/)) {
-        doc.fontSize(16)
-           .font('Helvetica-Bold')
-           .text(trimmedLine, { align: 'center' });
-        doc.moveDown(0.3);
-      }
-      // Exam title (e.g., Midterm Exam (Mar 9th, 2023))
-      else if (trimmedLine.includes('Midterm Exam') || trimmedLine.includes('Practice Exam') || trimmedLine.includes('Final Exam')) {
-        doc.fontSize(14)
-           .font('Helvetica-Bold')
-           .text(trimmedLine, { align: 'center' });
-        doc.moveDown(0.3);
-      }
-      // Total points
-      else if (trimmedLine.startsWith('Total:')) {
-        doc.fontSize(12)
-           .font('Helvetica-Bold')
-           .text(trimmedLine, { align: 'center' });
-        doc.moveDown(0.8);
-      }
-      // Important Notes header
-      else if (trimmedLine.includes('Important Notes') || trimmedLine.includes('READ BEFORE')) {
-        doc.fontSize(12)
-           .font('Helvetica-Bold')
-           .fillColor('red')
-           .text(trimmedLine, { align: 'left' });
-        doc.fillColor('black');
-        doc.moveDown(0.4);
-      }
-      // Bullet points
-      else if (trimmedLine.startsWith('•') || trimmedLine.startsWith('*') || trimmedLine.startsWith('-')) {
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(`    ${trimmedLine}`, { align: 'left' });
-        doc.moveDown(0.2);
-      }
-      // Honor code section
-      else if (trimmedLine.includes('Honor code') || trimmedLine.includes('honor code')) {
-        doc.fontSize(11)
-           .font('Helvetica-Bold')
-           .text(trimmedLine, { align: 'left' });
-        doc.moveDown(0.3);
-      }
-      // Questions with numbers and points
-      else if (trimmedLine.match(/^\d+\./)) {
-        doc.fontSize(11)
-           .font('Helvetica')
-           .text(trimmedLine, { align: 'left' });
+      // Detect table structures
+      const isTableLine = this.isTableLine(trimmedLine);
+      const isTableSeparator = this.isTableSeparator(trimmedLine);
+      
+      if (isTableLine) {
+        if (!inTable) {
+          inTable = true;
+          tableData = [];
+        }
+        tableData.push(this.parseTableRow(trimmedLine));
+        continue;
+      } else if (isTableSeparator) {
+        // Skip table separator lines but continue table processing
+        continue;
+      } else if (inTable) {
+        // End of table, render it
+        this.renderProfessionalTable(doc, tableData);
+        inTable = false;
+        tableData = [];
         doc.moveDown(0.5);
+        // Fall through to process current line normally
       }
-      // Problem headers
-      else if (trimmedLine.startsWith('Problem ')) {
-        doc.fontSize(12)
-           .font('Helvetica-Bold')
-           .text(trimmedLine, { align: 'left' });
-        doc.moveDown(0.3);
+
+      // Detect ASCII art/diagram blocks
+      const isAsciiArt = this.isAsciiArtLine(line);
+      
+      // Detect code blocks
+      if (trimmedLine.startsWith('```')) {
+        inCodeBlock = !inCodeBlock;
+        continue;
       }
-      // Regular text
-      else {
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(trimmedLine, { align: 'left' });
-        doc.moveDown(0.3);
+      
+      // Handle diagrams with professional rendering
+      if (inCodeBlock || isAsciiArt) {
+        this.renderDiagram(doc, line);
+        continue;
       }
+
+      // Process content with professional formatting
+      this.renderProfessionalLine(doc, trimmedLine);
+    }
+    
+    // Render any remaining table
+    if (inTable && tableData.length > 0) {
+      this.renderProfessionalTable(doc, tableData);
     }
     
     console.log('=== TEMPLATE-FORMATTED CONTENT COMPLETED ===');
   }
 
   /**
-   * Add standard academic content (when content needs formatting)
+   * Check if a line is part of a table structure
+   * @param {string} line - The line to check
+   * @returns {boolean} - True if line is part of a table
+   */
+  static isTableLine(line) {
+    if (!line || typeof line !== 'string') return false;
+    
+    // Must contain at least 2 pipe characters
+    const pipeCount = (line.match(/\|/g) || []).length;
+    if (pipeCount < 2) return false;
+    
+    // Exclude separator lines (only dashes, equals, spaces, and pipes)
+    if (line.match(/^\s*\|\s*[-=\s]*(\|\s*[-=\s]*)*\|\s*$/)) {
+      return false;
+    }
+    
+    // Must have actual content between pipes
+    const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
+    const hasRealContent = cells.some(cell => cell.length > 0 && !cell.match(/^[-=\s]*$/));
+    
+    return hasRealContent && cells.length >= 2;
+  }
+
+  /**
+   * Check if a line is a table separator (like |---|---|)
+   * @param {string} line - Line to check
+   * @returns {boolean} - True if line is a table separator
+   */
+  static isTableSeparator(line) {
+    if (!line || typeof line !== 'string') return false;
+    
+    // Must contain pipes
+    if (!line.includes('|')) return false;
+    
+    // Must be only dashes, equals, spaces, and pipes
+    return line.match(/^\s*\|\s*[-=\s]*(\|\s*[-=\s]*)*\|\s*$/);
+  }
+
+  /**
+   * Parse a table row into cells
+   * @param {string} line - The table row line
+   * @returns {Array} - Array of cell contents
+   */
+  static parseTableRow(line) {
+    if (!line || typeof line !== 'string') return [];
+    
+    // Split by pipe and clean up cells
+    const cells = line.split('|')
+      .map(cell => cell.trim())
+      .filter((cell, index, array) => {
+        // Remove empty cells at start and end (from leading/trailing pipes)
+        if (index === 0 || index === array.length - 1) {
+          return cell.length > 0 && !cell.match(/^[-=\s]*$/);
+        }
+        return true; // Keep all middle cells, even if empty
+      });
+    
+    return cells;
+  }
+
+  /**
+   * Render a professional table matching the uploaded exam format
+   * @param {PDFDocument} doc - The PDF document
+   * @param {Array} tableData - Array of table rows
+   */
+  static renderProfessionalTable(doc, tableData) {
+    if (!tableData || tableData.length === 0) return;
+    
+    console.log('=== RENDERING PROFESSIONAL TABLE ===');
+    console.log('Raw table data:', tableData);
+    
+    // Clean and validate table data
+    const cleanTableData = tableData.filter(row => 
+      row && Array.isArray(row) && row.length > 0 && 
+      !row.every(cell => !cell || cell.toString().match(/^[-=\s]*$/))
+    );
+    
+    if (cleanTableData.length === 0) {
+      console.log('No valid table data after cleaning');
+      return;
+    }
+    
+    console.log('Clean table data:', cleanTableData);
+    
+    // Determine number of columns and normalize rows
+    const numCols = Math.max(...cleanTableData.map(row => row.length));
+    console.log('Number of columns:', numCols);
+    
+    // Ensure all rows have the same number of columns
+    const normalizedTableData = cleanTableData.map(row => {
+      const normalizedRow = [...row];
+      while (normalizedRow.length < numCols) {
+        normalizedRow.push(''); // Fill missing cells
+      }
+      return normalizedRow.slice(0, numCols); // Trim extra columns
+    });
+    
+    console.log('Normalized table data:', normalizedTableData);
+    
+    // Check if table will fit on current page
+    const estimatedTableHeight = normalizedTableData.length * 28 + 50; // 28px per row + margins
+    if (doc.y + estimatedTableHeight > doc.page.height - 100) {
+      console.log('Table too large for current page, adding new page');
+      doc.addPage();
+    }
+    
+    // Use proper margins - left margin should be 72 (1 inch)
+    const leftMargin = 72;
+    const startX = leftMargin;
+    const startY = doc.y;
+    const availableWidth = doc.page.width - (leftMargin * 2); // Both left and right margins
+    
+    // Dynamic width calculation based on number of columns
+    const maxTableWidth = Math.min(availableWidth, 500); // Don't exceed page width
+    const tableWidth = Math.min(maxTableWidth, numCols * 80); // Minimum 80px per column
+    const rowHeight = Math.max(28, Math.min(40, 280 / normalizedTableData.length)); // Dynamic row height
+    const colWidth = tableWidth / numCols;
+    
+    console.log(`Table dimensions: ${tableWidth}px wide, ${rowHeight}px row height, ${colWidth}px column width`);
+    
+    // Enhanced professional styling
+    const borderWidth = 1.2;
+    const headerFontSize = Math.max(9, Math.min(11, 100 / numCols)); // Dynamic font size
+    const cellFontSize = Math.max(8, Math.min(10, 90 / numCols));
+    const borderColor = '#333333';
+    const headerBgColor = '#f5f5f5';
+    const headerTextColor = '#000000';
+    const cellTextColor = '#222222';
+    
+    try {
+      // Draw outer table border
+      doc.lineWidth(borderWidth)
+         .strokeColor(borderColor)
+         .rect(startX, startY, tableWidth, normalizedTableData.length * rowHeight)
+         .stroke();
+      
+      // Draw table content
+      for (let i = 0; i < normalizedTableData.length; i++) {
+        const row = normalizedTableData[i];
+        const y = startY + (i * rowHeight);
+        const isHeader = i === 0;
+        
+        console.log(`Rendering row ${i}:`, row);
+        
+        // Draw horizontal lines between rows
+        if (i > 0) {
+          doc.lineWidth(0.8)
+             .strokeColor(borderColor)
+             .moveTo(startX, y)
+             .lineTo(startX + tableWidth, y)
+             .stroke();
+        }
+        
+        // Header row background
+        if (isHeader) {
+          doc.fillColor(headerBgColor)
+             .rect(startX + 1, startY + 1, tableWidth - 2, rowHeight - 1)
+             .fill();
+          doc.fillColor(headerTextColor);
+        }
+        
+        // Draw vertical lines and cell content
+        for (let j = 0; j < numCols; j++) {
+          const x = startX + (j * colWidth);
+          
+          // Draw vertical line
+          if (j > 0) {
+            doc.lineWidth(0.8)
+               .strokeColor(borderColor)
+               .moveTo(x, startY)
+               .lineTo(x, startY + (normalizedTableData.length * rowHeight))
+               .stroke();
+          }
+          
+          // Add cell content
+          const cellContent = (row[j] || '').toString();
+          if (cellContent) {
+            const fontSize = isHeader ? headerFontSize : cellFontSize;
+            const fontWeight = isHeader ? 'Helvetica-Bold' : 'Helvetica';
+            const textColor = isHeader ? headerTextColor : cellTextColor;
+            
+            const textX = x + 6;
+            const textY = y + (rowHeight / 2) - (fontSize / 2) + 2;
+            const maxWidth = colWidth - 12;
+            
+            // Handle text wrapping for long content
+            doc.fontSize(fontSize)
+               .font(fontWeight)
+               .fillColor(textColor);
+            
+            // Simple text wrapping
+            if (cellContent.length * fontSize * 0.6 > maxWidth) {
+              // Text is too long, use smaller font or truncate
+              const smallerFont = Math.max(6, fontSize - 1);
+              doc.fontSize(smallerFont);
+            }
+            
+            doc.text(cellContent, textX, textY, {
+              width: maxWidth,
+              align: 'left',
+              baseline: 'middle',
+              ellipsis: true
+            });
+          }
+        }
+      }
+      
+      // Draw outer border again
+      doc.lineWidth(borderWidth)
+         .strokeColor(borderColor)
+         .rect(startX, startY, tableWidth, normalizedTableData.length * rowHeight)
+         .stroke();
+      
+      // Reset colors and move cursor
+      doc.fillColor('#000000').strokeColor('#000000');
+      doc.y = startY + (normalizedTableData.length * rowHeight) + 20;
+      
+      console.log('=== TABLE RENDERING COMPLETED SUCCESSFULLY ===');
+      
+    } catch (error) {
+      console.error('Error rendering table:', error);
+      // Fallback: render as simple text
+      doc.fillColor('#000000')
+         .fontSize(10)
+         .text('Table rendering failed - content:', startX, startY);
+      
+      normalizedTableData.forEach((row, i) => {
+        doc.text(`Row ${i + 1}: ${row.join(' | ')}`, startX, doc.y + 5);
+      });
+      
+      doc.moveDown(2);
+    }
+  }
+
+  /**
+   * Render a diagram with professional styling
+   * @param {PDFDocument} doc - The PDF document
+   * @param {string} line - The diagram line
+   */
+  static renderDiagram(doc, line) {
+    const leftMargin = 72; // 1 inch left margin
+    const availableWidth = doc.page.width - (leftMargin * 2); // Account for both margins
+    
+    // Enhanced diagram rendering for DAG structures
+    if (this.isDAGLine(line)) {
+      this.renderDAGLine(doc, line);
+    } else {
+      // Standard monospace rendering for other diagrams with proper positioning
+      doc.fontSize(9)
+         .font('Courier')
+         .text(line, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'left',
+           lineGap: 1
+         });
+      doc.moveDown(0.1);
+    }
+  }
+
+  /**
+   * Check if line is part of a DAG diagram
+   * @param {string} line - The line to check
+   * @returns {boolean} - True if line is part of DAG
+   */
+  static isDAGLine(line) {
+    // Look for DAG patterns like nodes with arrows
+    return /[A-Z]\s*\([^)]*\)/.test(line) || // Node notation like A(2)
+           /[\/\\|─→←↑↓]/.test(line) || // Arrow characters
+           /^\s*[A-Z]\s*$/.test(line.trim()); // Single letter nodes
+  }
+
+  /**
+   * Render a DAG line with professional styling
+   * @param {PDFDocument} doc - The PDF document  
+   * @param {string} line - The DAG line
+   */
+  static renderDAGLine(doc, line) {
+    const leftMargin = 72; // 1 inch left margin
+    const availableWidth = doc.page.width - (leftMargin * 2); // Account for both margins
+    
+    // Enhanced DAG rendering with better visual styling
+    const trimmedLine = line.trim();
+    
+    // Check if this line contains nodes (like A(5), B(10))
+    const nodeMatches = trimmedLine.match(/[A-Z]\(\d+\)/g);
+    
+    if (nodeMatches && nodeMatches.length > 0) {
+      // This line contains nodes - render with enhanced node styling
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .fillColor('#1a1a1a') // Dark gray for better contrast
+         .text(trimmedLine, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'center',
+           lineGap: 3
+         });
+    } else if (trimmedLine.includes('→') || trimmedLine.includes('←') || trimmedLine.includes('↑') || trimmedLine.includes('↓')) {
+      // This line contains arrows - render with arrow styling
+      doc.fontSize(12)
+         .font('Helvetica')
+         .fillColor('#333333') // Medium gray for arrows
+         .text(trimmedLine, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'center',
+           lineGap: 2
+         });
+    } else if (trimmedLine.match(/[\/\\|─\-_]/)) {
+      // This line contains connection characters
+      doc.fontSize(10)
+         .font('Courier') // Monospace for better alignment
+         .fillColor('#666666') // Light gray for connections
+         .text(trimmedLine, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'center',
+           lineGap: 1
+         });
+    } else {
+      // Regular diagram text
+      doc.fontSize(10)
+         .font('Courier')
+         .fillColor('#444444') // Dark gray
+         .text(trimmedLine, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'center',
+           lineGap: 2
+         });
+    }
+    
+    // Reset color to default
+    doc.fillColor('#000000');
+    doc.moveDown(0.15);
+  }
+
+  /**
+   * Render a line with professional formatting
+   * @param {PDFDocument} doc - The PDF document
+   * @param {string} line - The line to render
+   */
+  static renderProfessionalLine(doc, line) {
+    const leftMargin = 72; // 1 inch left margin
+    const availableWidth = doc.page.width - (leftMargin * 2); // Account for both margins
+    
+    // Course code header (e.g., CSCI-UA.0480-051: Parallel Computing)
+    if (line.match(/^[A-Z]{3,4}-[A-Z]{2}\.\d{4}-\d{3}:/)) {
+      doc.fontSize(16)
+         .font('Helvetica-Bold')
+         .fillColor('#1a1a1a') // Dark charcoal for better contrast
+         .text(line, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'center' 
+         });
+      doc.moveDown(0.4);
+    }
+    // Exam title
+    else if (line.includes('Midterm Exam') || line.includes('Practice Exam') || line.includes('Final Exam')) {
+      doc.fontSize(14)
+         .font('Helvetica-Bold')
+         .fillColor('#2c2c2c') // Dark gray
+         .text(line, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'center' 
+         });
+      doc.moveDown(0.4);
+    }
+    // Total points
+    else if (line.startsWith('Total:')) {
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#333333') // Medium dark gray
+         .text(line, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'center' 
+         });
+      doc.moveDown(0.8);
+    }
+    // Important Notes section
+    else if (line.includes('Important Notes:') || line.includes('READ BEFORE')) {
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#b8860b') // Dark goldenrod for emphasis
+         .text(line, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'left' 
+         });
+      doc.moveDown(0.3);
+    }
+    // Bullet points for important notes
+    else if (line.trim().startsWith('•')) {
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor('#4a4a4a') // Medium gray
+         .text(line, leftMargin + 10, doc.y, { // Slight indent for bullets
+           width: availableWidth - 10,
+           align: 'left' 
+         });
+      doc.moveDown(0.2);
+    }
+    // Problem headers with points (e.g., "Problem 1 (25 points)")
+    else if (line.match(/^Problem\s+\d+/) || line.match(/^\*\*Problem\s+\d+/)) {
+      doc.fontSize(13)
+         .font('Helvetica-Bold')
+         .fillColor('#1a1a1a') // Dark charcoal
+         .text(line.replace(/\*\*/g, ''), leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'left' 
+         });
+      doc.moveDown(0.5);
+    }
+    // Numbered questions (1., 2., 3.)
+    else if (line.match(/^\d+\./)) {
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#2c2c2c') // Dark gray
+         .text(line, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'left' 
+         });
+      doc.moveDown(0.4);
+    }
+    // Sub-questions with points (a. [10], b. [15])
+    else if (line.match(/^[a-z]\.\s*\[\d+\]/)) {
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .fillColor('#4169e1') // Royal blue for sub-questions with points
+         .text(line, leftMargin + 15, doc.y, { // Indent sub-questions
+           width: availableWidth - 15,
+           align: 'left' 
+         });
+      doc.moveDown(0.3);
+    }
+    // Sub-questions without points (a., b., c.)
+    else if (line.match(/^[a-z]\.\s/)) {
+      doc.fontSize(11)
+         .font('Helvetica')
+         .fillColor('#4169e1') // Royal blue for sub-questions
+         .text(line, leftMargin + 15, doc.y, { // Indent sub-questions
+           width: availableWidth - 15,
+           align: 'left' 
+         });
+      doc.moveDown(0.3);
+    }
+    // Section headers or descriptive text before tables
+    else if (line.includes('following table') || line.includes('Consider the') || 
+             line.includes('The table') || line.includes('execution time') ||
+             line.includes('Suppose we have') || line.includes('task dependency')) {
+      doc.fontSize(11)
+         .font('Helvetica')
+         .fillColor('#2c2c2c') // Dark gray
+         .text(line, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'left',
+           lineGap: 2
+         });
+      doc.moveDown(0.5);
+    }
+    // Regular content
+    else {
+      const cleanLine = line.replace(/\*\*(.*?)\*\*/g, '$1');
+      doc.fontSize(11)
+         .font('Helvetica')
+         .fillColor('#333333') // Medium dark gray for body text
+         .text(cleanLine, leftMargin, doc.y, { 
+           width: availableWidth,
+           align: 'left',
+           lineGap: 2
+         });
+      doc.moveDown(0.4);
+    }
+    
+    // Reset color to default black
+    doc.fillColor('#000000');
+  }
+
+  /**
+   * Add standard academic content with professional formatting
    * @param {PDFDocument} doc - The PDF document
    * @param {string} content - The content to add
    * @param {string} subject - The subject name
    * @param {object} options - Additional options
    */
   static addStandardAcademicContent(doc, content, subject, options) {
-    // Add academic header similar to the uploaded example
+    // Add professional header matching the uploaded exam format
     const currentDate = new Date().toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'long', 
@@ -265,116 +803,77 @@ class PDFService {
     let courseCode = '';
     if (subject.toLowerCase().includes('parallel computing')) {
       courseCode = 'CSCI-UA.0480-051: Parallel Computing';
-    } else if (subject.toLowerCase().includes('computer science') || subject.toLowerCase().includes('cs')) {
-      courseCode = `CS-${Math.floor(Math.random() * 900 + 100)}: ${subject}`;
-    } else if (subject.toLowerCase().includes('math')) {
-      courseCode = `MATH-${Math.floor(Math.random() * 900 + 100)}: ${subject}`;
+    } else if (subject.toLowerCase().includes('computer science')) {
+      courseCode = `CSCI-UA.${Math.floor(Math.random() * 900 + 100)}: ${subject}`;
     } else {
-      // Generic course code
       const subjectAbbr = subject.split(' ').map(word => word.charAt(0).toUpperCase()).join('');
-      courseCode = `${subjectAbbr}-${Math.floor(Math.random() * 900 + 100)}: ${subject}`;
+      courseCode = `${subjectAbbr}-UA.${Math.floor(Math.random() * 900 + 100)}: ${subject}`;
     }
     
-    // Course header - centered and bold
+    // Course header - exactly matching uploaded format
     doc.fontSize(14)
        .font('Helvetica-Bold')
        .text(courseCode, { align: 'center' });
     
     doc.moveDown(0.3);
     
-    // Practice Exam title - centered and bold
-    doc.fontSize(14)
+    // Exam title
+    doc.fontSize(12)
        .font('Helvetica-Bold')
        .text('Practice Exam', { align: 'center' });
     
-    doc.moveDown(0.5);
+    doc.moveDown(0.3);
     
-    // Date and difficulty info - centered
-    doc.fontSize(12)
+    // Date
+    doc.fontSize(11)
        .font('Helvetica')
        .text(`Generated on ${currentDate}`, { align: 'center' });
     
-    if (options.difficulty) {
-      doc.text(`Difficulty: ${options.difficulty.charAt(0).toUpperCase() + options.difficulty.slice(1)}`, { align: 'center' });
-    }
+    doc.moveDown(0.5);
     
-    doc.moveDown(1);
+    // Calculate total points
+    const totalPoints = options.questionPoints ? 
+      options.questionPoints.reduce((sum, points) => sum + points, 0) : 100;
     
-    // Add Important Notes section (similar to uploaded example)
-    doc.fontSize(12)
+    doc.fontSize(11)
        .font('Helvetica-Bold')
-       .text('Important Notes:', { align: 'left' });
+       .text(`Total: ${totalPoints} points`, { align: 'center' });
     
-    doc.moveDown(0.3);
+    doc.moveDown(0.8);
     
-    doc.fontSize(10)
-       .font('Helvetica')
-       .text('• Answer all questions to the best of your ability', { align: 'left', indent: 0 });
-    doc.text('• Show all work for partial credit', { align: 'left', indent: 0 });
-    doc.text('• Use additional paper if needed', { align: 'left', indent: 0 });
-    doc.text('• Time limit: 90 minutes', { align: 'left', indent: 0 });
-    
-    doc.moveDown(1);
-    
-    // Add a separator line
-    doc.moveTo(72, doc.y)
+    // Add separator line matching uploaded format
+    doc.lineWidth(0.5)
+       .moveTo(72, doc.y)
        .lineTo(doc.page.width - 72, doc.y)
        .stroke();
     
     doc.moveDown(0.5);
     
-    // Process the content with enhanced formatting
-    const lines = content.split('\n');
-    let currentSection = '';
+    // Process content with enhanced formatting
+    this.addTemplateFormattedContent(doc, content);
+  }
+
+  /**
+   * Check if a line contains ASCII art or diagram elements
+   * @param {string} line - The line to check
+   * @returns {boolean} - True if line appears to be ASCII art
+   */
+  static isAsciiArtLine(line) {
+    const asciiChars = /[┌┐└┘├┤┬┴┼│─╭╮╰╯╠╣╦╩╬║═╔╗╚╝╠╣╦╩╬]/;
+    const drawingChars = /[\/\\|_\-+*=<>^v(){}\[\]]/;
+    const spacedPattern = /\s+[\/\\|_\-+*=<>^v(){}\[\]]\s+/;
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-      
-      if (!trimmedLine) {
-        doc.moveDown(0.3);
-        continue;
-      }
-
-      // Check if we need a new page
-      if (doc.y > doc.page.height - 100) {
-        doc.addPage();
-      }
-
-      // Question headers (lines starting with numbers)
-      if (/^\d+\./.test(trimmedLine)) {
-        doc.moveDown(0.5);
-        doc.fontSize(12)
-           .font('Helvetica-Bold')
-           .text(trimmedLine);
-        doc.moveDown(0.3);
-      }
-      // Section headers (lines in ALL CAPS or with colons)
-      else if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 5 || trimmedLine.includes(':')) {
-        doc.moveDown(0.3);
-        doc.fontSize(11)
-           .font('Helvetica-Bold')
-           .text(trimmedLine);
-        doc.moveDown(0.2);
-      }
-      // Multiple choice options (lines starting with letters)
-      else if (/^[A-D]\)/.test(trimmedLine) || /^[a-d]\)/.test(trimmedLine)) {
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(`   ${trimmedLine}`);
-        doc.moveDown(0.1);
-      }
-      // Regular content
-      else {
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(trimmedLine, {
-             width: 450,
-             align: 'left'
-           });
-        doc.moveDown(0.2);
-      }
-    }
+    const diagramPatterns = [
+      /^\s*[A-Z]\(\d+\)\s*$/, // Node notation like A(2)
+      /^\s*[\/\\|_\-+*=<>^v\s]{3,}\s*$/, // Lines with drawing characters
+      /^\s*\d+\s*[\/\\|_\-+*=<>^v]\s*/, // Numbers with connectors
+      /[A-Z]\(\d+\).*[\/\\|_\-+*=<>^v]/, // Nodes with connections
+    ];
+    
+    return asciiChars.test(line) || 
+           (drawingChars.test(line) && spacedPattern.test(line)) ||
+           diagramPatterns.some(pattern => pattern.test(line)) ||
+           (line.includes('(') && line.includes(')') && /[\/\\|_\-+*=<>^v]/.test(line));
   }
 
   /**
@@ -406,95 +905,28 @@ class PDFService {
   }
 
   /**
-   * Add formatted content to the PDF document (original method, kept for compatibility)
-   * @param {PDFDocument} doc - The PDF document
-   * @param {string} content - The content to add
+   * Extract text from PDF using pdftotext
+   * @param {string} pdfPath - Path to the PDF file
+   * @returns {Promise<string>} - Extracted text content
    */
-  static addFormattedContent(doc, content) {
-    try {
-      console.log('=== ADDING FORMATTED CONTENT ===');
-      console.log('Content length:', content.length);
+  static async extractTextFromPDF(pdfPath) {
+    return new Promise((resolve, reject) => {
+      console.log('=== EXTRACTING TEXT FROM PDF ===');
+      console.log('PDF path:', pdfPath);
       
-      const lines = content.split('\n');
-      console.log('Number of lines:', lines.length);
-
-      for (let i = 0; i < lines.length; i++) {
-        try {
-          const line = lines[i];
-          const trimmedLine = line.trim();
-          
-          if (!trimmedLine) {
-            doc.moveDown(0.5);
-            continue;
-          }
-
-          // Check if we need a new page
-          if (doc.y > doc.page.height - 100) {
-            doc.addPage();
-          }
-
-          // Question headers (lines starting with numbers)
-          if (/^\d+\./.test(trimmedLine)) {
-            doc.moveDown(0.5);
-            doc.fontSize(12)
-               .font('Helvetica-Bold')
-               .text(trimmedLine);
-            doc.moveDown(0.3);
-          }
-          // Section headers (lines in ALL CAPS or with colons)
-          else if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 5 || trimmedLine.includes(':')) {
-            doc.moveDown(0.3);
-            doc.fontSize(11)
-               .font('Helvetica-Bold')
-               .text(trimmedLine);
-            doc.moveDown(0.2);
-          }
-          // Multiple choice options (lines starting with letters)
-          else if (/^[A-D]\)/.test(trimmedLine) || /^[a-d]\)/.test(trimmedLine)) {
-            doc.fontSize(11)
-               .font('Helvetica')
-               .text(`   ${trimmedLine}`);
-          }
-          // Regular content
-          else {
-            doc.fontSize(11)
-               .font('Helvetica')
-               .text(trimmedLine, {
-                 width: 450,
-                 align: 'left'
-               });
-          }
-        } catch (lineError) {
-          console.error(`Error processing line ${i}:`, lineError);
-          console.error('Problematic line:', lines[i]);
-          // Continue with next line instead of failing completely
-          try {
-            doc.fontSize(11)
-               .font('Helvetica')
-               .text(`[Error processing line: ${lines[i].substring(0, 50)}...]`);
-          } catch (fallbackError) {
-            console.error('Fallback text also failed:', fallbackError);
-          }
+      // Use pdftotext to extract text
+      exec(`pdftotext "${pdfPath}" -`, (error, stdout, stderr) => {
+        if (error) {
+          console.error('pdftotext error:', error);
+          console.error('stderr:', stderr);
+          reject(new Error(`Failed to extract text from PDF: ${error.message}`));
+          return;
         }
-      }
-
-      // Add answer space at the end
-      try {
-        doc.moveDown();
-        doc.fontSize(10)
-           .font('Helvetica-Oblique')
-           .text('_'.repeat(80));
-        doc.moveDown(0.5);
-      } catch (footerError) {
-        console.error('Error adding footer:', footerError);
-      }
-      
-      console.log('=== CONTENT FORMATTING COMPLETED ===');
-    } catch (error) {
-      console.error('=== ERROR IN FORMATTED CONTENT ===');
-      console.error('Error details:', error);
-      throw error;
-    }
+        
+        console.log('✅ Text extracted successfully, length:', stdout.length);
+        resolve(stdout);
+      });
+    });
   }
 }
 

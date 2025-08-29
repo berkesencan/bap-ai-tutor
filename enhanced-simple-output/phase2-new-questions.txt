@@ -1,0 +1,70 @@
+Problem 1 (20 points)
+
+Consider the following task flow graph, where each node represents a task and directed edges indicate dependencies.  Execution times for each task on two different processor types are given below (times are in milliseconds).
+
+```
+Task | Type 1 Time | Type 2 Time
+-----|-------------|-------------
+A    | 2           | 4
+B    | 5           | 3
+C    | 3           | 2
+D    | 4           | 5
+E    | 1           | 1
+F    | 6           | 2
+
+Dependencies: A -> B, A -> C, B -> D, C -> D, D -> E, D -> F
+```
+
+a. (5 points) Determine the critical path (longest path) and its length if only Type 1 processors are used.
+
+b. (5 points) Determine the critical path and its length if only Type 2 processors are used.
+
+c. (10 points)  What is the minimum number of processors (of any type) needed to achieve a speedup of at least 2.5x compared to using a single Type 1 processor?  Specify the processor type for each task in your solution, justify your processor allocation choices, and calculate the resulting speedup.
+
+
+Problem 2 (20 points)
+
+a. (5 points) Classify each system as SISD, SIMD, MISD, or MIMD.  No justification needed.
+
+1. A single-core processor with out-of-order execution and hyperthreading.
+2. A GPU with many cores executing the same instruction on different data.
+3. A multi-core processor where each core runs a completely independent program.
+4. A system with a single instruction stream and multiple data streams, operating on independent data sets.
+5. A single core processor capable only of in-order instruction execution.
+
+b. (5 points)  Indicate whether each statement is True (T) or False (F). No justification needed.
+
+1.  Superscalar processors always utilize out-of-order execution.
+2.  Hyperthreading allows multiple threads from the same process to share the same core resources.
+3.  Cache coherence is a concern only in multi-process systems.
+4.  SIMD architectures are well-suited for parallel processing of large arrays.
+5.  MISD architectures are commonly found in modern computer systems.
+
+c. (10 points) You have a 16-core processor with 4-way simultaneous multithreading (SMT).  What is the maximum number of threads that can run concurrently? Explain your answer concisely.  If you need to create more than 16 threads, how might you utilize all the available resources?
+
+
+Problem 3 (20 points)
+
+a. (10 points)  You have an algorithm with eight computationally intensive tasks that can be executed in parallel. Describe three characteristics that would make you choose to implement this algorithm using multiple processes rather than multiple threads within a single process.
+
+b. (10 points) Two different parallel implementations of a sorting algorithm are tested on the same dataset using the same number of cores. Implementation A completes in 10 seconds, and Implementation B completes in 12 seconds. However, Implementation A has a parallel efficiency of 60%, while Implementation B has an efficiency of 80%. Explain which implementation is "better" and why, considering both execution time and efficiency.
+
+
+Problem 4 (20 points)
+
+A program uses MPI with four processes (rank 0, 1, 2, 3). Each process has an integer variable `x`.  Initially, the values are:  `x = {10, 20, 30, 40}` (rank 0 has 10, rank 1 has 20, etc.).
+
+a. (5 points) Write the MPI commands to make process 0 hold the sum of all `x` values, while the other processes maintain their original values.
+
+b. (5 points) Write the MPI commands so that each process ends up with the maximum value of `x` across all processes.
+
+c. (10 points)  Explain the difference between blocking and non-blocking MPI communication functions (e.g., `MPI_Send` vs. `MPI_Isend`).  Describe a scenario where using non-blocking communication would be beneficial.
+
+
+Problem 5 (20 points)
+
+Consider a parallel program that computes the dot product of two vectors, each of size N, distributed across P processors. Each processor holds N/P elements of each vector.
+
+a. (10 points) Design an algorithm using MPI to compute the dot product. Clearly outline the steps involved in data distribution, local computation, and global aggregation of the result.  Include relevant MPI calls.
+
+b. (10 points) Analyze the communication overhead in your algorithm.  How does the overhead scale with N and P?  Suggest ways to reduce the communication overhead.

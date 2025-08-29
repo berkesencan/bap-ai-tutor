@@ -1,0 +1,177 @@
+{
+  "questions": "Q1a) (a) Explain Amdahl's Law in the context of parallel computing. Give a concise example to illustrate its implications.\n\nQ1b) (b) Describe the difference between strong and weak scaling in parallel performance evaluation.\n\nQ2a) (a) Explain the concept of a race condition in concurrent programming. Provide a simple code example demonstrating a race condition.\n\nQ2b) (b) Describe two different mechanisms for synchronizing threads to prevent race conditions.\n\nQ3a) Consider a parallel program that sorts an array of 10 million integers.\n\n(a) Describe a suitable parallel sorting algorithm that could be used to sort the array efficiently. Justify your choice.\n\nQ3b) Consider a parallel program that sorts an array of 10 million integers.\n\n(b) Discuss the potential challenges and limitations of scaling this algorithm to a very large number of processors.\n\nQ4a) Suppose we have a distributed memory system with four processors.\n\n(a) Describe the steps involved in sending a large dataset (e.g., 1GB) from one processor to another using MPI. Include details about data partitioning if necessary.\n\nQ4b) Suppose we have a distributed memory system with four processors.\n\n(b) Discuss the impact of network latency and bandwidth on the performance of this data transfer.\n\nQ5a) (a) What are the advantages and disadvantages of using threads versus processes for parallel programming?\n\nQ5b) (b) Explain the concept of thread affinity and its importance in optimizing parallel performance.\n\nQ6a) Suppose we have the following DAG representing tasks and their dependencies: (Assume tasks A, B, C, D, E take 2, 4, 3, 1, 5 units of time respectively) (Insert a simple DAG here – e.g., A -> B, A -> C, B -> D, C -> D, D -> E)\n\n(a) Determine the critical path of this DAG.\n\nQ6b) Suppose we have the following DAG representing tasks and their dependencies: (Assume tasks A, B, C, D, E take 2, 4, 3, 1, 5 units of time respectively) (Insert a simple DAG here – e.g., A -> B, A -> C, B -> D, C -> D, D -> E)\n\n(b) What is the minimum execution time on a single core? What is the minimum number of cores needed to achieve this minimum execution time?\n\nQ7a) The following code uses OpenMP: [CODE SNIPPET] #include <omp.h> #include <stdio.h> int main() int i, n = 1000; double sum = 0.0; #pragma omp parallel for reduction(+:sum) for (i = 0; i < n; i++) { sum += i * i; printf(\"Sum: %f\", sum); return 0; } [/CODE SNIPPET]\n\n(a) Explain the role of the `reduction(+:sum)` clause.\n\nQ7b) The following code uses OpenMP: [CODE SNIPPET] #include <omp.h> #include <stdio.h> int main() int i, n = 1000; double sum = 0.0; #pragma omp parallel for reduction(+:sum) for (i = 0; i < n; i++) { sum += i * i; printf(\"Sum: %f\", sum); return 0; } [/CODE SNIPPET]\n\n(b) What would happen if the `reduction` clause were removed?\n\nQ8a) (a) Describe the difference between cache coherence and memory consistency in a multiprocessor system.\n\nQ8b) (b) Explain how a cache coherence protocol ensures data consistency among multiple processors.\n\nQ9a) (a) Explain how false sharing can negatively impact the performance of a parallel program.\n\nQ9b) (b) Describe techniques to mitigate false sharing.\n\nQ9c) (c) Give an example of a data structure that is prone to false sharing.\n\nQ10a) (a) Compare and contrast the message-passing and shared-memory programming paradigms.\n\nQ10b) (b) Give an example of a problem that is better suited for message-passing and one that is better suited for shared-memory programming. Justify your choices.",
+  "parsedQuestions": [
+    {
+      "id": 1,
+      "question": "Q1a) (a) Explain Amdahl's Law in the context of parallel computing. Give a concise example to illustrate its implications.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q1b) (b) Describe the difference between strong and weak scaling in parallel performance evaluation.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q2a) (a) Explain the concept of a race condition in concurrent programming. Provide a simple code example demonstrating a race condition.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q2b) (b) Describe two different mechanisms for synchronizing threads to prevent race conditions.",
+      "points": 10
+    },
+    {
+      "id": 5,
+      "question": "Q3a) Consider a parallel program that sorts an array of 10 million integers.\n\n(a) Describe a suitable parallel sorting algorithm that could be used to sort the array efficiently. Justify your choice.",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q3b) Consider a parallel program that sorts an array of 10 million integers.\n\n(b) Discuss the potential challenges and limitations of scaling this algorithm to a very large number of processors.",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q4a) Suppose we have a distributed memory system with four processors.\n\n(a) Describe the steps involved in sending a large dataset (e.g., 1GB) from one processor to another using MPI. Include details about data partitioning if necessary.",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q4b) Suppose we have a distributed memory system with four processors.\n\n(b) Discuss the impact of network latency and bandwidth on the performance of this data transfer.",
+      "points": 10
+    },
+    {
+      "id": 9,
+      "question": "Q5a) (a) What are the advantages and disadvantages of using threads versus processes for parallel programming?",
+      "points": 10
+    },
+    {
+      "id": 10,
+      "question": "Q5b) (b) Explain the concept of thread affinity and its importance in optimizing parallel performance.",
+      "points": 10
+    }
+  ],
+  "interactiveQuestions": [
+    {
+      "id": 1,
+      "question": "Q1a) (a) Explain Amdahl's Law in the context of parallel computing. Give a concise example to illustrate its implications.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q1b) (b) Describe the difference between strong and weak scaling in parallel performance evaluation.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q2a) (a) Explain the concept of a race condition in concurrent programming. Provide a simple code example demonstrating a race condition.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q2b) (b) Describe two different mechanisms for synchronizing threads to prevent race conditions.",
+      "points": 10
+    },
+    {
+      "id": 5,
+      "question": "Q3a) Consider a parallel program that sorts an array of 10 million integers.\n\n(a) Describe a suitable parallel sorting algorithm that could be used to sort the array efficiently. Justify your choice.",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q3b) Consider a parallel program that sorts an array of 10 million integers.\n\n(b) Discuss the potential challenges and limitations of scaling this algorithm to a very large number of processors.",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q4a) Suppose we have a distributed memory system with four processors.\n\n(a) Describe the steps involved in sending a large dataset (e.g., 1GB) from one processor to another using MPI. Include details about data partitioning if necessary.",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q4b) Suppose we have a distributed memory system with four processors.\n\n(b) Discuss the impact of network latency and bandwidth on the performance of this data transfer.",
+      "points": 10
+    },
+    {
+      "id": 9,
+      "question": "Q5a) (a) What are the advantages and disadvantages of using threads versus processes for parallel programming?",
+      "points": 10
+    },
+    {
+      "id": 10,
+      "question": "Q5b) (b) Explain the concept of thread affinity and its importance in optimizing parallel performance.",
+      "points": 10
+    },
+    {
+      "id": 11,
+      "question": "Q6a) Suppose we have the following DAG representing tasks and their dependencies: (Assume tasks A, B, C, D, E take 2, 4, 3, 1, 5 units of time respectively) (Insert a simple DAG here – e.g., A -> B, A -> C, B -> D, C -> D, D -> E)\n\n(a) Determine the critical path of this DAG.",
+      "points": 10
+    },
+    {
+      "id": 12,
+      "question": "Q6b) Suppose we have the following DAG representing tasks and their dependencies: (Assume tasks A, B, C, D, E take 2, 4, 3, 1, 5 units of time respectively) (Insert a simple DAG here – e.g., A -> B, A -> C, B -> D, C -> D, D -> E)\n\n(b) What is the minimum execution time on a single core? What is the minimum number of cores needed to achieve this minimum execution time?",
+      "points": 10
+    },
+    {
+      "id": 13,
+      "question": "Q7a) The following code uses OpenMP: [CODE SNIPPET] #include <omp.h> #include <stdio.h> int main() int i, n = 1000; double sum = 0.0; #pragma omp parallel for reduction(+:sum) for (i = 0; i < n; i++) { sum += i * i; printf(\"Sum: %f\", sum); return 0; } [/CODE SNIPPET]\n\n(a) Explain the role of the `reduction(+:sum)` clause.",
+      "points": 10
+    },
+    {
+      "id": 14,
+      "question": "Q7b) The following code uses OpenMP: [CODE SNIPPET] #include <omp.h> #include <stdio.h> int main() int i, n = 1000; double sum = 0.0; #pragma omp parallel for reduction(+:sum) for (i = 0; i < n; i++) { sum += i * i; printf(\"Sum: %f\", sum); return 0; } [/CODE SNIPPET]\n\n(b) What would happen if the `reduction` clause were removed?",
+      "points": 10
+    },
+    {
+      "id": 15,
+      "question": "Q8a) (a) Describe the difference between cache coherence and memory consistency in a multiprocessor system.",
+      "points": 10
+    },
+    {
+      "id": 16,
+      "question": "Q8b) (b) Explain how a cache coherence protocol ensures data consistency among multiple processors.",
+      "points": 10
+    },
+    {
+      "id": 17,
+      "question": "Q9a) (a) Explain how false sharing can negatively impact the performance of a parallel program.",
+      "points": 8
+    },
+    {
+      "id": 18,
+      "question": "Q9b) (b) Describe techniques to mitigate false sharing.",
+      "points": 7
+    },
+    {
+      "id": 19,
+      "question": "Q9c) (c) Give an example of a data structure that is prone to false sharing.",
+      "points": 5
+    },
+    {
+      "id": 20,
+      "question": "Q10a) (a) Compare and contrast the message-passing and shared-memory programming paradigms.",
+      "points": 10
+    },
+    {
+      "id": 21,
+      "question": "Q10b) (b) Give an example of a problem that is better suited for message-passing and one that is better suited for shared-memory programming. Justify your choices.",
+      "points": 10
+    }
+  ],
+  "questionPoints": [
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10
+  ],
+  "subject": "Parallel Computing",
+  "difficulty": "medium",
+  "pdfPath": "backend/uploads/simple-exam-1754523680370.pdf"
+}

@@ -1,0 +1,107 @@
+CS-UY 2413: Design & Analysis of Algorithms
+Prof. Lisa Hellerstein
+
+Fall 2024
+New York University
+
+Homework 2
+Due 11:59pm Monday, Sep 30, New York time.
+By handing in the homework you are agreeing to the Homework Rules; see EdStem.
+Our Master Theorem: The version of the Master Theorem that we covered in class is on the last
+page of this homework. We won’t be covering the version of the Master Theorem in the textbook and
+you’re not responsible for knowing it. (But you may find it interesting!)
+k+1
+Reminder: For r ̸= 1, r0 + r1 + . . . + rk = r r−1−1 .
+
+1. For each example, indicate whether f = o(g) (little-oh), f = ω(g) (little-omega), or f = Θ(g)
+(big-Theta). No justification is necessary.
+
+(a) f (n) = 2(log₂ n)², g(n) = n
+(b) f (n) = n², g(n) = n log n
+(c) f (n) = 7n!, g(n) = 7ⁿ
+(d) f (n) =  ∑ᵢ₌₀ⁿ 3¹⁰ⁱ, g(n) = n²
+(e) f (n) = log₂(n²), g(n) = log₁₆ n + log₄ n
+
+
+2. Give a formal proof of the following statement: If f (n) ≥ 0 for all n ∈ N, g(n) ≥ 0 for all n ∈ N,
+f (n) = O(g(n)), and g(n) is unbounded (meaning limn→∞ g(n) = ∞) then
+√f (n) = O(√g(n)).
+Use the formal definition of big-Oh in your answer. In your proof, you can use the fact that the value of
+√n increases as n increases.
+Note that a similar statement with exponential functions is not true: If f (n) = 2ⁿ and g(n) = n², then
+f (n) = ω(g(n)), but 2ⁿ is not O(n).
+
+
+3. For each of the following recurrences, determine whether Our Master Theorem (on the last page
+of this HW) can be applied to the recurrence. If it can, use it to give the solution to the recurrence
+in Θ notation; no need to give any details. If not, write “Our Master Theorem does not apply.”
+
+(a) T (n) = 9T (n/3) + n²
+(b) T (n) = 2T (n/4) + √n
+(c) T (n) = nT (n/2) + n
+
+
+4. Our Master Theorem can be applied to a recurrence of the form T (n) = aT (n/b) + nᵈ, where a, b, d are
+constants with a > 0, b > 1, d > 0. Consider instead a recurrence of the form Tnew (n) = aTnew (n/b)+nˡᵒᵍᵇᵃ
+where a > 0, b > 1 (and T (1) = 1).
+
+For each of the following, state whether the given property of Tnew is true. If so, explain why it is true.
+If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook,
+don’t use it in your explanation.)
+
+(a) Tnew (n) = O(n log n) if logb a < 1
+(b) Tnew (n) = Ω(n log n) if logb a > 1
+
+
+5. Consider the recurrence T (n) = 2T (n/2) + n log n for n > 1, and T (1) = 1.
+
+(a) Compute the value of T (4), using the recurrence. Show your work.
+(b) Use a recursion tree to solve the recurrence and get a closed-form expression for T (n), when n is a
+power of 2. (Check that your expression is correct by plugging in n = 4 and comparing with your answer
+to (a).)
+(c) Suppose that the base case is T (2) = 5, instead of T (1) = 1. What is the solution to the recurrence
+in this case, for n ≥ 2?
+
+
+6. Consider a variation of mergesort that works as follows: If the array has size 1, return. Otherwise,
+divide the array into fourths, rather than in half. Recursively sort each fourth using this variation of
+mergesort. Then merge the first two fourths. Finally, merge the result with the last two fourths.
+
+(a) Write a recurrence for the running time of this variation of mergesort. It should be similar to the
+recurrence for ordinary mergesort. Assume n is a power of 4.
+(b) Apply Our Master Theorem to the recurrence to get the running time of the algorithm, in theta
+notation. Show your work.
+
+
+7. Consider the following recursive sorting algorithm. Assume n is a power of 2. (Note: This is not a
+version of mergesort. No merges are performed.)
+
+• If the array has only one element, return.
+• Recursively sort the first half of the elements in the array.
+• Recursively sort the last half of the elements in the array.
+• Recursively sort the first half of the elements in the array again.
+(Note: Even if you can’t figure out part (a) below, you can still answer (b) and (c).)
+
+(a) Prove that the algorithm is correct by showing that the array will be sorted after the three recursive
+calls are performed, assuming the three recursive calls correctly sort their (sub)arrays. Note that the
+middle element of the array is included in each of the 3 recursive calls.
+(b) Write a recurrence expressing the running time of the algorithm.
+(c) Apply Our Master Theorem to your recurrence. What is the running time of the algorithm, in theta
+notation?
+
+
+Theorem 0.1 (Our Master Theorem) Let a, b, d, n0 be constants such that a > 0, b > 1, d ≥ 0 and
+n0 > 0.
+Let T (n) = aT (n/b) + θ(nd ) for when n ≥ n0 , and T (n) = θ(1) when 0 ≤ n < n0 . Then,
+
+d
+
+θ(n log n) if d = logb a
+T (n) = θ(nlogb a )
+if d < logb a
+
+ d
+θ(n )
+if d > logb a
+We assume here that T (n) is a function defined on the natural numbers. We use aT (n/b) to mean
+a′ T (⌊n/b⌋) + a′′ (T (⌈n/b⌉) where a′ , a′′ > 0 such that a′ + a′′ = a.

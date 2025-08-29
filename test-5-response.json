@@ -1,0 +1,182 @@
+{
+  "questions": "Q1a) (a) Suppose we have a core with only superscalar execution (i.e. no pipelining or hyperthreading). Will this core benefit from having a larger instruction cache? Justify your answer in 1-2 lines.\n\nQ1b) (b) Can several threads be executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the distributed machine has multiple CPUs.\n\nQ1c) (c) Can several processes, belonging to the same program, be executed on a shared memory machine and get the same performance as when executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the distributed machine and the shared memory machine have the same number of cores.\n\nQ1d) (d) If we have an eight-way superscalar core, how many instruction decoders do we need to get the best performance? Justify.\n\nQ2a) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(a) What is the minimum number of CPUs of each type that we need to get the highest speedup over sequential execution on CPU of type A? Show which CPU will execute which task(s) and calculate the final speedup.\n\nQ2b) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(b) Repeat the problem above but using CPU of type B.\n\nQ2c) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(c) Suppose we can improve the algorithm to reduce the execution time of Task B on CPU type A to 2 time units. How would this change the optimal CPU assignment and the resulting speedup compared to the original algorithm in part (a)?\n\nQ3b) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(b) Explain how the use of tags in MPI\\_Send and MPI\\_Recv helps in avoiding message collisions in this example.\n\nQ3c) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(c) What will happen if we remove all the tags from the MPI\\_Send and MPI\\_Recv calls? Explain.\n\nQ3d) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(d) What happens if process 1 crashes before sending the message in `MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD);`?\n\nQ4a) (a) If we have an application with high communication overhead between parallel tasks. Does it have good scalability? Explain.\n\nQ4b) (b) If we have four threads, each assigned to a core, and all threads have the same type and number of computations. Does this guarantee load balance? Explain.\n\nQ5) Describe three different ways to parallelize a matrix multiplication algorithm. Explain the advantages and disadvantages of each approach. [20 points]\n\nQ6a) (a) Explain the concept of Amdahl's Law and its implications for parallel computing.\n\nQ6b) (b) Explain the concept of Gustafson's Law and how it differs from Amdahl's Law.\n\nQ6c) (c) Give a scenario where Gustafson's Law is more applicable than Amdahl's Law.\n\nQ7a) (a) Compare and contrast OpenMP and MPI. Discuss their strengths and weaknesses in different contexts.\n\nQ7b) (b) Describe a situation where OpenMP would be a better choice than MPI, and vice versa.\n\nQ8) Consider a parallel program that sorts an array of integers using a merge sort algorithm. Describe how you would parallelize this algorithm using either OpenMP or MPI. Include pseudocode or a detailed description of the steps involved. [20 points]\n\nQ9a) (a) What are false sharing and cache coherence? Explain how they can affect the performance of parallel programs.\n\nQ9b) (b) Describe techniques to mitigate the effects of false sharing in parallel programs.\n\nQ10) Explain the concept of a critical section in parallel programming and illustrate its use with an example. Describe different mechanisms for managing critical sections and their relative advantages and disadvantages. [20 points]",
+  "parsedQuestions": [
+    {
+      "id": 1,
+      "question": "Q1a) (a) Suppose we have a core with only superscalar execution (i.e. no pipelining or hyperthreading). Will this core benefit from having a larger instruction cache? Justify your answer in 1-2 lines.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q1b) (b) Can several threads be executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the distributed machine has multiple CPUs.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q1c) (c) Can several processes, belonging to the same program, be executed on a shared memory machine and get the same performance as when executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the distributed machine and the shared memory machine have the same number of cores.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q1d) (d) If we have an eight-way superscalar core, how many instruction decoders do we need to get the best performance? Justify.",
+      "points": 6
+    },
+    {
+      "id": 5,
+      "question": "Q2a) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(a) What is the minimum number of CPUs of each type that we need to get the highest speedup over sequential execution on CPU of type A? Show which CPU will execute which task(s) and calculate the final speedup.",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q2b) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(b) Repeat the problem above but using CPU of type B.",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q2c) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(c) Suppose we can improve the algorithm to reduce the execution time of Task B on CPU type A to 2 time units. How would this change the optimal CPU assignment and the resulting speedup compared to the original algorithm in part (a)?",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q3b) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(b) Explain how the use of tags in MPI\\_Send and MPI\\_Recv helps in avoiding message collisions in this example.",
+      "points": 5
+    },
+    {
+      "id": 9,
+      "question": "Q3c) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(c) What will happen if we remove all the tags from the MPI\\_Send and MPI\\_Recv calls? Explain.",
+      "points": 5
+    },
+    {
+      "id": 10,
+      "question": "Q3d) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(d) What happens if process 1 crashes before sending the message in `MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD);`?",
+      "points": 5
+    }
+  ],
+  "interactiveQuestions": [
+    {
+      "id": 1,
+      "question": "Q1a) (a) Suppose we have a core with only superscalar execution (i.e. no pipelining or hyperthreading). Will this core benefit from having a larger instruction cache? Justify your answer in 1-2 lines.",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Q1b) (b) Can several threads be executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the distributed machine has multiple CPUs.",
+      "points": 10
+    },
+    {
+      "id": 3,
+      "question": "Q1c) (c) Can several processes, belonging to the same program, be executed on a shared memory machine and get the same performance as when executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the distributed machine and the shared memory machine have the same number of cores.",
+      "points": 10
+    },
+    {
+      "id": 4,
+      "question": "Q1d) (d) If we have an eight-way superscalar core, how many instruction decoders do we need to get the best performance? Justify.",
+      "points": 6
+    },
+    {
+      "id": 5,
+      "question": "Q2a) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(a) What is the minimum number of CPUs of each type that we need to get the highest speedup over sequential execution on CPU of type A? Show which CPU will execute which task(s) and calculate the final speedup.",
+      "points": 10
+    },
+    {
+      "id": 6,
+      "question": "Q2b) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(b) Repeat the problem above but using CPU of type B.",
+      "points": 10
+    },
+    {
+      "id": 7,
+      "question": "Q2c) Suppose we have the following DAG that represents different tasks and their dependencies. The DAG is a simple linear chain: Task A -> Task B -> Task C -> Task D. The following table shows the execution time of each task if we execute it on a core of type A and if we execute it on core of type B. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks. [TABLE] |c|c|c| Task & CPU type A & CPU type B A & 2 & 4 B & 5 & 3 C & 8 & 6 D & 1 & 2 [/TABLE]\n\n(c) Suppose we can improve the algorithm to reduce the execution time of Task B on CPU type A to 2 time units. How would this change the optimal CPU assignment and the resulting speedup compared to the original algorithm in part (a)?",
+      "points": 10
+    },
+    {
+      "id": 8,
+      "question": "Q3b) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(b) Explain how the use of tags in MPI\\_Send and MPI\\_Recv helps in avoiding message collisions in this example.",
+      "points": 5
+    },
+    {
+      "id": 9,
+      "question": "Q3c) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(c) What will happen if we remove all the tags from the MPI\\_Send and MPI\\_Recv calls? Explain.",
+      "points": 5
+    },
+    {
+      "id": 10,
+      "question": "Q3d) Suppose that MPI\\_COMM\\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (my\\_rank contains the rank of the executing process): [CODE SNIPPET] int x, y; MPI_Status status; switch(my_rank) case 0: x=1; y=2; MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD); MPI_Recv(&y, 1, MPI_INT, 3, 2, MPI_COMM_WORLD, &status); break; case 1: x=3; y=4; MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD); break; case 2: x=5; y=6; MPI_Recv(&y, 1, MPI_INT, 1, 3, MPI_COMM_WORLD, &status); MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD); break; case 3: x=7; y=8; MPI_Recv(&x, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status); MPI_Send(&y, 1, MPI_INT, 0, 2, MPI_COMM_WORLD); break; [/CODE SNIPPET] a. [9 points] What will be the values of x and y for each of the 4 processes after executing the above code? [TABLE] |c|c|c|c|c| & P0 & P1 & P2 & P3 x & & & & y & & & & [/TABLE]\n\n(d) What happens if process 1 crashes before sending the message in `MPI_Send(&y, 1, MPI_INT, 2, 3, MPI_COMM_WORLD);`?",
+      "points": 5
+    },
+    {
+      "id": 11,
+      "question": "Q4a) (a) If we have an application with high communication overhead between parallel tasks. Does it have good scalability? Explain.",
+      "points": 5
+    },
+    {
+      "id": 12,
+      "question": "Q4b) (b) If we have four threads, each assigned to a core, and all threads have the same type and number of computations. Does this guarantee load balance? Explain.",
+      "points": 5
+    },
+    {
+      "id": 13,
+      "question": "Q5) Describe three different ways to parallelize a matrix multiplication algorithm. Explain the advantages and disadvantages of each approach. [20 points]",
+      "points": 10
+    },
+    {
+      "id": 14,
+      "question": "Q6a) (a) Explain the concept of Amdahl's Law and its implications for parallel computing.",
+      "points": 8
+    },
+    {
+      "id": 15,
+      "question": "Q6b) (b) Explain the concept of Gustafson's Law and how it differs from Amdahl's Law.",
+      "points": 7
+    },
+    {
+      "id": 16,
+      "question": "Q6c) (c) Give a scenario where Gustafson's Law is more applicable than Amdahl's Law.",
+      "points": 5
+    },
+    {
+      "id": 17,
+      "question": "Q7a) (a) Compare and contrast OpenMP and MPI. Discuss their strengths and weaknesses in different contexts.",
+      "points": 10
+    },
+    {
+      "id": 18,
+      "question": "Q7b) (b) Describe a situation where OpenMP would be a better choice than MPI, and vice versa.",
+      "points": 10
+    },
+    {
+      "id": 19,
+      "question": "Q8) Consider a parallel program that sorts an array of integers using a merge sort algorithm. Describe how you would parallelize this algorithm using either OpenMP or MPI. Include pseudocode or a detailed description of the steps involved. [20 points]",
+      "points": 10
+    },
+    {
+      "id": 20,
+      "question": "Q9a) (a) What are false sharing and cache coherence? Explain how they can affect the performance of parallel programs.",
+      "points": 10
+    },
+    {
+      "id": 21,
+      "question": "Q9b) (b) Describe techniques to mitigate the effects of false sharing in parallel programs.",
+      "points": 10
+    },
+    {
+      "id": 22,
+      "question": "Q10) Explain the concept of a critical section in parallel programming and illustrate its use with an example. Describe different mechanisms for managing critical sections and their relative advantages and disadvantages. [20 points]",
+      "points": 10
+    }
+  ],
+  "questionPoints": [
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10
+  ],
+  "subject": "Parallel Computing",
+  "difficulty": "medium",
+  "pdfPath": "backend/uploads/simple-exam-1754523811859.pdf"
+}

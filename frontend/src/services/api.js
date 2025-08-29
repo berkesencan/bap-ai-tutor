@@ -82,15 +82,35 @@ const handleApiError = (error) => {
 };
 
 // Test Gemini 1.5 Flash API (no authentication required)
-export const testGemini = async (prompt) => {
+export const testGemini = async (prompt, timeoutMs = 30000) => {
   try {
     console.log('Calling test-gemini API with prompt:', prompt);
     console.log('API URL:', `${API_BASE_URL}/test-ai/test-gemini`);
-    const response = await testApiClient.post('/test-ai/test-gemini', { prompt });
+    
+    // Create timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
+    });
+    
+    // Race between the API call and timeout
+    const apiPromise = testApiClient.post('/test-ai/test-gemini', { prompt });
+    
+    const response = await Promise.race([apiPromise, timeoutPromise]);
     console.log('Test API response:', response.data);
     return response.data; // { success: true, data: { response: '...', model: '...' } }
   } catch (error) {
     console.error('Test API error details:', error);
+    
+    // Handle timeout specifically
+    if (error.message === 'Request timed out') {
+      return { 
+        success: false, 
+        error: 'Request timed out - please try again', 
+        status: 0,
+        timeout: true
+      };
+    }
+    
     return handleApiError(error);
   }
 };
@@ -494,7 +514,7 @@ export const processPracticeExam = async (form) => {
     formData.append('numQuestions', form.numQuestions);
     formData.append('difficulty', form.difficulty);
     formData.append('generatePDF', form.generatePDF);
-    if (form.instructions) formData.append('instructions', form.instructions);
+    formData.append('instructions', form.instructions || ''); // Always send instructions, even if empty
     if (form.pdf) formData.append('pdf', form.pdf);
     
     // Add question points as JSON string
@@ -517,6 +537,7 @@ export const processPracticeExam = async (form) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 60000, // 60 second timeout for practice exam generation
     });
     
     console.log('=== API RESPONSE RECEIVED ===');

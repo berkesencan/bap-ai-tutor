@@ -1,0 +1,40 @@
+{
+  "subject": "operating-systems",
+  "hasDAGs": false,
+  "hasCircuits": false,
+  "hasTables": false,
+  "hasCodeSnippets": true,
+  "hasMathEquations": false,
+  "hasFlowCharts": false,
+  "hasNetworkDiagrams": false,
+  "hasAlgorithmPseudocode": false,
+  "detectedElements": [
+    "Code snippets"
+  ],
+  "codeLanguages": [
+    "JavaScript"
+  ],
+  "diagramTypes": [],
+  "tableStructures": [],
+  "mathNotations": [],
+  "contentTopics": [
+    "operating-systems (9 mentions)",
+    "computer-networks (5 mentions)"
+  ],
+  "questionTypes": [
+    "theoretical (1 instances)",
+    "practical (8 instances)"
+  ],
+  "academicPatterns": [],
+  "technicalTerms": [
+    "HINT",
+    "printk-basics",
+    "apt-get",
+    "linux-headers",
+    "short-answer",
+    "RULES",
+    "GENERAL",
+    "ALLOWED"
+  ],
+  "complexityLevel": "basic"
+}

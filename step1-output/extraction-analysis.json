@@ -1,0 +1,63 @@
+{
+  "summary": {
+    "pdfPath": "/Users/peterperry/Desktop/NYU/Hackathons/bap-ai-tutor/backend/uploads/1756425956597-HW2-2.pdf",
+    "textLength": 4849,
+    "htmlLength": 57969,
+    "pageCount": 1,
+    "fontSizes": [
+      22,
+      18,
+      12,
+      9
+    ],
+    "colors": [
+      "#000000"
+    ],
+    "tableCount": 0,
+    "imageCount": 6,
+    "errors": []
+  },
+  "tables": [],
+  "images": [
+    {
+      "type": "background",
+      "index": 0,
+      "src": "page-1-1756425959995-ynj624.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 1,
+      "src": "page-2-1756425959995-ynj624.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 2,
+      "src": "page-3-1756425959995-ynj624.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "inline",
+      "index": 0,
+      "src": "page-1-1756425959995-ynj624.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 1,
+      "src": "page-2-1756425959995-ynj624.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 2,
+      "src": "page-3-1756425959995-ynj624.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    }
+  ],
+  "timestamp": "2025-08-29T00:06:00.273Z"
+}

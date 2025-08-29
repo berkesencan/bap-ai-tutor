@@ -1,0 +1,41 @@
+[
+  {
+    "type": "background",
+    "index": 0,
+    "src": "page-1-1756425959995-ynj624.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "background",
+    "index": 1,
+    "src": "page-2-1756425959995-ynj624.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "background",
+    "index": 2,
+    "src": "page-3-1756425959995-ynj624.png",
+    "purpose": "diagram_or_visual_content"
+  },
+  {
+    "type": "inline",
+    "index": 0,
+    "src": "page-1-1756425959995-ynj624.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  },
+  {
+    "type": "inline",
+    "index": 1,
+    "src": "page-2-1756425959995-ynj624.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  },
+  {
+    "type": "inline",
+    "index": 2,
+    "src": "page-3-1756425959995-ynj624.png",
+    "alt": "background image",
+    "purpose": "content_image"
+  }
+]

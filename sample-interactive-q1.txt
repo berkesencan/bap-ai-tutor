@@ -1,0 +1,3 @@
+INTERACTIVE QUESTION 1:
+
+Q1a) (a) f(n) = n⁽2⁾ log n, g(n) = n⁽3⁾
