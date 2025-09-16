@@ -34,10 +34,11 @@
     "socket.io": "^4.8.1",
     "svg2pdf.js": "^2.5.0",
     "tough-cookie": "^5.1.2",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^4.1.8"
   },
   "devDependencies": {
-    "concurrently": "^8.0.1",
+    "concurrently": "^8.2.2",
     "nodemon": "^2.0.22"
   }
 }

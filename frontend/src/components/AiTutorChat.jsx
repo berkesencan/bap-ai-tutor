@@ -38,6 +38,8 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   const [courseMaterials, setCourseMaterials] = useState([]);
+  const [loadingMaterials, setLoadingMaterials] = useState(false);
+  const [materialsError, setMaterialsError] = useState(null);
 
   // Fetch available courses on component mount
   useEffect(() => {
@@ -66,14 +68,25 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   };
 
   const handleCourseSelect = async (course) => {
+    const courseId = course?.id;
+    
     setSelectedCourse(course);
     setShowCourseDropdown(false);
+    setMaterialsError(null);
+    
+    // Reset materials immediately to prevent stale data
+    setCourseMaterials({});
     
     // Fetch integrated materials for this course
     if (course && currentUser) {
+      setLoadingMaterials(true);
+      
       try {
         const token = await currentUser.getIdToken();
         const contextType = course.type || 'course';
+        
+        console.log(`[Course Select] Fetching materials for ${course.name} (${courseId})`);
+        
         const response = await fetch(`/api/ai/materials/${course.id}?type=${contextType}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -83,13 +96,24 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
 
         if (response.ok) {
           const data = await response.json();
-          setCourseMaterials(data.data || {});
+          
+          // Prevent race condition: only update if this is still the selected course
+          if (selectedCourse?.id === courseId || (!selectedCourse && course?.id === courseId)) {
+            console.log(`[Course Select] Materials loaded:`, data.data);
+            setCourseMaterials(data.data || {});
+          }
+        } else {
+          throw new Error(`Failed to fetch materials: ${response.status}`);
         }
       } catch (error) {
         console.error('Error fetching course materials:', error);
+        setMaterialsError('Failed to load course materials');
+      } finally {
+        setLoadingMaterials(false);
       }
     } else {
       setCourseMaterials({});
+      setLoadingMaterials(false);
     }
   };
 
@@ -797,11 +821,24 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
         </div>
         <div className="chat-header-controls">
           <CourseSelector />
-          {selectedCourse && courseMaterials.length > 0 && (
+          {selectedCourse && (
             <div className="classroom-materials-indicator">
-              <span className="text-xs text-white">
-                📚 {courseMaterials.length} course materials available
-              </span>
+              {loadingMaterials && (
+                <span className="text-xs text-white">
+                  <FaSpinner className="animate-spin inline mr-1" />
+                  Loading materials...
+                </span>
+              )}
+              {materialsError && (
+                <span className="text-xs text-red-300">
+                  ⚠️ {materialsError}
+                </span>
+              )}
+              {!loadingMaterials && !materialsError && courseMaterials.totalMaterials > 0 && (
+                <span className="text-xs text-white">
+                  📚 {courseMaterials.totalMaterials} course materials available
+                </span>
+              )}
             </div>
           )}
         </div>

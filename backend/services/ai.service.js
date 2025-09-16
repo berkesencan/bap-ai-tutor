@@ -897,8 +897,23 @@ async function getIntegratedMaterials(userId, contextId, contextType = 'classroo
       totalAnnouncements: announcements.length
     };
   } catch (error) {
-    console.error('Error getting integrated materials:', error);
-    return { materials: [], assignments: [], announcements: [] };
+    console.error(`[AI Service] Error getting integrated materials for ${contextType} ${contextId}:`, error);
+    console.error(`[AI Service] Error details:`, {
+      userId,
+      contextId,
+      contextType,
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+    return { 
+      materials: [], 
+      assignments: [], 
+      announcements: [],
+      totalMaterials: 0,
+      totalAssignments: 0,
+      totalAnnouncements: 0,
+      error: error.message 
+    };
   }
 }
 

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "Q1",
+    "text": "Problem 1 (10 points) Explain the difference between cache coherence and memory consistency in a multi-core system. Provide examples of situations where one might be violated while the other holds.",
+    "rawLatex": "\\section*{Problem 1 (10 points)}\nExplain the difference between cache coherence and memory consistency in a multi-core system.  Provide examples of situations where one might be violated while the other holds.",
+    "points": null
+  },
+  {
+    "id": "Q2",
+    "text": "Problem 2 (15 points) Describe three different approaches to handling false sharing in shared memory programming. For each approach, briefly explain how it works and its advantages and disadvantages.",
+    "rawLatex": "\\section*{Problem 2 (15 points)}\nDescribe three different approaches to handling false sharing in shared memory programming.  For each approach, briefly explain how it works and its advantages and disadvantages.",
+    "points": null
+  },
+  {
+    "id": "Q3",
+    "text": "Problem 3 (15 points) Consider a parallel program that sorts an array of integers. Describe how you would implement this using: [(a)] (5 points) A divide-and-conquer approach using MPI. [(b)] (5 points) A parallel merge sort algorithm using OpenMP. [(c)] (5 points) Compare the scalability of the two approaches. Which would be better suited for a very large number of cores and a massive dataset? Justify your answer.",
+    "rawLatex": "\\section*{Problem 3 (15 points)}\nConsider a parallel program that sorts an array of integers.  Describe how you would implement this using:\n\\begin{enumerate}\n    \\item[(a)] (5 points) A divide-and-conquer approach using MPI.\n    \\item[(b)] (5 points) A parallel merge sort algorithm using OpenMP.\n    \\item[(c)] (5 points)  Compare the scalability of the two approaches. Which would be better suited for a very large number of cores and a massive dataset? Justify your answer.\n\\end{enumerate}",
+    "points": null
+  },
+  {
+    "id": "Q4",
+    "text": "Problem 4 (15 points) A program uses a single producer and multiple consumer threads to process data. Describe how you would implement a thread-safe bounded buffer using appropriate synchronization primitives (e.g., semaphores, mutexes, condition variables). Explain the role of each primitive in ensuring thread safety.",
+    "rawLatex": "\\section*{Problem 4 (15 points)}\nA program uses a single producer and multiple consumer threads to process data. Describe how you would implement a thread-safe bounded buffer using appropriate synchronization primitives (e.g., semaphores, mutexes, condition variables).  Explain the role of each primitive in ensuring thread safety.",
+    "points": null
+  },
+  {
+    "id": "Q5",
+    "text": "Problem 5 (15 points) Suppose you are given a task graph where each node represents a task and the edges represent dependencies between tasks. Explain how you would use a topological sort to schedule the tasks for parallel execution, and discuss any challenges you might encounter.",
+    "rawLatex": "\\section*{Problem 5 (15 points)}\nSuppose you are given a task graph where each node represents a task and the edges represent dependencies between tasks.  Explain how you would use a topological sort to schedule the tasks for parallel execution, and discuss any challenges you might encounter.",
+    "points": null
+  },
+  {
+    "id": "Q6",
+    "text": "Problem 6 (15 points) You have a program that needs to perform a large number of independent calculations. Compare and contrast the use of MPI and OpenMP for parallelizing this program. Discuss the strengths and weaknesses of each approach for this type of problem.",
+    "rawLatex": "\\section*{Problem 6 (15 points)}\nYou have a program that needs to perform a large number of independent calculations.  Compare and contrast the use of MPI and OpenMP for parallelizing this program. Discuss the strengths and weaknesses of each approach for this type of problem.",
+    "points": null
+  },
+  {
+    "id": "Q7",
+    "text": "Problem 7 (15 points) Explain the concept of Amdahl's Law and its implications for the scalability of parallel programs. Give an example of a program with a high serial fraction and discuss why it would be difficult to achieve significant speedup using parallelization.",
+    "rawLatex": "\\section*{Problem 7 (15 points)}\nExplain the concept of Amdahl's Law and its implications for the scalability of parallel programs.  Give an example of a program with a high serial fraction and discuss why it would be difficult to achieve significant speedup using parallelization.",
+    "points": null
+  }
+]

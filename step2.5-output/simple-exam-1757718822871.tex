@@ -1,0 +1,197 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+
+\begin{document}
+
+\textbf{New York University} \\
+\textbf{Tandon School of Engineering} \\
+\textbf{Department of Computer Science and Engineering} \\
+\textbf{Introduction to Operating Systems} \\
+\textbf{Fall 2024} \\
+\textbf{Assignment 4} \\
+(10 points)
+
+
+\textbf{Problem 1 (2 points)} If you create a main() routine that calls fork() four times, i.e., if it includes the following code:
+
+\texttt{pid\_t w=-1, x=-2, y=-3, z=-4;} \\
+\texttt{w = fork();}\\
+\texttt{if(w==0) x = fork();}\\
+\texttt{if(x==0) y = fork();}\\
+\texttt{if(y==0) z = fork();}\\
+
+Assuming all fork() calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of w, x, y, and z for each process in the tree (i.e., whether 0, -1, -2, -3, -4, or larger than 0).
+Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes.
+The process tree should be a snapshot just after all forks completed but before any process exits.
+Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+
+\textbf{Problem 2 (4 points)} Write a program that creates the process tree shown below:
+\textit{(Process tree diagram would be inserted here -  a simple tree with at least 4 processes)}
+
+
+\textbf{Problem 3 (4 points)} Write a program whose main routine obtains a parameter n from the user (i.e., passed to your program when it was invoked from the shell, n>2) and creates a child process. The child process shall then calculate the sum of the first n even numbers and print the result. The parent waits for the child to exit and then prints double the sum calculated by the child. Do not use IPC in your solution to this problem (i.e., neither shared memory nor message passing).
+
+
+\textbf{Problem 4 (2 points)}  Describe the race condition that might occur if two processes try to increment a shared counter simultaneously without any synchronization mechanisms.  Suggest a solution to prevent this race condition.
+
+\textbf{Problem 5 (3 points)} Explain the difference between a process and a thread.  Give examples of when you might prefer to use threads over processes, and vice versa.
+
+
+\textbf{Problem 6 (4 points)} Write a C program that uses threads to calculate the factorial of numbers from 1 to 5 concurrently. Each thread should calculate the factorial of one number and print the result. The main thread should wait for all other threads to complete before exiting.
+
+
+\textbf{Problem 7 (2 points)} What is a deadlock? Give an example scenario where a deadlock might occur in an operating system.
+
+
+\textbf{Problem 8 (3 points)} Explain the concept of a semaphore.  How can semaphores be used to prevent race conditions?
+
+
+\textbf{Problem 9 (4 points)} Write a C program that uses two threads and a mutex to protect a shared counter. One thread increments the counter 1000 times, and the other thread decrements the counter 1000 times.  Ensure that the final value of the counter is 0.
+
+
+\textbf{Problem 10 (2 points)} What is a critical section? Why is it important to protect critical sections?
+
+
+\textbf{Problem 11 (3 points)}  Explain the difference between a mutex and a condition variable. When would you use each?
+
+
+\textbf{Problem 12 (4 points)} Write a C program that uses a condition variable to synchronize two threads. One thread produces data, and the other thread consumes the data. The consumer thread should wait for data to be available before consuming it.
+
+
+\textbf{Problem 13 (2 points)} Describe the producer-consumer problem.
+
+
+\textbf{Problem 14 (3 points)}  Explain the concept of a reader-writer lock. When would you use a reader-writer lock instead of a mutex?
+
+
+\textbf{Problem 15 (4 points)} Write a C program that uses a reader-writer lock to protect a shared resource. Multiple reader threads can access the resource concurrently, but only one writer thread can access it at a time.
+
+
+\textbf{Problem 16 (2 points)} What is a memory map?
+
+
+\textbf{Problem 17 (3 points)} Explain the concept of virtual memory. What are its advantages?
+
+
+\textbf{Problem 18 (4 points)}  Describe the page replacement algorithms: FIFO, LRU, and Optimal.  Discuss their relative performance.
+
+
+\textbf{Problem 19 (2 points)} What is a page fault?
+
+
+\textbf{Problem 20 (3 points)} Explain the concept of thrashing. How can it be avoided?
+
+
+\textbf{Problem 21 (4 points)} Write a short C program that simulates a simple page replacement algorithm (e.g., FIFO) with a fixed number of frames.
+
+
+\textbf{Problem 22 (2 points)} What is the role of the scheduler in an operating system?
+
+
+\textbf{Problem 23 (3 points)} Describe different scheduling algorithms (e.g., FCFS, SJF, Round Robin).
+
+
+\textbf{Problem 24 (4 points)} Compare and contrast preemptive and non-preemptive scheduling.
+
+
+\textbf{Problem 25 (2 points)} What is context switching?
+
+
+\textbf{Problem 26 (3 points)} Explain the concept of a process control block (PCB).
+
+
+\textbf{Problem 27 (4 points)} Describe the different states a process can be in (e.g., running, ready, blocked).
+
+
+\textbf{Problem 28 (2 points)} What is an interrupt?
+
+
+\textbf{29 (3 points)} Explain how interrupts are handled by the operating system.
+
+
+\textbf{Problem 30 (4 points)}  Describe the differences between hardware and software interrupts.
+
+
+\textbf{Problem 31 (2 points)} What is I/O-bound process?
+
+
+\textbf{Problem 32 (3 points)} What is CPU-bound process?
+
+
+\textbf{Problem 33 (4 points)} How does the operating system handle I/O operations?
+
+
+\textbf{Problem 34 (2 points)} What is a file system?
+
+
+\textbf{Problem 35 (3 points)} Describe different types of file systems (e.g., FAT, NTFS, ext4).
+
+
+\textbf{Problem 36 (4 points)}  Explain the concept of file allocation methods (e.g., contiguous, linked, indexed).
+
+
+\textbf{Problem 37 (2 points)} What is a directory?
+
+
+\textbf{Problem 38 (3 points)} Explain the concept of a file descriptor.
+
+
+\textbf{Problem 39 (4 points)} Write a simple C program that creates a file, writes data to it, and then reads the data back.
+
+
+\textbf{Problem 40 (2 points)} What is a socket?
+
+
+\textbf{Problem 41 (3 points)} Explain the client-server model.
+
+
+\textbf{Problem 42 (4 points)} Write a simple client-server program using sockets (you can use TCP or UDP). The client sends a message to the server, and the server echoes the message back to the client.
+
+
+\textbf{Problem 43 (2 points)} What is a deadlock?
+
+
+\textbf{Problem 44 (3 points)} Explain the four conditions necessary for a deadlock to occur.
+
+
+\textbf{Problem 45 (4 points)} Describe methods for preventing or avoiding deadlocks.
+
+
+\textbf{Problem 46 (2 points)} What is a race condition?
+
+
+\textbf{Problem 47 (3 points)} Explain how mutual exclusion can be used to prevent race conditions.
+
+
+\textbf{Problem 48 (4 points)}  Write a C program that demonstrates a race condition and then shows how to fix it using a mutex.
+
+
+\textbf{Problem 49 (2 points)} What are some common operating system security threats?
+
+
+\textbf{What to hand in (using Brightspace):}
+Please submit the following files individually for all 49 problems:
+\begin{enumerate}
+    \item Source file(s) with appropriate comments. The naming should be similar to “lab\#\_\$.c” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g. lab4\_b.c, for lab 4, question c OR lab5\_1a for lab 5, question 1a).
+    \item A single pdf file (for images + report/answers to short-answer questions), named “lab\#.pdf” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program and the output of your program.
+    \end{itemize}
+    \item Your Makefile, if any. This is applicable only to kernel modules.
+\end{enumerate}
+
+\textbf{RULES:}
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied form other students, the internet or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+Operating Systems - Prof. Omar Mansour
+
+\end{document}

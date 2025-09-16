@@ -1,0 +1,123 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{forest}
+
+\title{New York University \\ Tandon School of Engineering \\ Department of Computer Science and Engineering \\ Introduction to Operating Systems \\ Fall 2024 \\ Assignment 4 (10 points)}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Problem 1 (2 points)}
+
+If you create a \texttt{main()} routine that calls \texttt{fork()} four times, i.e., if it includes the following code:
+
+\begin{verbatim}
+pid_t w=-11, x=-22, y=-33, z=-44;
+w = fork();
+if(w==0) x = fork();
+if(x==0) y = fork();
+if(y>0) z = fork();
+\end{verbatim}
+
+Assuming all \texttt{fork()} calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of w, x, y and z for each process in the tree.  The process tree should only have one node for each process. Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+
+\begin{forest}
+  [Main Process, w=-11, x=-22, y=-33, z=-44
+    [Child 1, w=0, x=-22, y=-33, z=-44
+      [Child 1.1, w=0, x=0, y=-33, z=-44
+        [Child 1.1.1, w=0, x=0, y=0, z=-44]
+        [Child 1.1.2, w=0, x=0, y>0, z=0]
+      ]
+    ]
+    [Child 2, w>0, x=-22, y=-33, z=-44]
+  ]
+\end{forest}
+
+
+\section*{Problem 2 (4 points)}
+
+Write a program that creates the following process tree:
+
+\begin{forest}
+  [A
+    [B
+      [D]
+      [E]
+    ]
+    [C
+      [F]
+      [G]
+    ]
+  ]
+\end{forest}
+
+
+\section*{Problem 3 (4 points)}
+
+Write a program whose \texttt{main} routine obtains two parameters, \texttt{n} and \texttt{m} from the user (\texttt{n>2, m>2}), and creates two child processes. The first child process shall create and print an arithmetic sequence of length \texttt{n} starting from 1 with common difference 2 (1,3,5,...). The second child process shall create and print a geometric sequence of length \texttt{m} starting from 1 with common ratio 3 (1,3,9,...).  The parent waits for both children to exit. Do not use IPC.
+
+
+\section*{Problem 4 (2 points)}
+
+Explain the difference between a process and a thread.  Give examples of when you might prefer to use threads over processes and vice-versa.
+
+
+\section*{Problem 5 (3 points)}
+
+Describe the concept of context switching. How does it impact performance? What are some techniques used to optimize context switching?
+
+
+\section*{Problem 6 (2 points)}
+
+What is a race condition?  Provide a simple code example demonstrating a potential race condition.
+
+
+\section*{Problem 7 (2 points)}
+
+Explain the purpose of semaphores and mutexes in concurrent programming.  What are the key differences between them?
+
+
+\section*{Problem 8 (3 points)}
+
+Design a solution using semaphores to ensure mutual exclusion for accessing a shared resource among three threads. Explain how your solution prevents race conditions.  Provide pseudocode.
+
+
+\section*{Problem 9 (3 points)}
+
+Describe the producer-consumer problem. Design a solution using semaphores to solve the producer-consumer problem for a bounded buffer of size 5.  Include pseudocode.
+
+
+\section*{Problem 10 (3 points)}
+
+Explain the concept of deadlock. Provide a scenario where deadlock might occur in a system with multiple threads and resources.  Describe how to prevent deadlocks.
+
+
+\section*{What to hand in (using Brightspace)}
+
+Please submit the following files individually:
+
+1) Source file(s) with appropriate comments. The naming should be similar to “\texttt{lab\#\_\$.c}” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g., \texttt{lab4\_b.c}, for lab 4, question b OR \texttt{lab5\_1a} for lab 5, question 1a).
+
+2) A single pdf file (for images + report/answers to short-answer questions), named “\texttt{lab\#.pdf}” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program and the output of your program.
+    \end{itemize}
+3) Your Makefile, if any. This is applicable only to kernel modules.
+
+
+\section*{RULES}
+
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied from other students, the internet or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+\end{document}

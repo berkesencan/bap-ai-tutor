@@ -1,0 +1,126 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{forest}
+
+\title{New York University\\Tandon School of Engineering\\Department of Computer Science and Engineering\\Introduction to Operating Systems\\Fall 2024\\Assignment 4 (10 points)}
+\author{Operating Systems - Prof. Omar Mansour}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{A) (2 points)}
+
+If you create a \texttt{main()} routine that calls \texttt{fork()} four times, i.e., if it includes the following code:
+
+\begin{verbatim}
+pid_t w=-1, x=-2, y=-3, z=-4;
+w = fork();
+if(w==0) x = fork();
+if(x==0) y = fork();
+if(y>0) z = fork();
+\end{verbatim}
+
+Assuming all \texttt{fork()} calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of w, x, y and z for each process in the tree (i.e., whether 0, -1, -2, -3, -4, or larger than 0).  Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes. The process tree should be a snapshot just after all forks completed but before any process exits. Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+\begin{forest}
+  [P0, w > 0, x > 0, y > 0, z > 0]
+  [P1, w == 0, x > 0, y > 0, z > 0]
+  [P2, w == 0, x == 0, y > 0, z > 0]
+  [P3, w == 0, x == 0, y == 0, z == 0]
+  [P4, w == 0, x == 0, y == 0, z > 0]
+  [P5, w == 0, x == 0, y > 0, z > 0]
+  [P6, w == 0, x > 0, y > 0, z > 0]
+  [P7, w > 0, x > 0, y > 0, z > 0]
+  [P8, w > 0, x > 0, y > 0, z > 0]
+  [P9, w > 0, x > 0, y > 0, z > 0]
+\end{forest}
+
+
+\section*{B) (4 points)}
+
+Write a program that creates the following process tree:
+
+\begin{forest}
+  [P0]
+  [P1]
+  [P2]
+  [P3]
+  [P4]
+  [P5]
+  [P6]
+  [P7]
+  [P8]
+  [P9]
+\end{forest}
+
+Each process should print its process ID.
+
+
+\section*{C) (4 points)}
+
+Write a program whose \texttt{main} routine obtains a parameter \texttt{n} from the command line (n>2) and creates two child processes. The first child process shall create and print a sequence of the first n even numbers. The second child process shall create and print a sequence of the first n odd numbers. The parent waits for both children to exit. Do not use IPC.
+
+
+\section*{D) (2 points)}
+
+Explain the difference between a zombie process and an orphan process.  Provide examples of how each might occur.
+
+
+\section*{E) (2 points)}
+
+Describe the purpose of the \texttt{wait()} and \texttt{waitpid()} system calls.  What are the key differences between them?
+
+
+\section*{F) (2 points)}
+
+What are shared memory and message passing? Describe their advantages and disadvantages in inter-process communication.
+
+
+\section*{G) (2 points)}
+
+Explain the concept of a race condition in the context of concurrent programming.  Give a simple example of a race condition.
+
+
+\section*{H) (2 points)}
+
+Describe the use of signals in Unix-like operating systems.  Give examples of some common signals and their purposes.
+
+
+\section*{I) (2 points)}
+
+What is a process control block (PCB)?  What information does it typically contain?
+
+
+\section*{J) (2 points)}
+
+Explain the difference between preemptive and non-preemptive scheduling.  Give an example of each.
+
+
+\section*{What to hand in (using Brightspace)}
+
+Please submit the following files individually:
+
+1) Source file(s) with appropriate comments. The naming should be similar to “\texttt{lab\#\_\$.c}” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g., \texttt{lab4\_b.c}, for lab 4, question c OR \texttt{lab5\_1a} for lab 5, question 1a).
+
+2) A single pdf file (for images + report/answers to short-answer questions), named “\texttt{lab\#.pdf}” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program, and the output of your program.
+    \end{itemize}
+
+3) Your Makefile, if any. This is applicable only to kernel modules.
+
+
+\section*{RULES}
+
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied from other students, the internet, or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+\end{document}

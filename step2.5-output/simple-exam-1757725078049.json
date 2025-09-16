@@ -1,0 +1,38 @@
+[
+  {
+    "id": "Q1",
+    "text": "Problem 1 a. [10] Explain the difference between strong scaling and weak scaling in parallel computing. Give an example scenario where strong scaling would be preferred and another where weak scaling would be more appropriate. b. [10] What is Amdahl's Law? Explain its implications for the speedup achievable through parallelization. Give a concrete example of a program where Amdahl's Law would severely limit the potential speedup. c. [10] Describe the concept of a race condition in concurrent programming. Provide a simple code snippet (in any language) demonstrating a race condition, and explain how it could be avoided.",
+    "rawLatex": "\\section*{Problem 1}\n\\textbf{a. [10]}  Explain the difference between strong scaling and weak scaling in parallel computing.  Give an example scenario where strong scaling would be preferred and another where weak scaling would be more appropriate.\n\n\\textbf{b. [10]} What is Amdahl's Law? Explain its implications for the speedup achievable through parallelization.  Give a concrete example of a program where Amdahl's Law would severely limit the potential speedup.\n\n\\textbf{c. [10]} Describe the concept of a race condition in concurrent programming. Provide a simple code snippet (in any language) demonstrating a race condition, and explain how it could be avoided.",
+    "points": null
+  },
+  {
+    "id": "Q2",
+    "text": "Problem 2 Consider a parallel program that performs matrix multiplication of two $n n$ matrices. a. [10] Describe a simple parallel algorithm for matrix multiplication using a master-worker approach. Explain how the work is divided among the workers and how the results are aggregated. b. [10] Analyze the runtime complexity of your algorithm in terms of $n$ and the number of processors $p$. Identify any potential bottlenecks in your design. c. [10] Discuss the impact of communication overhead on the performance of your parallel matrix multiplication algorithm. How could you potentially reduce this overhead?",
+    "rawLatex": "\\section*{Problem 2}\nConsider a parallel program that performs matrix multiplication of two $n \\times n$ matrices.\n\n\\textbf{a. [10]} Describe a simple parallel algorithm for matrix multiplication using a master-worker approach.  Explain how the work is divided among the workers and how the results are aggregated.\n\n\\textbf{b. [10]}  Analyze the runtime complexity of your algorithm in terms of $n$ and the number of processors $p$.  Identify any potential bottlenecks in your design.\n\n\\textbf{c. [10]}  Discuss the impact of communication overhead on the performance of your parallel matrix multiplication algorithm.  How could you potentially reduce this overhead?",
+    "points": null
+  },
+  {
+    "id": "Q3",
+    "text": "Problem 3 a. [15] Describe the differences between OpenMP and MPI. When would you choose to use each paradigm? Provide specific application examples where one would be more suitable than the other.",
+    "rawLatex": "\\section*{Problem 3}\n\\textbf{a. [15]} Describe the differences between OpenMP and MPI.  When would you choose to use each paradigm?  Provide specific application examples where one would be more suitable than the other.",
+    "points": null
+  },
+  {
+    "id": "Q4",
+    "text": "Problem 4 Suppose we have the following DAG that represents different tasks and their dependencies: (Insert a simple DAG here, e.g., A -> B, A -> C, B -> D, C -> D, D -> E) The following table shows the execution time of each task in milliseconds: [TABLE] |c|c| Task & Execution Time (ms) A & 10 B & 5 C & 8 D & 12 E & 7 [/TABLE] a. [10] Determine the minimum execution time of this DAG on a single processor. b. [10] Assuming you have two processors, schedule the tasks to minimize the overall execution time. Show your schedule and calculate the resulting execution time.",
+    "rawLatex": "\\section*{Problem 4}\nSuppose we have the following DAG that represents different tasks and their dependencies:\n\n(Insert a simple DAG here, e.g., A -> B, A -> C, B -> D, C -> D, D -> E)\n\nThe following table shows the execution time of each task in milliseconds:\n\n\\begin{tabular}{|c|c|}\n\\hline\nTask & Execution Time (ms) \\\\ \\hline\nA & 10 \\\\ \\hline\nB & 5 \\\\ \\hline\nC & 8 \\\\ \\hline\nD & 12 \\\\ \\hline\nE & 7 \\\\ \\hline\n\\end{tabular}\n\n\\textbf{a. [10]}  Determine the minimum execution time of this DAG on a single processor.\n\n\\textbf{b. [10]}  Assuming you have two processors, schedule the tasks to minimize the overall execution time. Show your schedule and calculate the resulting execution time.",
+    "points": null
+  },
+  {
+    "id": "Q5",
+    "text": "Problem 5 Consider a shared-memory parallel program with two threads. Thread 1 increments a shared counter variable 1000 times, and Thread 2 decrements the same counter variable 1000 times. a. [10] Explain why using a simple increment/decrement operation without any synchronization mechanisms might lead to an incorrect final value of the counter. b. [10] Describe how you would use mutex locks (or other synchronization primitives) to ensure that the final value of the counter is correct. Provide a code snippet (pseudocode or a real language) illustrating your solution.",
+    "rawLatex": "\\section*{Problem 5}\nConsider a shared-memory parallel program with two threads.  Thread 1 increments a shared counter variable 1000 times, and Thread 2 decrements the same counter variable 1000 times.\n\n\\textbf{a. [10]} Explain why using a simple increment/decrement operation without any synchronization mechanisms might lead to an incorrect final value of the counter.\n\n\\textbf{b. [10]} Describe how you would use mutex locks (or other synchronization primitives) to ensure that the final value of the counter is correct. Provide a code snippet (pseudocode or a real language) illustrating your solution.",
+    "points": null
+  },
+  {
+    "id": "Q6",
+    "text": "Problem 6 a. [10] Explain the concept of false sharing in a cache-coherent multiprocessor system. Provide an example scenario where false sharing could significantly impact performance. b. [10] Discuss techniques to mitigate the negative effects of false sharing.",
+    "rawLatex": "\\section*{Problem 6}\n\\textbf{a. [10]} Explain the concept of false sharing in a cache-coherent multiprocessor system.  Provide an example scenario where false sharing could significantly impact performance.\n\n\\textbf{b. [10]} Discuss techniques to mitigate the negative effects of false sharing.",
+    "points": null
+  }
+]

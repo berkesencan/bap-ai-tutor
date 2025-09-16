@@ -1,0 +1,43 @@
+\documentclass[12pt]{article}
+
+% Essential packages only - no unnecessary dependencies
+\usepackage[margin=1in]{geometry}
+\usepackage{array}
+\usepackage{enumitem}
+
+% Remove page numbers
+\pagestyle{empty}
+
+% Configure itemize formatting to match original
+\setlist[itemize]{leftmargin=15pt,itemsep=2pt,parsep=0pt,topsep=3pt}
+
+\begin{document}
+
+% Header - exact match to original PDF
+\begin{center}
+{\large\bfseries CSCI-UA.0480-051: Parallel Computing}
+
+\vspace{0.2cm}
+
+{\normalsize\bfseries Practice Exam}
+
+\vspace{0.1cm}
+
+{\normalsize\bfseries Total: 100 points}
+\end{center}
+
+\vspace{0.4cm}
+
+A program uses multiple threads to process a large dataset.  Each thread processes a portion of the data independently. Which of the following best describes this type of parallelism?
+
+
+\vspace{0.3cm}
+Explain the concept of Amdahl's Law in the context of parallel computing.  Provide a concise example illustrating its implications.
+
+
+\vspace{0.3cm}
+Consider a distributed memory system with four nodes.  Each node has a single processor and a local memory.  Design a parallel algorithm using MPI to compute the sum of an array of 1000 integers distributed across the four nodes.  Your algorithm should clearly outline the steps involved, including data distribution, computation, and aggregation of results.  Explain how you handle potential load imbalance.
+
+
+
+\end{document}

@@ -248,8 +248,8 @@ class AIController {
           currentSubPart += ' ' + line;
         } else if (!subPartLetter && line.length > 0) {
           if (lineIndex === 0 || currentSubPart.length === 0) currentSubPart += line; else currentSubPart += ' ' + line;
+          }
         }
-      }
       if (currentSubPart.trim() && subPartLetter) {
         const cleanSubPartText = cleanLatexText(currentSubPart);
         if (cleanSubPartText.length > 10) {

@@ -1,0 +1,82 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{forest}
+
+\title{New York University \\ Tandon School of Engineering \\ Department of Computer Science and Engineering \\ Introduction to Operating Systems \\ Fall 2024 \\ Assignment 4}
+\author{Prof. Omar Mansour}
+\date{September 27, 2024}
+
+\begin{document}
+
+\maketitle
+
+\section*{Assignment 4 (10 points)}
+
+\subsection*{A) (2 points)}
+
+If you create a \texttt{main()} routine that calls \texttt{fork()} three times, i.e., if it includes the following code:
+
+\begin{verbatim}
+pid_t x=-11, y=-22, z=-33;
+x = fork();
+if(x==0) y = fork();
+if(y>0) z = fork();
+\end{verbatim}
+
+Assuming all \texttt{fork()} calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x, y, and z for each process in the tree (i.e., whether 0, -11, -22, -33, or larger than 0).  The process tree should only have one node for each process. The process tree should be a snapshot just after all forks completed but before any process exits. Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+\vspace{1cm}
+% Insert process tree diagram here.  Use a tool like Forest or TikZ.  Example using Forest below:
+\begin{forest}
+  [P1, x=-11, y=-22, z=-33
+    [P2, x=0, y=-22, z=-33]
+    [P3, x>0, y=0, z=-33
+      [P4, x>0, y>0, z=0]
+      [P5, x>0, y>0, z>0]
+    ]
+  ]
+\end{forest}
+
+
+\subsection*{B) (4 points)}
+
+Write a program that creates the process tree shown below:
+
+\vspace{1cm}
+%Insert process tree diagram here.
+
+
+\subsection*{C) (4 points)}
+
+Write a program whose \texttt{main} routine obtains a parameter $n$ from the user (i.e., passed to your program when it was invoked from the shell, $n > 2$) and creates a child process. The child process shall then create and print a Fibonacci sequence of length $n$ and whose elements are of type \texttt{unsigned long long}. You may find more information about Fibonacci numbers at \href{https://en.wikipedia.org/wiki/Fibonacci_number}{https://en.wikipedia.org/wiki/Fibonacci\_number}. The parent waits for the child to exit and then prints two additional Fibonacci elements, i.e., the total number of Fibonacci elements printed by the child and the parent is $n+2$. Do not use IPC in your solution to this problem (i.e., neither shared memory nor message passing).
+
+
+\section*{What to Hand In (using Brightspace)}
+
+Please submit the following files individually:
+
+\begin{enumerate}
+    \item Source file(s) with appropriate comments. The naming should be similar to ``lab\#\_\$.c'' (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g., \texttt{lab4\_b.c}, for lab 4, question b OR \texttt{lab5\_1a} for lab 5, question 1a).
+    \item A single PDF file (for images + report/answers to short-answer questions), named ``lab\#.pdf'' (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program, and the output of your program.
+    \end{itemize}
+    \item Your Makefile, if any. This is applicable only to kernel modules.
+\end{enumerate}
+
+\section*{Rules}
+
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about general concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied from other students, the internet, or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+\end{document}
+
+
+Remember to replace the placeholder comments  with the actual process tree diagrams and code for parts B and C.  The Forest package is used for creating trees; you'll need to adapt it to your specific tree structures.  You might need to install additional LaTeX packages depending on your system.

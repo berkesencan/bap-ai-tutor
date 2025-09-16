@@ -9,6 +9,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 180000, // 3 minute default timeout for all API calls
 });
 
 // Create a separate client for unauthenticated test requests
@@ -17,6 +18,7 @@ const testApiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 180000, // 3 minute timeout for test API calls (including practice exams)
 });
 
 // Interceptor to add the auth token to requests
@@ -537,7 +539,7 @@ export const processPracticeExam = async (form) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 60000, // 60 second timeout for practice exam generation
+      timeout: 300000, // 5 minute timeout for practice exam generation (more time for complex PDFs like OS_hw4)
     });
     
     console.log('=== API RESPONSE RECEIVED ===');

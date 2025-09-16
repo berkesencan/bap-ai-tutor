@@ -1,0 +1,84 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\title{New York University \\ Tandon School of Engineering \\ Department of Computer Science and Engineering \\ Introduction to Operating Systems \\ Fall 2024 \\ Assignment 4 (10 points)}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Problem 1: Process Tree (2 points)}
+
+\begin{enumerate}
+    \item Draw a process tree here.  You'll need to manually create a tree diagram showing the parent-child relationships.  The tree should represent the following scenario: Process A forks into B and C. Process B forks into D and E. Process C forks into F. Each node in the tree should be labeled with the process name (A, B, C, D, E, F). Each arrow/line should indicate a parent-child relationship.
+\end{enumerate}
+
+
+\section{Problem 2: Process Tree Program (4 points)}
+
+\begin{enumerate}
+    \item Write your C code here to generate the process tree specified in Problem 1.  Remember to include appropriate comments.  Save this as `lab4_b.c`.  The program should create the processes A, B, C, D, E, and F, with the parent-child relationships as described in Problem 1. Each process should print its process ID to the console.
+\end{enumerate}
+
+\section{Problem 3:  Producer-Consumer (4 points)}
+
+\begin{enumerate}
+    \item Write a C program that uses two processes, a producer and a consumer, to simulate a bounded buffer. The producer generates random integers between 1 and 100 and adds them to the buffer.  The consumer removes integers from the buffer and prints them. The buffer size is 5. Use semaphores for synchronization.  Save this as `lab4_c.c`.
+\end{enumerate}
+
+\section{Problem 4:  Shared Memory (4 points)}
+
+\begin{enumerate}
+    \item Write a C program that uses shared memory to allow two processes to share a counter. One process increments the counter 1000 times, and the other process decrements the counter 1000 times.  Use appropriate synchronization mechanisms to prevent race conditions.  Print the final value of the counter.  Save this as `lab4_d.c`
+\end{enumerate}
+
+\section{Problem 5:  File Locking (4 points)}
+
+\begin{enumerate}
+    \item Write a C program that uses file locking to ensure that only one process can write to a file at a time.  Two processes should attempt to write to the same file concurrently. One process writes "Hello", the other writes "World".  The output should be either "Hello" or "World", but not a corrupted mix of both.  Save this as `lab4_e.c`.
+\end{enumerate}
+
+\section{Problem 6:  Zombie Processes (2 points)}
+
+\begin{enumerate}
+    \item Explain what a zombie process is and how it can be avoided in C. Provide a code snippet demonstrating a situation where a zombie process might be created and a corrected version that avoids this.
+\end{enumerate}
+
+\section{Problem 7:  Signal Handling (4 points)}
+
+\begin{enumerate}
+    \item Write a C program that handles the SIGINT signal (Ctrl+C). When SIGINT is received, the program should print a message "Caught SIGINT!" and then gracefully exit.  Demonstrate that the signal handler is correctly invoked when Ctrl+C is pressed. Save this as `lab4_f.c`.
+\end{enumerate}
+
+
+\section{What to Hand In}
+
+\begin{enumerate}
+    \item Source code files (`lab4_b.c`, `lab4_c.c`, `lab4_d.c`, `lab4_e.c`, `lab4_f.c`).
+    \item A PDF file (`lab4.pdf`) containing:
+    \begin{itemize}
+        \item Screenshots of your terminal showing compilation and execution for each problem.
+        \item The process tree diagram from Problem 1.
+    \end{itemize}
+    \item Makefile (if applicable).
+\end{enumerate}
+
+
+\section{Rules}
+
+\begin{itemize}
+    \item Use kernel version 4.x.x or above.
+    \item No copying code or algorithms.
+    \item Ask your TA for help if needed.
+    \item Submit on time.
+\end{itemize}
+
+\end{document}

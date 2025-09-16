@@ -1,99 +1,132 @@
-CS-UY 2413: Design & Analysis of Algorithms
-Prof. Lisa Hellerstein
+CS-UY 2214 — Recitation 1
 
-Fall 2024
-New York University
+Introduction
+Complete the following exercises. Put your answers in a plain text file named recitation1.txt. Number
+your solution to each question. When you finish, submit your file on Gradescope. Then, in order to receive
+credit, you must ask your TA to check your work. Your work should be completed and checked during the
+recitation session.
+Please note that your solutions must be in a plain text file. Other formats, such as PDF, RTF, and
+Microsoft Word, will not be accepted. Here are some recommended editors that produce plain text files:
+ Notepad (comes with Windows)
+ TextEdit (comes with Mac OS); note that if you are using TextEdit, you need to select “Make Plain
+Text” from the Format menu before saving the file
+ gedit (available on most Linux distributions)
+ nano (available on most Linux distributions)
+ Sublime Text
+ VSCode
+ Atom
+ Vim
+ Emacs
 
-Homework 2
-Due 11:59pm Monday, Sep 30, New York time.
-By handing in the homework you are agreeing to the Homework Rules; see EdStem.
-Our Master Theorem: The version of the Master Theorem that we covered in class is on the last
-page of this homework. We won’t be covering the version of the Master Theorem in the textbook and
-you’re not responsible for knowing it. (But you may find it interesting!)
-k+1
-Reminder: For r ̸= 1, r0 + r1 + . . . + rk = r r−1−1 .
-1. For each example, indicate whether f = o(g) (little-oh), f = ω(g) (little-omega), or f = Θ(g)
-(big-Theta). No justification is necessary.
-3
+For questions that require a solution expressed as an image, submit the image as a separate file. The
+image file should be named recitationnqm, where n is the recitation number and m is the question number;
+use an appropriate suffix (either jpg or png).
 
-(a) f (n) = 3(log3 n) , g(n) = n3
-√
-1
-(b) f (n) = n, g(n) = n 3
-(c) f (n) = 5n , g(n) = 5n! (that’s factorial)
-P
-(d) f (n) = 5 ni=0 41i , g(n) = n
-(e) f (n) = log10 n, g(n) = log5 n + log2 n
-2. Give a formal proof of the following statement: If f (n) ≥ 0 for all n ∈ N, g(n) ≥ 0 for all n ∈ N,
-f (n) = O(g(n)), and g(n) is unbounded (meaning limn→∞ g(n) = ∞) then
-log2 f (n) = O(log g(n)).
-Use the formal definition of big-Oh in your answer. In your proof, you can use the fact that the value of
-log2 n increases as n increases.
-Note that a similar statement with exponential functions is not true: If f (n) = 3n and g(n) = n, then
-f (n) = O(g(n)), but 23n is not O(2n ).
-3. For each of the following recurrences, determine whether Our Master Theorem (on the last page
-of this HW) can be applied to the recurrence. If it can, use it to give the solution to the recurrence
-in Θ notation; no need to give any details. If not, write “Our Master Theorem does not apply.”
-(a) T (n) = 4T (n/5) + n3
-(b) T (n) = 10T (n/3) + 5n2
-(c) T (n) = n2 T (n/5) + 2
-4. Our Master Theorem can be applied to a recurrence of the form T (n) = aT (n/b) + nd , where a, b, d are
-constants with a > 0, b > 1, d > 0. Consider instead a recurrence of the form Tnew (n) = aTnew (n/b)+logd n
-where a > 0, b > 1, d > 1 (and T (1) = 1).
-For each of the following, state whether the given property of Tnew is true. If so, explain why it is true.
-If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook,
-don’t use it in your explanation.)
+Problems
+1. Consider the following circuit.
+
 1
 
-(a) Tnew (n) = O(n log n) if logb a = 1
-(b) Tnew (n) = Ω(nlogb a )
-5. Consider the recurrence T (n) = 4T (n/3) + 2n for n > 1, and T (1) = 2.
-(a) Compute the value of T (9), using the recurrence. Show your work.
-(b) Use a recursion tree to solve the recurrence and get a closed-form expression for T (n), when n is a
-power of 3. (Check that your expression is correct by plugging in n = 9 and comparing with your answer
-to (a).)
-(c) Suppose that the base case is T (3) = 5, instead of T (1) = 2. What is the solution to the recurrence
-in this case, for n ≥ 3?
-6. Consider a variation of mergesort that works as follows: If the array has size 1, return. Otherwise,
-divide the array into thirds, rather than in half. Recursively sort each third using this variation of
-mergesort. Then merge the first (leftmost) third with the middle third. Finally, merge the first two
-thirds with the last third.
-(a) Write a recurrence for the running time of this variation of mergesort. It should be similar to the
-recurrence for ordinary mergesort. Assume n is a power of 3.
-(b) Apply Our Master Theorem to the recurrence to get the running time of the algorithm, in theta
-notation. Show your work.
-7. Consider the following recursive sorting algorithm. Assume n is a power of 3. (Note: This is not a
-version of mergesort. No merges are performed.)
-• If the array has only one element, return.
-• Recursively sort the first 2/3 of the elements in the array.
-• Recursively sort the second 2/3 of the elements in the array.
-• Recursively sort the first 2/3 of the elements in the array again.
-(Note: Even if you can’t figure out part (a) below, you can still answer (b) and (c).)
-(a) Prove that the algorithm is correct by showing that the array will be sorted after the three recursive
-calls are performed, assuming the three recursive calls correctly sort their (sub)arrays. Note that the
-middle third of the array is included in each of the 3 recursive calls.
-(b) Write a recurrence expressing the running time of the algorithm.
-(c) Apply Our Master Theorem to your recurrence. What is the running time of the algorithm, in theta
-notation?
-
+Please note that in the above diagram, an arced line represents a wire crossing another wire without
+intersecting it. A filled dot on a wire intersects an intersection, i.e. the signal passes to multiple
+outputs.
+Express the circuit as a boolean expression, using only AND, OR, and NOT. Provide a truth table for
+this circuit.
+2. Using only AND, OR, and NOT gates, construct a circuit diagram that will calculate XOR. Your
+circuit will have two inputs A and B, and one output Y.
+Submit your answer as an image, in accordance with the instructions at the beginning of this document.
+Your image may be a diagram created in a drawing program, or it may be a photograph of a hand-drawn
+diagram on paper.
+3. Convert the following decimal numbers into binary.
+(a) 35
+4. Convert the following binary numbers into decimal.
+(a) 1001
+5. Convert the following decimal numbers into hexadecimal.
+(a) 35
+(b) 64
+6. Convert the following hexadecimal numbers into binary.
+(a) f00f
+(b) abcd
+7. Convert the following decimal numbers into 8-bit binary 2’s complement. Write all the digits.
+(a) 34
+(b) −34
+8. Convert the following 8-bit binary unsigned numbers into decimal.
+(a) 11010011
+(b) 00001000
+(c) 11111111
+9. Convert the following 8-bit binary 2’s complement numbers into decimal.
+(a) 11010011
+(b) 00001000
+(c) 11111111
+10. Consider the following C++ program. Do not run it.
+# include < iostream >
+using namespace std ;
+int main () {
+int i = 1;
+int count = 0;
+while ( i > 0) {
 2
 
-Theorem 0.1 (Our Master Theorem) Let a, b, d, n0 be constants such that a > 0, b > 1, d ≥ 0 and
-n0 > 0.
-Let T (n) = aT (n/b) + θ(nd ) for when n ≥ n0 , and T (n) = θ(1) when 0 ≤ n < n0 . Then,
-
-d
-
-θ(n log n) if d = logb a
-T (n) = θ(nlogb a )
-if d < logb a
-
- d
-θ(n )
-if d > logb a
-We assume here that T (n) is a function defined on the natural numbers. We use aT (n/b) to mean
-a′ T (⌊n/b⌋) + a′′ (T (⌈n/b⌉) where a′ , a′′ > 0 such that a′ + a′′ = a.
+i *= 2;
+count ++;
+}
+cout << " Completed " << count << " iterations " < < endl ;
+return 0;
+}
+Your friend Rufus argues that this program has an infinite loop, and will therefore never end. Is he
+right or wrong? Justify your opinion with a persuasive explanation, but do not type in or run the
+program. Predict the output of the program.
+11. For this class, you are required to use a Linux programming environment. Take this opportunity to set
+up such an environment. Use one of the options enumerated in the syllabus: Anubis, Vital, VirtualBox,
+WSL, or a proper Linux installation.
+Log in to your Linux environment. Then, submit a screenshot of your working Linux programming
+environment.
+The screenshot should simply show the Linux desktop. You don’t need to do anything after you log in.
+12. The course presumes a satisfactory knowledge of programming. In addition, we want to know that
+you are able to create, edit, and run programs in a Linux environment. Demonstrate that you can do
+programming under Linux by following these instructions. Your TA will help you if you get stuck.
+(a) Log in to your Linux environment: Anubis, Vital, VirtualBox, WSL, or a proper Linux installation.
+(b) Open a text editor on your Linux environment.
+ If you’re using Anubis, simply select New File from the File menu to open a new text editing
+window.
+ If you’re using Vital or VirtualBox, you should have a program called Text Editor or gedit
+available.
+ In any case, ask your TA if you can’t find the right program.
+
+Save your new file as either fizzbuzz.cpp (for C++) or fizzbuzz.py (for Python). Make sure
+that you save the file in your home directory, which will typically be /home/anubis on Anubis,
+or /home/ubuntu on Vital.
+(c) Use the text editor to write a program in either Python or C++. Your program should have the
+following behavior:
+The program will print out all the numbers from 1 to 100 in order. However, for
+numbers that are multiples of three, the program will print “Fizz” instead of the number.
+For numbers that are multiples of five, it will print “Buzz” instead of the number. And
+finally, for numbers which are multiples of both three and five, it will print “FizzBuzz”.
+Everyone should be able to write this program. If you are not able to write this program correctly
+on the first try, without outside help, you may not meet the prerequisites for this course. In that
+case, please contact your professor to discuss your options.
+(d) After you’ve written the program, open a Terminal in your Linux environment.
+ If you’re using Anubis, select New Terminal from the Terminal menu to open a command
+prompt window.
+ If you’re using Vital or VirtualBox, you should have a program called Terminal available.
+ In any case, ask your TA if you can’t find the right program.
+
+(e) Run your program, after compiling it if necessary.
 
 3
+
+ To run your Python program, type python3 fizzbuzz.py and press enter. Your program
+should run. If you see an error message, make sure that your program is saved is the right
+place.
+ To compile your C++ program, type g++ fizzbuzz.cpp -o fizzbuzz and press enter. If
+compilation is successful, you will see no error message, and a new executable file named
+fizzbuzz will be created by the compiler.
+To run the program, now type ./fizzbuzz and press enter. Your program should run. If you
+see an error message, make sure that your program is saved is the right place.
+ In any case, ask your TA if you’re having trouble.
+
+(f) Take a screenshot of the Terminal showing the execution of your program. Submit this screenshot.
+
+4
 
 

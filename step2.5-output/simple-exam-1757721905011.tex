@@ -1,0 +1,88 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{forest}
+
+\begin{document}
+
+\textbf{New York University} \\
+\textbf{Tandon School of Engineering} \\
+\textbf{Department of Computer Science and Engineering} \\
+\textbf{Introduction to Operating Systems} \\
+\textbf{Fall 2024} \\
+\textbf{Assignment 4} \\
+(70 points)
+
+\textbf{Problem 1 (10 points)}
+
+\textbf{A) (2 points)} If you create a main() routine that calls fork() four times, i.e. if it includes the following code:
+
+\texttt{pid\_t w=-1, x=-2, y=-3, z=-4;} \\
+\texttt{w = fork();}\\
+\texttt{if(w==0) x = fork();}\\
+\texttt{if(x>0) y = fork();}\\
+\texttt{if(y==0) z = fork();}\\
+
+Assuming all fork() calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of w, x, y and z for each process in the tree (i.e. whether 0, -1, -2, -3, -4, or larger than 0).
+Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes.
+The process tree should be a snapshot just after all forks completed but before any process exists.
+Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+\begin{forest}
+  [Main, w=-1, x=-2, y=-3, z=-4
+    [Child 1, w=0, x=-2, y=-3, z=-4
+      [Child 1.1, w=0, x=0, y=-3, z=-4
+        [Child 1.1.1, w=0, x=0, y=0, z=-4]
+        [Child 1.1.2, w=0, x=0, y=0, z>0]
+      ]
+      [Child 1.2, w=0, x>0, y=-3, z=-4
+        [Child 1.2.1, w=0, x>0, y=0, z=-4]
+        [Child 1.2.2, w=0, x>0, y=0, z>0]
+      ]
+    ]
+    [Child 2, w>0, x=-2, y=-3, z=-4
+      [Child 2.1, w>0, x=0, y=-3, z=-4
+        [Child 2.1.1, w>0, x=0, y=0, z=-4]
+        [Child 2.1.2, w>0, x=0, y=0, z>0]
+      ]
+      [Child 2.2, w>0, x>0, y=-3, z=-4]
+    ]
+  ]
+\end{forest}
+
+
+\textbf{Problem 2 (10 points)} Write a C program that creates the following process tree:
+
+\begin{forest}
+  [P0
+    [P1]
+    [P2
+      [P3]
+      [P4]
+    ]
+    [P5
+      [P6]
+      [P7]
+    ]
+  ]
+\end{forest}
+
+
+\textbf{Problem 3 (10 points)} Write a C program whose main routine obtains parameters n and m from the user (passed as command-line arguments, n>0, m>0) and creates m child processes. Each child process calculates the factorial of n using unsigned long long and prints the result with its process ID. The parent waits for all children to finish and prints the average of the factorials calculated by the children.
+
+\textbf{Problem 4 (10 points)}  Explain the concept of Zombie processes and Orphan processes in the context of process management. Provide examples of how they can arise and strategies to prevent or handle them.
+
+\textbf{Problem 5 (10 points)} Consider a system with a multi-level feedback queue scheduler. Explain how such a scheduler works, including the concept of aging. Discuss its advantages and disadvantages compared to a simple round-robin scheduler.
+
+\textbf{Problem 6 (10 points)} Design a C program that simulates a simple producer-consumer problem using semaphores.  The producer generates random numbers and adds them to a bounded buffer. The consumer removes numbers from the buffer and prints them. Ensure proper synchronization to prevent race conditions.
+
+\textbf{Problem 7 (10 points)} Write a C program that uses shared memory to allow two processes to communicate. One process writes a message to the shared memory segment, and the other process reads and prints the message.  Implement appropriate synchronization mechanisms to prevent data corruption.
+
+
+\textbf{What to hand in (using Brightspace):}  (Instructions omitted for brevity)
+
+
+\textbf{RULES:} (Rules omitted for brevity)
+
+
+\end{document}

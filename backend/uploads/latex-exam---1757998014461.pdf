@@ -1,0 +1,5 @@
+%PDF-1.4
+Mock PDF - LaTeX compilation failed
+Error: Command failed: cd "/Users/berkesencan/Desktop/bap-ai-tutor-main/backend/uploads" && "/usr/local/texlive/2025basic/bin/universal-darwin/pdflatex" -interaction=nonstopmode "latex-exam---1757998014461.tex"
+
+LaTeX file saved at: /Users/berkesencan/Desktop/bap-ai-tutor-main/backend/uploads/latex-exam---1757998014461.tex

@@ -1,0 +1,100 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{listings}
+
+\title{New York University \\ Tandon School of Engineering \\ Department of Computer Science and Engineering \\ Introduction to Operating Systems \\ Fall 2024 \\ Assignment 4 (10 points)}
+\author{ }
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Problem 1 (2 points)}
+
+If you create a main() routine that calls fork() twice, i.e., if it includes the following code:
+
+\begin{verbatim}
+pid_t x=-11, y=-22;
+x = fork();
+if(x==0) y = fork();
+\end{verbatim}
+
+Assuming all fork() calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e., whether 0, -11, -22, or larger than 0). Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes. The process tree should be a snapshot just after all forks completed but before any process exists. Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+(Insert process tree diagram here -  A simple tree with 3 processes)
+
+
+\section*{Problem 2 (4 points)}
+
+Write a program that creates the process tree shown below:
+
+(Insert process tree diagram here - A tree with 5 processes, showing a slightly more complex branching)
+
+
+\section*{Problem 3 (4 points)}
+
+Write a program whose main routine obtains a parameter n from the user (i.e., passed to your program when it was invoked from the shell, n>2) and creates a child process. The child process shall then calculate the sum of integers from 1 to n and print the result. The parent waits for the child to exit and then prints the square of the sum calculated by the child. Do not use IPC in your solution to this problem (i.e., neither shared memory nor message passing).
+
+
+\section*{Problem 4 (2 points)}
+
+Explain the difference between a process and a thread.  Give examples of when you might prefer one over the other.
+
+
+\section*{Problem 5 (3 points)}
+
+Describe the role of the scheduler in an operating system. What are some common scheduling algorithms, and what are their advantages and disadvantages?
+
+
+\section*{Problem 6 (2 points)}
+
+What is a race condition? Give an example of a code snippet that could exhibit a race condition, and explain how it could be avoided.
+
+
+\section*{Problem 7 (3 points)}
+
+Describe the concept of deadlock.  Provide a scenario that illustrates a potential deadlock situation involving two processes and two resources.  Explain how this deadlock could be avoided.
+
+
+\section*{Problem 8 (2 points)}
+
+Explain the difference between preemptive and non-preemptive scheduling. Provide examples of each.
+
+
+\section*{Problem 9 (3 points)}
+
+Write a C program that uses the `execl` system call to execute the `ls` command with the `-l` option.  The program should handle potential errors during the execution of `execl`.
+
+
+\section*{Problem 10 (3 points)}
+
+Describe the purpose of signals in an operating system. Give examples of some common signals and how they might be used in a program.
+
+
+\section*{What to hand in (using Brightspace)}
+
+Please submit the following files individually:
+
+\begin{enumerate}
+    \item Source file(s) with appropriate comments. The naming should be similar to “lab\#\_\$.c” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g., \texttt{lab4\_b.c}, for lab 4, question c OR \texttt{lab5\_1a} for lab 5, question 1a).
+    \item A single pdf file (for images + report/answers to short-answer questions), named “lab\#.pdf” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program and the output of your program.
+    \end{itemize}
+    \item Your Makefile, if any. This is applicable only to kernel modules.
+\end{enumerate}
+
+
+\section*{RULES}
+
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied from other students, the internet or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+\end{document}

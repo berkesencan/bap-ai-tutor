@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+<title></title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<meta name="generator" content="pdftohtml 0.36"/>
+<meta name="author" content=""/>
+<meta name="keywords" content=""/>
+<meta name="date" content="2024-09-24T02:49:02+00:00"/>
+<meta name="subject" content=""/>
+<style type="text/css">
+<!--
+.xflip {
+    -moz-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    transform: scaleX(-1);
+    filter: fliph;
+}
+.yflip {
+    -moz-transform: scaleY(-1);
+    -webkit-transform: scaleY(-1);
+    -o-transform: scaleY(-1);
+    transform: scaleY(-1);
+    filter: flipv;
+}
+.xyflip {
+    -moz-transform: scaleX(-1) scaleY(-1);
+    -webkit-transform: scaleX(-1) scaleY(-1);
+    -o-transform: scaleX(-1) scaleY(-1);
+    transform: scaleX(-1) scaleY(-1);
+    filter: fliph + flipv;
+}
+-->
+</style>
+</head>
+<body bgcolor="#A0A0A0" vlink="blue" link="blue">
+<!-- Page 1 -->
+<a name="1"></a>
+<style type="text/css">
+<!--
+	p {margin: 0; padding: 0;}	.ft00{font-size:18px;font-family:WPRPWN+CMTI12;color:#000000;}
+	.ft01{font-size:18px;font-family:QKXWIR+CMR12;color:#000000;}
+	.ft02{font-size:22px;font-family:KNJZQM+CMBX12;color:#000000;}
+	.ft03{font-size:18px;font-family:KNJZQM+CMBX12;color:#000000;}
+	.ft04{font-size:18px;font-family:BJQBMP+CMMI12;color:#000000;}
+	.ft05{font-size:18px;font-family:VZMIEP+CMSY10;color:#000000;}
+	.ft06{font-size:12px;font-family:ZRKGUW+CMR8;color:#000000;}
+	.ft07{font-size:12px;font-family:ABYVSO+CMMI8;color:#000000;}
+	.ft08{font-size:9px;font-family:MMAKVV+CMMI6;color:#000000;}
+	.ft09{font-size:9px;font-family:VROLGE+CMR6;color:#000000;}
+	.ft010{font-size:12px;font-family:WIPKKX+CMSY8;color:#000000;}
+	.ft011{font-size:18px;font-family:DGBHFP+CMEX10;color:#000000;}
+	.ft012{font-size:9px;line-height:9px;font-family:VROLGE+CMR6;color:#000000;}
+	.ft013{font-size:12px;line-height:13px;font-family:ABYVSO+CMMI8;color:#000000;}
+	.ft014{font-size:18px;line-height:21px;font-family:QKXWIR+CMR12;color:#000000;}
+-->
+</style>
+<div id="page1-div" style="position:relative;width:918px;height:1188px;">
+<img width="918" height="1188" src="1757997011448-HW2-2001.png" alt="background image"/>
+<p style="position:absolute;top:67px;left:64px;white-space:nowrap" class="ft00">CS-UY&#160;2413:&#160;Design&#160;&amp;&#160;Analysis&#160;of&#160;Algorithms</p>
+<p style="position:absolute;top:67px;left:781px;white-space:nowrap" class="ft00">Fall&#160;2024</p>
+<p style="position:absolute;top:88px;left:64px;white-space:nowrap" class="ft01">Prof.&#160;Lisa&#160;Hellerstein</p>
+<p style="position:absolute;top:88px;left:694px;white-space:nowrap" class="ft01">New&#160;York&#160;University</p>
+<p style="position:absolute;top:127px;left:392px;white-space:nowrap" class="ft02">Homework&#160;2</p>
+<p style="position:absolute;top:154px;left:211px;white-space:nowrap" class="ft02">Due&#160;11:59pm&#160;Monday,&#160;Sep&#160;30,&#160;New&#160;York&#160;time.</p>
+<p style="position:absolute;top:178px;left:137px;white-space:nowrap" class="ft01">By&#160;handing&#160;in&#160;the&#160;homework&#160;you&#160;are&#160;agreeing&#160;to&#160;the&#160;Homework&#160;Rules;&#160;see&#160;EdStem.</p>
+<p style="position:absolute;top:236px;left:64px;white-space:nowrap" class="ft03">Our&#160;Master&#160;Theorem:</p>
+<p style="position:absolute;top:236px;left:272px;white-space:nowrap" class="ft01">The&#160;version&#160;of&#160;the&#160;Master&#160;Theorem&#160;that&#160;we&#160;covered&#160;in&#160;class&#160;is&#160;on&#160;the&#160;last</p>
+<p style="position:absolute;top:257px;left:64px;white-space:nowrap" class="ft01">page&#160;of&#160;this&#160;homework.&#160;We&#160;won’t&#160;be&#160;covering&#160;the&#160;version&#160;of&#160;the&#160;Master&#160;Theorem&#160;in&#160;the&#160;textbook&#160;and</p>
+<p style="position:absolute;top:279px;left:63px;white-space:nowrap" class="ft01">you’re&#160;not&#160;responsible&#160;for&#160;knowing&#160;it.&#160;(But&#160;you&#160;may&#160;find&#160;it&#160;interesting!)</p>
+<p style="position:absolute;top:302px;left:64px;white-space:nowrap" class="ft03">Reminder:</p>
+<p style="position:absolute;top:302px;left:164px;white-space:nowrap" class="ft01">For</p>
+<p style="position:absolute;top:302px;left:195px;white-space:nowrap" class="ft04">r</p>
+<p style="position:absolute;top:301px;left:209px;white-space:nowrap" class="ft05"≯</p>
+<p style="position:absolute;top:302px;left:209px;white-space:nowrap" class="ft01">=&#160;1,</p>
+<p style="position:absolute;top:302px;left:247px;white-space:nowrap" class="ft04">r</p>
+<p style="position:absolute;top:300px;left:255px;white-space:nowrap" class="ft06">0</p>
+<p style="position:absolute;top:302px;left:266px;white-space:nowrap" class="ft01">+</p>
+<p style="position:absolute;top:302px;left:284px;white-space:nowrap" class="ft04">r</p>
+<p style="position:absolute;top:300px;left:292px;white-space:nowrap" class="ft06">1</p>
+<p style="position:absolute;top:302px;left:303px;white-space:nowrap" class="ft01">+</p>
+<p style="position:absolute;top:302px;left:321px;white-space:nowrap" class="ft04">.&#160;.&#160;.</p>
+<p style="position:absolute;top:302px;left:346px;white-space:nowrap" class="ft01">+</p>
+<p style="position:absolute;top:302px;left:363px;white-space:nowrap" class="ft04">r</p>
+<p style="position:absolute;top:300px;left:372px;white-space:nowrap" class="ft07">k</p>
+<p style="position:absolute;top:302px;left:384px;white-space:nowrap" class="ft01">=</p>
+<p style="position:absolute;top:299px;left:405px;white-space:nowrap" class="ft07">r</p>
+<p style="position:absolute;top:297px;left:411px;white-space:nowrap" class="ft08">k</p>
+<p style="position:absolute;top:297px;left:417px;white-space:nowrap" class="ft09">+1</p>
+<p style="position:absolute;top:299px;left:431px;white-space:nowrap" class="ft010">−</p>
+<p style="position:absolute;top:299px;left:441px;white-space:nowrap" class="ft06">1</p>
+<p style="position:absolute;top:313px;left:415px;white-space:nowrap" class="ft07">r</p>
+<p style="position:absolute;top:312px;left:421px;white-space:nowrap" class="ft010">−</p>
+<p style="position:absolute;top:313px;left:431px;white-space:nowrap" class="ft06">1</p>
+<p style="position:absolute;top:302px;left:450px;white-space:nowrap" class="ft01">.</p>
+<p style="position:absolute;top:342px;left:64px;white-space:nowrap" class="ft01">1.&#160;For&#160;each&#160;example,&#160;indicate&#160;whether</p>
+<p style="position:absolute;top:342px;left:380px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:342px;left:399px;white-space:nowrap" class="ft01">=</p>
+<p style="position:absolute;top:342px;left:422px;white-space:nowrap" class="ft04">o</p>
+<p style="position:absolute;top:342px;left:430px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:342px;left:437px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:342px;left:446px;white-space:nowrap" class="ft01">)&#160;(little-oh),</p>
+<p style="position:absolute;top:342px;left:550px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:342px;left:569px;white-space:nowrap" class="ft01">=</p>
+<p style="position:absolute;top:342px;left:592px;white-space:nowrap" class="ft04">ω</p>
+<p style="position:absolute;top:342px;left:603px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:342px;left:610px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:342px;left:619px;white-space:nowrap" class="ft01">)&#160;(little-omega),&#160;or</p>
+<p style="position:absolute;top:342px;left:778px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:342px;left:797px;white-space:nowrap" class="ft01">=&#160;Θ(</p>
+<p style="position:absolute;top:342px;left:840px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:342px;left:849px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:364px;left:62px;white-space:nowrap" class="ft01">(big-Theta).&#160;No&#160;justification&#160;is&#160;necessary.</p>
+<p style="position:absolute;top:400px;left:64px;white-space:nowrap" class="ft01">(a)</p>
+<p style="position:absolute;top:400px;left:95px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:400px;left:106px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:400px;left:112px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:400px;left:123px;white-space:nowrap" class="ft01">)&#160;=&#160;3</p>
+<p style="position:absolute;top:398px;left:162px;white-space:nowrap" class="ft06">(log</p>
+<p style="position:absolute;top:403px;left:183px;white-space:nowrap" class="ft09">3</p>
+<p style="position:absolute;top:398px;left:192px;white-space:nowrap" class="ft07">n</p>
+<p style="position:absolute;top:398px;left:200px;white-space:nowrap" class="ft06">)</p>
+<p style="position:absolute;top:396px;left:204px;white-space:nowrap" class="ft09">3</p>
+<p style="position:absolute;top:400px;left:211px;white-space:nowrap" class="ft01">,</p>
+<p style="position:absolute;top:400px;left:222px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:400px;left:231px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:400px;left:238px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:400px;left:249px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:400px;left:279px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:398px;left:289px;white-space:nowrap" class="ft06">3</p>
+<p style="position:absolute;top:431px;left:64px;white-space:nowrap" class="ft01">(b)</p>
+<p style="position:absolute;top:431px;left:96px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:431px;left:107px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:431px;left:113px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:431px;left:124px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:417px;left:154px;white-space:nowrap" class="ft05">√</p>
+<p style="position:absolute;top:431px;left:169px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:431px;left:180px;white-space:nowrap" class="ft01">,</p>
+<p style="position:absolute;top:431px;left:190px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:431px;left:200px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:431px;left:206px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:431px;left:217px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:431px;left:247px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:426px;left:260px;white-space:nowrap" class="ft012">1<br/>3</p>
+<p style="position:absolute;top:460px;left:64px;white-space:nowrap" class="ft01">(c)</p>
+<p style="position:absolute;top:460px;left:94px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:460px;left:105px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:460px;left:111px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:460px;left:122px;white-space:nowrap" class="ft01">)&#160;=&#160;5</p>
+<p style="position:absolute;top:457px;left:161px;white-space:nowrap" class="ft07">n</p>
+<p style="position:absolute;top:460px;left:170px;white-space:nowrap" class="ft01">,</p>
+<p style="position:absolute;top:460px;left:180px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:460px;left:189px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:460px;left:196px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:460px;left:207px;white-space:nowrap" class="ft01">)&#160;=&#160;5</p>
+<p style="position:absolute;top:460px;left:246px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:460px;left:256px;white-space:nowrap" class="ft01">!&#160;(that’s&#160;factorial)</p>
+<p style="position:absolute;top:489px;left:64px;white-space:nowrap" class="ft01">(d)</p>
+<p style="position:absolute;top:489px;left:96px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:489px;left:107px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:489px;left:113px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:489px;left:124px;white-space:nowrap" class="ft01">)&#160;=&#160;5</p>
+<p style="position:absolute;top:487px;left:166px;white-space:nowrap" class="ft011">P</p>
+<p style="position:absolute;top:484px;left:185px;white-space:nowrap" class="ft013">n<br/>i</p>
+<p style="position:absolute;top:498px;left:189px;white-space:nowrap" class="ft06">=0</p>
+<p style="position:absolute;top:486px;left:213px;white-space:nowrap" class="ft06">1</p>
+<p style="position:absolute;top:499px;left:211px;white-space:nowrap" class="ft06">4</p>
+<p style="position:absolute;top:498px;left:217px;white-space:nowrap" class="ft08">i</p>
+<p style="position:absolute;top:489px;left:224px;white-space:nowrap" class="ft01">,</p>
+<p style="position:absolute;top:489px;left:235px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:489px;left:244px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:489px;left:251px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:489px;left:261px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:489px;left:292px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:518px;left:64px;white-space:nowrap" class="ft01">(e)</p>
+<p style="position:absolute;top:518px;left:94px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:518px;left:105px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:518px;left:111px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:518px;left:122px;white-space:nowrap" class="ft01">)&#160;=&#160;log</p>
+<p style="position:absolute;top:526px;left:175px;white-space:nowrap" class="ft06">10</p>
+<p style="position:absolute;top:518px;left:191px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:518px;left:202px;white-space:nowrap" class="ft01">,</p>
+<p style="position:absolute;top:518px;left:213px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:518px;left:222px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:518px;left:229px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:518px;left:239px;white-space:nowrap" class="ft01">)&#160;=&#160;log</p>
+<p style="position:absolute;top:526px;left:292px;white-space:nowrap" class="ft06">5</p>
+<p style="position:absolute;top:518px;left:302px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:518px;left:317px;white-space:nowrap" class="ft01">+&#160;log</p>
+<p style="position:absolute;top:526px;left:357px;white-space:nowrap" class="ft06">2</p>
+<p style="position:absolute;top:518px;left:367px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:554px;left:64px;white-space:nowrap" class="ft01">2.&#160;Give&#160;a&#160;formal&#160;proof&#160;of&#160;the&#160;following&#160;statement:&#160;If</p>
+<p style="position:absolute;top:554px;left:484px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:554px;left:495px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:554px;left:502px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:554px;left:512px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:553px;left:525px;white-space:nowrap" class="ft05">≥</p>
+<p style="position:absolute;top:554px;left:545px;white-space:nowrap" class="ft01">0&#160;for&#160;all</p>
+<p style="position:absolute;top:554px;left:613px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:553px;left:629px;white-space:nowrap" class="ft05">∈</p>
+<p style="position:absolute;top:554px;left:647px;white-space:nowrap" class="ft03">N</p>
+<p style="position:absolute;top:554px;left:663px;white-space:nowrap" class="ft01">,</p>
+<p style="position:absolute;top:554px;left:675px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:554px;left:684px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:554px;left:691px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:554px;left:701px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:553px;left:714px;white-space:nowrap" class="ft05">≥</p>
+<p style="position:absolute;top:554px;left:733px;white-space:nowrap" class="ft01">0&#160;for&#160;all</p>
+<p style="position:absolute;top:554px;left:802px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:553px;left:818px;white-space:nowrap" class="ft05">∈</p>
+<p style="position:absolute;top:554px;left:836px;white-space:nowrap" class="ft03">N</p>
+<p style="position:absolute;top:554px;left:852px;white-space:nowrap" class="ft01">,</p>
+<p style="position:absolute;top:576px;left:64px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:576px;left:74px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:576px;left:81px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:576px;left:92px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:576px;left:122px;white-space:nowrap" class="ft04">O</p>
+<p style="position:absolute;top:576px;left:136px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:576px;left:143px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:576px;left:152px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:576px;left:159px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:576px;left:169px;white-space:nowrap" class="ft01">)),&#160;and</p>
+<p style="position:absolute;top:576px;left:228px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:576px;left:237px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:576px;left:244px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:576px;left:254px;white-space:nowrap" class="ft01">)&#160;is&#160;unbounded&#160;(meaning&#160;lim</p>
+<p style="position:absolute;top:582px;left:477px;white-space:nowrap" class="ft07">n</p>
+<p style="position:absolute;top:582px;left:484px;white-space:nowrap" class="ft010">→∞</p>
+<p style="position:absolute;top:576px;left:513px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:576px;left:523px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:576px;left:529px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:576px;left:540px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:575px;left:570px;white-space:nowrap" class="ft05">∞</p>
+<p style="position:absolute;top:576px;left:588px;white-space:nowrap" class="ft01">)&#160;then</p>
+<p style="position:absolute;top:614px;left:368px;white-space:nowrap" class="ft01">log</p>
+<p style="position:absolute;top:623px;left:390px;white-space:nowrap" class="ft06">2</p>
+<p style="position:absolute;top:614px;left:401px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:614px;left:411px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:614px;left:418px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:614px;left:428px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:614px;left:459px;white-space:nowrap" class="ft04">O</p>
+<p style="position:absolute;top:614px;left:473px;white-space:nowrap" class="ft01">(log</p>
+<p style="position:absolute;top:614px;left:505px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:614px;left:514px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:614px;left:521px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:614px;left:532px;white-space:nowrap" class="ft01">))</p>
+<p style="position:absolute;top:614px;left:545px;white-space:nowrap" class="ft04">.</p>
+<p style="position:absolute;top:660px;left:64px;white-space:nowrap" class="ft014">Use&#160;the&#160;formal&#160;definition&#160;of&#160;big-Oh&#160;in&#160;your&#160;answer.&#160;In&#160;your&#160;proof,&#160;you&#160;can&#160;use&#160;the&#160;fact&#160;that&#160;the&#160;value&#160;of<br/>log</p>
+<p style="position:absolute;top:690px;left:86px;white-space:nowrap" class="ft06">2</p>
+<p style="position:absolute;top:682px;left:97px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:682px;left:113px;white-space:nowrap" class="ft01">increases&#160;as</p>
+<p style="position:absolute;top:682px;left:208px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:682px;left:224px;white-space:nowrap" class="ft01">increases.</p>
+<p style="position:absolute;top:711px;left:64px;white-space:nowrap" class="ft01">Note&#160;that&#160;a&#160;similar&#160;statement&#160;with&#160;exponential&#160;functions&#160;is&#160;not&#160;true:&#160;If</p>
+<p style="position:absolute;top:711px;left:623px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:711px;left:634px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:711px;left:641px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:711px;left:651px;white-space:nowrap" class="ft01">)&#160;=&#160;3</p>
+<p style="position:absolute;top:711px;left:691px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:711px;left:707px;white-space:nowrap" class="ft01">and</p>
+<p style="position:absolute;top:711px;left:741px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:711px;left:750px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:711px;left:757px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:711px;left:768px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:711px;left:798px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:711px;left:809px;white-space:nowrap" class="ft01">,&#160;then</p>
+<p style="position:absolute;top:733px;left:64px;white-space:nowrap" class="ft04">f</p>
+<p style="position:absolute;top:733px;left:74px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:733px;left:81px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:733px;left:92px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:733px;left:122px;white-space:nowrap" class="ft04">O</p>
+<p style="position:absolute;top:733px;left:136px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:733px;left:143px;white-space:nowrap" class="ft04">g</p>
+<p style="position:absolute;top:733px;left:152px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:733px;left:159px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:733px;left:169px;white-space:nowrap" class="ft01">)),&#160;but&#160;2</p>
+<p style="position:absolute;top:730px;left:235px;white-space:nowrap" class="ft06">3</p>
+<p style="position:absolute;top:730px;left:241px;white-space:nowrap" class="ft07">n</p>
+<p style="position:absolute;top:733px;left:255px;white-space:nowrap" class="ft01">is&#160;not</p>
+<p style="position:absolute;top:733px;left:304px;white-space:nowrap" class="ft04">O</p>
+<p style="position:absolute;top:733px;left:318px;white-space:nowrap" class="ft01">(2</p>
+<p style="position:absolute;top:730px;left:334px;white-space:nowrap" class="ft07">n</p>
+<p style="position:absolute;top:733px;left:342px;white-space:nowrap" class="ft01">).</p>
+<p style="position:absolute;top:769px;left:64px;white-space:nowrap" class="ft014">3.&#160;For&#160;each&#160;of&#160;the&#160;following&#160;recurrences,&#160;determine&#160;whether&#160;Our&#160;Master&#160;Theorem&#160;(on&#160;the&#160;last&#160;page<br/>of&#160;this&#160;HW)&#160;can&#160;be&#160;applied&#160;to&#160;the&#160;recurrence.&#160;If&#160;it&#160;can,&#160;use&#160;it&#160;to&#160;give&#160;the&#160;solution&#160;to&#160;the&#160;recurrence<br/>in&#160;Θ&#160;notation;&#160;no&#160;need&#160;to&#160;give&#160;any&#160;details.&#160;If&#160;not,&#160;write&#160;“Our&#160;Master&#160;Theorem&#160;does&#160;not&#160;apply.”</p>
+<p style="position:absolute;top:853px;left:64px;white-space:nowrap" class="ft01">(a)</p>
+<p style="position:absolute;top:853px;left:95px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:853px;left:108px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:853px;left:115px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:853px;left:125px;white-space:nowrap" class="ft01">)&#160;=&#160;4</p>
+<p style="position:absolute;top:853px;left:164px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:853px;left:177px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:853px;left:184px;white-space:nowrap" class="ft04">n/</p>
+<p style="position:absolute;top:853px;left:203px;white-space:nowrap" class="ft01">5)&#160;+</p>
+<p style="position:absolute;top:853px;left:240px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:851px;left:251px;white-space:nowrap" class="ft06">3</p>
+<p style="position:absolute;top:882px;left:64px;white-space:nowrap" class="ft01">(b)</p>
+<p style="position:absolute;top:882px;left:96px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:882px;left:109px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:882px;left:116px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:882px;left:126px;white-space:nowrap" class="ft01">)&#160;=&#160;10</p>
+<p style="position:absolute;top:882px;left:174px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:882px;left:187px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:882px;left:194px;white-space:nowrap" class="ft04">n/</p>
+<p style="position:absolute;top:882px;left:213px;white-space:nowrap" class="ft01">3)&#160;+&#160;5</p>
+<p style="position:absolute;top:882px;left:259px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:879px;left:269px;white-space:nowrap" class="ft06">2</p>
+<p style="position:absolute;top:911px;left:64px;white-space:nowrap" class="ft01">(c)</p>
+<p style="position:absolute;top:911px;left:94px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:911px;left:107px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:911px;left:114px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:911px;left:124px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:911px;left:155px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:908px;left:165px;white-space:nowrap" class="ft06">2</p>
+<p style="position:absolute;top:911px;left:172px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:911px;left:185px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:911px;left:192px;white-space:nowrap" class="ft04">n/</p>
+<p style="position:absolute;top:911px;left:211px;white-space:nowrap" class="ft01">5)&#160;+&#160;2</p>
+<p style="position:absolute;top:951px;left:64px;white-space:nowrap" class="ft01">4.&#160;Our&#160;Master&#160;Theorem&#160;can&#160;be&#160;applied&#160;to&#160;a&#160;recurrence&#160;of&#160;the&#160;form</p>
+<p style="position:absolute;top:951px;left:568px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:951px;left:580px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:951px;left:587px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:951px;left:598px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:951px;left:628px;white-space:nowrap" class="ft04">aT</p>
+<p style="position:absolute;top:951px;left:650px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:951px;left:656px;white-space:nowrap" class="ft04">n/b</p>
+<p style="position:absolute;top:951px;left:683px;white-space:nowrap" class="ft01">)&#160;+</p>
+<p style="position:absolute;top:951px;left:708px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:949px;left:718px;white-space:nowrap" class="ft07">d</p>
+<p style="position:absolute;top:951px;left:726px;white-space:nowrap" class="ft01">,&#160;where</p>
+<p style="position:absolute;top:951px;left:785px;white-space:nowrap" class="ft04">a,&#160;b,&#160;d</p>
+<p style="position:absolute;top:951px;left:831px;white-space:nowrap" class="ft01">are</p>
+<p style="position:absolute;top:973px;left:64px;white-space:nowrap" class="ft01">constants&#160;with</p>
+<p style="position:absolute;top:973px;left:176px;white-space:nowrap" class="ft04">a&#160;&gt;</p>
+<p style="position:absolute;top:973px;left:209px;white-space:nowrap" class="ft01">0</p>
+<p style="position:absolute;top:973px;left:217px;white-space:nowrap" class="ft04">,&#160;b&#160;&gt;</p>
+<p style="position:absolute;top:973px;left:256px;white-space:nowrap" class="ft01">1</p>
+<p style="position:absolute;top:973px;left:265px;white-space:nowrap" class="ft04">,&#160;d&#160;&gt;</p>
+<p style="position:absolute;top:973px;left:305px;white-space:nowrap" class="ft01">0.&#160;Consider&#160;instead&#160;a&#160;recurrence&#160;of&#160;the&#160;form</p>
+<p style="position:absolute;top:973px;left:632px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:980px;left:643px;white-space:nowrap" class="ft07">new</p>
+<p style="position:absolute;top:973px;left:666px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:973px;left:673px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:973px;left:684px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:973px;left:714px;white-space:nowrap" class="ft04">aT</p>
+<p style="position:absolute;top:980px;left:733px;white-space:nowrap" class="ft07">new</p>
+<p style="position:absolute;top:973px;left:757px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:973px;left:764px;white-space:nowrap" class="ft04">n/b</p>
+<p style="position:absolute;top:973px;left:790px;white-space:nowrap" class="ft01">)+log</p>
+<p style="position:absolute;top:981px;left:833px;white-space:nowrap" class="ft07">d</p>
+<p style="position:absolute;top:973px;left:844px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:995px;left:63px;white-space:nowrap" class="ft01">where</p>
+<p style="position:absolute;top:995px;left:114px;white-space:nowrap" class="ft04">a&#160;&gt;</p>
+<p style="position:absolute;top:995px;left:147px;white-space:nowrap" class="ft01">0</p>
+<p style="position:absolute;top:995px;left:155px;white-space:nowrap" class="ft04">,&#160;b&#160;&gt;</p>
+<p style="position:absolute;top:995px;left:194px;white-space:nowrap" class="ft01">1</p>
+<p style="position:absolute;top:995px;left:203px;white-space:nowrap" class="ft04">,&#160;d&#160;&gt;</p>
+<p style="position:absolute;top:995px;left:244px;white-space:nowrap" class="ft01">1&#160;(and</p>
+<p style="position:absolute;top:995px;left:299px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:995px;left:312px;white-space:nowrap" class="ft01">(1)&#160;=&#160;1).</p>
+<p style="position:absolute;top:1024px;left:64px;white-space:nowrap" class="ft01">For&#160;each&#160;of&#160;the&#160;following,&#160;state&#160;whether&#160;the&#160;given&#160;property&#160;of</p>
+<p style="position:absolute;top:1024px;left:543px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:1030px;left:553px;white-space:nowrap" class="ft07">new</p>
+<p style="position:absolute;top:1024px;left:582px;white-space:nowrap" class="ft01">is&#160;true.&#160;If&#160;so,&#160;explain&#160;why&#160;it&#160;is&#160;true.</p>
+<p style="position:absolute;top:1045px;left:64px;white-space:nowrap" class="ft014">If&#160;not,&#160;explain&#160;why&#160;it&#160;is&#160;not&#160;true.&#160;(Even&#160;if&#160;you&#160;know&#160;the&#160;version&#160;of&#160;the&#160;Master&#160;Theorem&#160;in&#160;the&#160;textbook,<br/>don’t&#160;use&#160;it&#160;in&#160;your&#160;explanation.)</p>
+<p style="position:absolute;top:1112px;left:455px;white-space:nowrap" class="ft01">1</p>
+</div>
+<!-- Page 2 -->
+<a name="2"></a>
+<style type="text/css">
+<!--
+	p {margin: 0; padding: 0;}	.ft015{font-size:18px;font-family:TWWQBJ+SFRM1200;color:#000000;}
+-->
+</style>
+<div id="page2-div" style="position:relative;width:918px;height:1188px;">
+<img width="918" height="1188" src="1757997011448-HW2-2002.png" alt="background image"/>
+<p style="position:absolute;top:69px;left:64px;white-space:nowrap" class="ft01">(a)</p>
+<p style="position:absolute;top:69px;left:95px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:76px;left:105px;white-space:nowrap" class="ft07">new</p>
+<p style="position:absolute;top:69px;left:129px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:69px;left:136px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:69px;left:146px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:69px;left:177px;white-space:nowrap" class="ft04">O</p>
+<p style="position:absolute;top:69px;left:191px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:69px;left:198px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:69px;left:211px;white-space:nowrap" class="ft01">log</p>
+<p style="position:absolute;top:69px;left:237px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:69px;left:247px;white-space:nowrap" class="ft01">)&#160;if&#160;log</p>
+<p style="position:absolute;top:78px;left:299px;white-space:nowrap" class="ft07">b</p>
+<p style="position:absolute;top:69px;left:308px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:69px;left:322px;white-space:nowrap" class="ft01">=&#160;1</p>
+<p style="position:absolute;top:98px;left:64px;white-space:nowrap" class="ft01">(b)</p>
+<p style="position:absolute;top:98px;left:96px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:105px;left:106px;white-space:nowrap" class="ft07">new</p>
+<p style="position:absolute;top:98px;left:130px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:98px;left:137px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:98px;left:147px;white-space:nowrap" class="ft01">)&#160;=&#160;Ω(</p>
+<p style="position:absolute;top:98px;left:197px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:96px;left:208px;white-space:nowrap" class="ft06">log</p>
+<p style="position:absolute;top:101px;left:224px;white-space:nowrap" class="ft08">b</p>
+<p style="position:absolute;top:96px;left:232px;white-space:nowrap" class="ft07">a</p>
+<p style="position:absolute;top:98px;left:239px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:135px;left:64px;white-space:nowrap" class="ft01">5.&#160;Consider&#160;the&#160;recurrence</p>
+<p style="position:absolute;top:135px;left:275px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:135px;left:287px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:135px;left:294px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:135px;left:305px;white-space:nowrap" class="ft01">)&#160;=&#160;4</p>
+<p style="position:absolute;top:135px;left:344px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:135px;left:357px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:135px;left:363px;white-space:nowrap" class="ft04">n/</p>
+<p style="position:absolute;top:135px;left:383px;white-space:nowrap" class="ft01">3)&#160;+&#160;2</p>
+<p style="position:absolute;top:135px;left:429px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:135px;left:445px;white-space:nowrap" class="ft01">for</p>
+<p style="position:absolute;top:135px;left:472px;white-space:nowrap" class="ft04">n&#160;&gt;</p>
+<p style="position:absolute;top:135px;left:506px;white-space:nowrap" class="ft01">1,&#160;and</p>
+<p style="position:absolute;top:135px;left:560px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:135px;left:572px;white-space:nowrap" class="ft01">(1)&#160;=&#160;2.</p>
+<p style="position:absolute;top:172px;left:64px;white-space:nowrap" class="ft01">(a)&#160;Compute&#160;the&#160;value&#160;of</p>
+<p style="position:absolute;top:172px;left:267px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:172px;left:279px;white-space:nowrap" class="ft01">(9),&#160;using&#160;the&#160;recurrence.&#160;Show&#160;your&#160;work.</p>
+<p style="position:absolute;top:201px;left:64px;white-space:nowrap" class="ft01">(b)&#160;Use&#160;a&#160;recursion&#160;tree&#160;to&#160;solve&#160;the&#160;recurrence&#160;and&#160;get&#160;a&#160;closed-form&#160;expression&#160;for</p>
+<p style="position:absolute;top:201px;left:718px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:201px;left:731px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:201px;left:737px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:201px;left:748px;white-space:nowrap" class="ft01">),&#160;when</p>
+<p style="position:absolute;top:201px;left:811px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:201px;left:828px;white-space:nowrap" class="ft01">is&#160;a</p>
+<p style="position:absolute;top:222px;left:64px;white-space:nowrap" class="ft01">power&#160;of&#160;3.&#160;(Check&#160;that&#160;your&#160;expression&#160;is&#160;correct&#160;by&#160;plugging&#160;in</p>
+<p style="position:absolute;top:222px;left:560px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:222px;left:575px;white-space:nowrap" class="ft01">=&#160;9&#160;and&#160;comparing&#160;with&#160;your&#160;answer</p>
+<p style="position:absolute;top:244px;left:64px;white-space:nowrap" class="ft01">to&#160;(a).)</p>
+<p style="position:absolute;top:273px;left:64px;white-space:nowrap" class="ft01">(c)&#160;Suppose&#160;that&#160;the&#160;base&#160;case&#160;is</p>
+<p style="position:absolute;top:273px;left:324px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:273px;left:336px;white-space:nowrap" class="ft01">(3)&#160;=&#160;5,&#160;instead&#160;of</p>
+<p style="position:absolute;top:273px;left:482px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:273px;left:495px;white-space:nowrap" class="ft01">(1)&#160;=&#160;2.&#160;What&#160;is&#160;the&#160;solution&#160;to&#160;the&#160;recurrence</p>
+<p style="position:absolute;top:295px;left:64px;white-space:nowrap" class="ft01">in&#160;this&#160;case,&#160;for</p>
+<p style="position:absolute;top:295px;left:187px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:294px;left:203px;white-space:nowrap" class="ft05">≥</p>
+<p style="position:absolute;top:295px;left:222px;white-space:nowrap" class="ft01">3?</p>
+<p style="position:absolute;top:332px;left:64px;white-space:nowrap" class="ft014">6.&#160;Consider&#160;a&#160;variation&#160;of&#160;mergesort&#160;that&#160;works&#160;as&#160;follows:&#160;If&#160;the&#160;array&#160;has&#160;size&#160;1,&#160;return.&#160;Otherwise,<br/>divide&#160;the&#160;array&#160;into&#160;thirds,&#160;rather&#160;than&#160;in&#160;half.&#160;Recursively&#160;sort&#160;each&#160;third&#160;using&#160;this&#160;variation&#160;of<br/>mergesort.&#160;Then&#160;merge&#160;the&#160;first&#160;(leftmost)&#160;third&#160;with&#160;the&#160;middle&#160;third.&#160;Finally,&#160;merge&#160;the&#160;first&#160;two<br/>thirds&#160;with&#160;the&#160;last&#160;third.</p>
+<p style="position:absolute;top:433px;left:64px;white-space:nowrap" class="ft014">(a)&#160;Write&#160;a&#160;recurrence&#160;for&#160;the&#160;running&#160;time&#160;of&#160;this&#160;variation&#160;of&#160;mergesort.&#160;It&#160;should&#160;be&#160;similar&#160;to&#160;the<br/>recurrence&#160;for&#160;ordinary&#160;mergesort.&#160;Assume</p>
+<p style="position:absolute;top:455px;left:399px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:455px;left:415px;white-space:nowrap" class="ft01">is&#160;a&#160;power&#160;of&#160;3.</p>
+<p style="position:absolute;top:484px;left:64px;white-space:nowrap" class="ft014">(b)&#160;Apply&#160;Our&#160;Master&#160;Theorem&#160;to&#160;the&#160;recurrence&#160;to&#160;get&#160;the&#160;running&#160;time&#160;of&#160;the&#160;algorithm,&#160;in&#160;theta<br/>notation.&#160;Show&#160;your&#160;work.</p>
+<p style="position:absolute;top:542px;left:64px;white-space:nowrap" class="ft01">7.&#160;Consider&#160;the&#160;following&#160;recursive&#160;sorting&#160;algorithm.&#160;Assume</p>
+<p style="position:absolute;top:542px;left:555px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:542px;left:571px;white-space:nowrap" class="ft01">is&#160;a&#160;power&#160;of&#160;3.&#160;(Note:&#160;This&#160;is&#160;not&#160;a</p>
+<p style="position:absolute;top:564px;left:63px;white-space:nowrap" class="ft01">version&#160;of&#160;mergesort.&#160;No&#160;merges&#160;are&#160;performed.)</p>
+<p style="position:absolute;top:596px;left:64px;white-space:nowrap" class="ft015">•</p>
+<p style="position:absolute;top:601px;left:81px;white-space:nowrap" class="ft01">If&#160;the&#160;array&#160;has&#160;only&#160;one&#160;element,&#160;return.</p>
+<p style="position:absolute;top:625px;left:64px;white-space:nowrap" class="ft015">•</p>
+<p style="position:absolute;top:630px;left:81px;white-space:nowrap" class="ft01">Recursively&#160;sort&#160;the&#160;first&#160;2/3&#160;of&#160;the&#160;elements&#160;in&#160;the&#160;array.</p>
+<p style="position:absolute;top:654px;left:64px;white-space:nowrap" class="ft015">•</p>
+<p style="position:absolute;top:659px;left:81px;white-space:nowrap" class="ft01">Recursively&#160;sort&#160;the&#160;second&#160;2/3&#160;of&#160;the&#160;elements&#160;in&#160;the&#160;array.</p>
+<p style="position:absolute;top:683px;left:64px;white-space:nowrap" class="ft015">•</p>
+<p style="position:absolute;top:688px;left:81px;white-space:nowrap" class="ft01">Recursively&#160;sort&#160;the&#160;first&#160;2/3&#160;of&#160;the&#160;elements&#160;in&#160;the&#160;array&#160;again.</p>
+<p style="position:absolute;top:725px;left:62px;white-space:nowrap" class="ft01">(Note:&#160;Even&#160;if&#160;you&#160;can’t&#160;figure&#160;out&#160;part&#160;(a)&#160;below,&#160;you&#160;can&#160;still&#160;answer&#160;(b)&#160;and&#160;(c).)</p>
+<p style="position:absolute;top:761px;left:64px;white-space:nowrap" class="ft014">(a)&#160;Prove&#160;that&#160;the&#160;algorithm&#160;is&#160;correct&#160;by&#160;showing&#160;that&#160;the&#160;array&#160;will&#160;be&#160;sorted&#160;after&#160;the&#160;three&#160;recursive<br/>calls&#160;are&#160;performed,&#160;assuming&#160;the&#160;three&#160;recursive&#160;calls&#160;correctly&#160;sort&#160;their&#160;(sub)arrays.&#160;Note&#160;that&#160;the<br/>middle&#160;third&#160;of&#160;the&#160;array&#160;is&#160;included&#160;in&#160;each&#160;of&#160;the&#160;3&#160;recursive&#160;calls.</p>
+<p style="position:absolute;top:834px;left:64px;white-space:nowrap" class="ft01">(b)&#160;Write&#160;a&#160;recurrence&#160;expressing&#160;the&#160;running&#160;time&#160;of&#160;the&#160;algorithm.</p>
+<p style="position:absolute;top:863px;left:64px;white-space:nowrap" class="ft014">(c)&#160;Apply&#160;Our&#160;Master&#160;Theorem&#160;to&#160;your&#160;recurrence.&#160;What&#160;is&#160;the&#160;running&#160;time&#160;of&#160;the&#160;algorithm,&#160;in&#160;theta<br/>notation?</p>
+<p style="position:absolute;top:1112px;left:455px;white-space:nowrap" class="ft01">2</p>
+</div>
+<!-- Page 3 -->
+<a name="3"></a>
+<style type="text/css">
+<!--
+	p {margin: 0; padding: 0;}-->
+</style>
+<div id="page3-div" style="position:relative;width:918px;height:1188px;">
+<img width="918" height="1188" src="1757997011448-HW2-2003.png" alt="background image"/>
+<p style="position:absolute;top:69px;left:64px;white-space:nowrap" class="ft03">Theorem&#160;0.1&#160;(Our&#160;Master&#160;Theorem)</p>
+<p style="position:absolute;top:69px;left:394px;white-space:nowrap" class="ft00">Let</p>
+<p style="position:absolute;top:69px;left:425px;white-space:nowrap" class="ft04">a,&#160;b,&#160;d,&#160;n</p>
+<p style="position:absolute;top:76px;left:485px;white-space:nowrap" class="ft06">0</p>
+<p style="position:absolute;top:69px;left:499px;white-space:nowrap" class="ft00">be&#160;constants&#160;such&#160;that</p>
+<p style="position:absolute;top:69px;left:677px;white-space:nowrap" class="ft04">a&#160;&gt;</p>
+<p style="position:absolute;top:69px;left:711px;white-space:nowrap" class="ft01">0</p>
+<p style="position:absolute;top:69px;left:720px;white-space:nowrap" class="ft04">,&#160;b&#160;&gt;</p>
+<p style="position:absolute;top:69px;left:759px;white-space:nowrap" class="ft01">1</p>
+<p style="position:absolute;top:69px;left:768px;white-space:nowrap" class="ft04">,&#160;d</p>
+<p style="position:absolute;top:68px;left:791px;white-space:nowrap" class="ft05">≥</p>
+<p style="position:absolute;top:69px;left:810px;white-space:nowrap" class="ft01">0</p>
+<p style="position:absolute;top:69px;left:825px;white-space:nowrap" class="ft00">and</p>
+<p style="position:absolute;top:91px;left:64px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:98px;left:74px;white-space:nowrap" class="ft06">0</p>
+<p style="position:absolute;top:91px;left:86px;white-space:nowrap" class="ft04">&gt;</p>
+<p style="position:absolute;top:91px;left:105px;white-space:nowrap" class="ft01">0</p>
+<p style="position:absolute;top:91px;left:114px;white-space:nowrap" class="ft00">.</p>
+<p style="position:absolute;top:113px;left:63px;white-space:nowrap" class="ft00">Let</p>
+<p style="position:absolute;top:113px;left:93px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:113px;left:106px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:113px;left:113px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:113px;left:123px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:113px;left:154px;white-space:nowrap" class="ft04">aT</p>
+<p style="position:absolute;top:113px;left:176px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:113px;left:182px;white-space:nowrap" class="ft04">n/b</p>
+<p style="position:absolute;top:113px;left:209px;white-space:nowrap" class="ft01">)&#160;+</p>
+<p style="position:absolute;top:113px;left:238px;white-space:nowrap" class="ft04">θ</p>
+<p style="position:absolute;top:113px;left:246px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:113px;left:253px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:110px;left:264px;white-space:nowrap" class="ft07">d</p>
+<p style="position:absolute;top:113px;left:271px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:113px;left:284px;white-space:nowrap" class="ft00">for&#160;when</p>
+<p style="position:absolute;top:113px;left:357px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:112px;left:372px;white-space:nowrap" class="ft05">≥</p>
+<p style="position:absolute;top:113px;left:391px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:119px;left:402px;white-space:nowrap" class="ft06">0</p>
+<p style="position:absolute;top:113px;left:409px;white-space:nowrap" class="ft00">,&#160;and</p>
+<p style="position:absolute;top:113px;left:454px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:113px;left:467px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:113px;left:474px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:113px;left:485px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:113px;left:515px;white-space:nowrap" class="ft04">θ</p>
+<p style="position:absolute;top:113px;left:524px;white-space:nowrap" class="ft01">(1)</p>
+<p style="position:absolute;top:113px;left:552px;white-space:nowrap" class="ft00">when</p>
+<p style="position:absolute;top:113px;left:597px;white-space:nowrap" class="ft01">0</p>
+<p style="position:absolute;top:112px;left:611px;white-space:nowrap" class="ft05">≤</p>
+<p style="position:absolute;top:113px;left:630px;white-space:nowrap" class="ft04">n&#160;&lt;&#160;n</p>
+<p style="position:absolute;top:119px;left:674px;white-space:nowrap" class="ft06">0</p>
+<p style="position:absolute;top:113px;left:682px;white-space:nowrap" class="ft00">.&#160;Then,</p>
+<p style="position:absolute;top:179px;left:323px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:179px;left:335px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:179px;left:342px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:179px;left:353px;white-space:nowrap" class="ft01">)&#160;=</p>
+<p style="position:absolute;top:149px;left:383px;white-space:nowrap" class="ft011"></p>
+<p style="position:absolute;top:165px;left:383px;white-space:nowrap" class="ft011"></p>
+<p style="position:absolute;top:170px;left:383px;white-space:nowrap" class="ft011"></p>
+<p style="position:absolute;top:203px;left:383px;white-space:nowrap" class="ft011"></p>
+<p style="position:absolute;top:208px;left:383px;white-space:nowrap" class="ft011"></p>
+<p style="position:absolute;top:154px;left:399px;white-space:nowrap" class="ft04">θ</p>
+<p style="position:absolute;top:154px;left:408px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:154px;left:415px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:152px;left:425px;white-space:nowrap" class="ft07">d</p>
+<p style="position:absolute;top:154px;left:435px;white-space:nowrap" class="ft01">log</p>
+<p style="position:absolute;top:154px;left:461px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:154px;left:472px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:154px;left:503px;white-space:nowrap" class="ft00">if</p>
+<p style="position:absolute;top:154px;left:520px;white-space:nowrap" class="ft04">d</p>
+<p style="position:absolute;top:154px;left:534px;white-space:nowrap" class="ft01">=&#160;log</p>
+<p style="position:absolute;top:162px;left:575px;white-space:nowrap" class="ft07">b</p>
+<p style="position:absolute;top:154px;left:584px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:180px;left:399px;white-space:nowrap" class="ft04">θ</p>
+<p style="position:absolute;top:180px;left:408px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:180px;left:415px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:178px;left:425px;white-space:nowrap" class="ft06">log</p>
+<p style="position:absolute;top:183px;left:442px;white-space:nowrap" class="ft08">b</p>
+<p style="position:absolute;top:178px;left:449px;white-space:nowrap" class="ft07">a</p>
+<p style="position:absolute;top:180px;left:457px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:180px;left:503px;white-space:nowrap" class="ft00">if</p>
+<p style="position:absolute;top:180px;left:520px;white-space:nowrap" class="ft04">d&#160;&lt;</p>
+<p style="position:absolute;top:180px;left:552px;white-space:nowrap" class="ft01">log</p>
+<p style="position:absolute;top:188px;left:575px;white-space:nowrap" class="ft07">b</p>
+<p style="position:absolute;top:180px;left:584px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:206px;left:399px;white-space:nowrap" class="ft04">θ</p>
+<p style="position:absolute;top:206px;left:408px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:206px;left:415px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:204px;left:425px;white-space:nowrap" class="ft07">d</p>
+<p style="position:absolute;top:206px;left:432px;white-space:nowrap" class="ft01">)</p>
+<p style="position:absolute;top:206px;left:503px;white-space:nowrap" class="ft00">if</p>
+<p style="position:absolute;top:206px;left:520px;white-space:nowrap" class="ft04">d&#160;&gt;&#160;log</p>
+<p style="position:absolute;top:213px;left:575px;white-space:nowrap" class="ft07">b</p>
+<p style="position:absolute;top:206px;left:581px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:248px;left:63px;white-space:nowrap" class="ft01">We&#160;assume&#160;here&#160;that</p>
+<p style="position:absolute;top:248px;left:238px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:248px;left:250px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:248px;left:257px;white-space:nowrap" class="ft04">n</p>
+<p style="position:absolute;top:248px;left:268px;white-space:nowrap" class="ft01">)&#160;is&#160;a&#160;function&#160;defined&#160;on&#160;the&#160;natural&#160;numbers.&#160;We&#160;use</p>
+<p style="position:absolute;top:248px;left:720px;white-space:nowrap" class="ft04">aT</p>
+<p style="position:absolute;top:248px;left:742px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:248px;left:749px;white-space:nowrap" class="ft04">n/b</p>
+<p style="position:absolute;top:248px;left:775px;white-space:nowrap" class="ft01">)&#160;to&#160;mean</p>
+<p style="position:absolute;top:270px;left:64px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:267px;left:73px;white-space:nowrap" class="ft010">′</p>
+<p style="position:absolute;top:270px;left:77px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:270px;left:90px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:269px;left:97px;white-space:nowrap" class="ft05">⌊</p>
+<p style="position:absolute;top:270px;left:105px;white-space:nowrap" class="ft04">n/b</p>
+<p style="position:absolute;top:269px;left:131px;white-space:nowrap" class="ft05">⌋</p>
+<p style="position:absolute;top:270px;left:139px;white-space:nowrap" class="ft01">)&#160;+</p>
+<p style="position:absolute;top:270px;left:168px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:267px;left:177px;white-space:nowrap" class="ft010">′′</p>
+<p style="position:absolute;top:270px;left:185px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:270px;left:192px;white-space:nowrap" class="ft04">T</p>
+<p style="position:absolute;top:270px;left:204px;white-space:nowrap" class="ft01">(</p>
+<p style="position:absolute;top:269px;left:211px;white-space:nowrap" class="ft05">⌈</p>
+<p style="position:absolute;top:270px;left:219px;white-space:nowrap" class="ft04">n/b</p>
+<p style="position:absolute;top:269px;left:246px;white-space:nowrap" class="ft05">⌉</p>
+<p style="position:absolute;top:270px;left:254px;white-space:nowrap" class="ft01">)&#160;where</p>
+<p style="position:absolute;top:270px;left:317px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:267px;left:326px;white-space:nowrap" class="ft010">′</p>
+<p style="position:absolute;top:270px;left:331px;white-space:nowrap" class="ft04">,&#160;a</p>
+<p style="position:absolute;top:267px;left:348px;white-space:nowrap" class="ft010">′′</p>
+<p style="position:absolute;top:270px;left:360px;white-space:nowrap" class="ft04">&gt;</p>
+<p style="position:absolute;top:270px;left:379px;white-space:nowrap" class="ft01">0&#160;such&#160;that</p>
+<p style="position:absolute;top:270px;left:471px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:267px;left:480px;white-space:nowrap" class="ft010">′</p>
+<p style="position:absolute;top:270px;left:489px;white-space:nowrap" class="ft01">+</p>
+<p style="position:absolute;top:270px;left:506px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:267px;left:515px;white-space:nowrap" class="ft010">′′</p>
+<p style="position:absolute;top:270px;left:528px;white-space:nowrap" class="ft01">=</p>
+<p style="position:absolute;top:270px;left:547px;white-space:nowrap" class="ft04">a</p>
+<p style="position:absolute;top:270px;left:556px;white-space:nowrap" class="ft01">.</p>
+<p style="position:absolute;top:1112px;left:455px;white-space:nowrap" class="ft01">3</p>
+</div>
+</body>
+</html>

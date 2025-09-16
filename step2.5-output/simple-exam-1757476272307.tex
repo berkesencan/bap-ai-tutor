@@ -1,0 +1,182 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{graphicx}
+
+\title{CS-UY 2214 — Recitation 1}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+Complete the following 33 exercises. Put your answers in a plain text file named \texttt{recitation1.txt}. Number your solution to each question. When you finish, submit your file on Gradescope. Then, in order to receive credit, you must ask your TA to check your work. Your work should be completed and checked during the recitation session.
+
+Please note that your solutions must be in a plain text file. Other formats, such as PDF, RTF, and Microsoft Word, will not be accepted. Here are some recommended editors that produce plain text files:
+\begin{itemize}
+    \item Notepad (comes with Windows)
+    \item TextEdit (comes with Mac OS); note that if you are using TextEdit, you need to select “Make Plain Text” from the Format menu before saving the file
+    \item gedit (available on most Linux distributions)
+    \item nano (available on most Linux distributions)
+    \item Sublime Text
+    \item VSCode
+    \item Atom
+    \item Vim
+    \item Emacs
+\end{itemize}
+
+For questions that require a solution expressed as an image, submit the image as a separate file. The image file should be named \texttt{recitationnqm}, where $n$ is the recitation number and $m$ is the question number; use an appropriate suffix (either jpg or png).
+
+\section*{Problems}
+\begin{enumerate}
+    \item Consider the following circuit.  (Diagram would be included as recitation1q1.jpg or .png)
+
+    Express the circuit as a Boolean expression, using only AND, OR, and NOT. Provide a truth table for this circuit.
+
+    \item Using only AND, OR, and NOT gates, construct a circuit diagram that will calculate XOR. Your circuit will have two inputs A and B, and one output Y. Submit your answer as an image, in accordance with the instructions at the beginning of this document. Your image may be a diagram created in a drawing program, or it may be a photograph of a hand-drawn diagram on paper. (Image would be included as recitation1q2.jpg or .png)
+
+    \item Convert the following decimal numbers into binary.
+    \begin{itemize}
+        \item (a) 27
+        \item (b) 105
+    \end{itemize}
+
+    \item Convert the following binary numbers into decimal.
+    \begin{itemize}
+        \item (a) 1110
+        \item (b) 0101
+    \end{itemize}
+
+    \item Convert the following decimal numbers into hexadecimal.
+    \begin{itemize}
+        \item (a) 255
+        \item (b) 128
+    \end{itemize}
+
+    \item Convert the following hexadecimal numbers into binary.
+    \begin{itemize}
+        \item (a) 1a2b
+        \item (b) cafe
+    \end{itemize}
+
+    \item Convert the following decimal numbers into 8-bit binary 2’s complement. Write all the digits.
+    \begin{itemize}
+        \item (a) 67
+        \item (b) −67
+    \end{itemize}
+
+    \item Convert the following 8-bit binary unsigned numbers into decimal.
+    \begin{itemize}
+        \item (a) 01101100
+        \item (b) 10000001
+        \item (c) 00000000
+    \end{itemize}
+
+    \item Convert the following 8-bit binary 2’s complement numbers into decimal.
+    \begin{itemize}
+        \item (a) 01101100
+        \item (b) 10000001
+        \item (c) 11111111
+    \end{itemize}
+
+    \item Consider the following C++ program. Do not run it.
+    \begin{verbatim}
+# include < iostream >
+using namespace std ;
+int main () {
+int i = 10;
+int count = 0;
+while ( i > 0) {
+i -= 2;
+count ++;
+}
+cout << " Completed " << count << " iterations " << endl ;
+return 0;
+}
+    \end{verbatim}
+    Your friend Rufus argues that this program has an infinite loop, and will therefore never end. Is he right or wrong? Justify your opinion with a persuasive explanation, but do not type in or run the program. Predict the output of the program.
+
+    \item  Design a circuit using only NAND gates that implements a half adder.  Show the circuit diagram and the truth table. (Image would be included as recitation1q10.jpg or .png)
+
+    \item  Explain the difference between combinational and sequential logic circuits. Provide examples of each.
+
+    \item  What are the advantages and disadvantages of using binary, decimal, and hexadecimal number systems in computer science?
+
+    \item  Describe the process of converting a decimal number to its two's complement representation.  Illustrate with an example.
+
+    \item  Explain overflow and underflow in the context of binary arithmetic.  Give examples of each.
+
+    \item  What is the purpose of a truth table? How is it constructed?
+
+    \item  Simplify the Boolean expression:  (A + B)(A' + C) using Boolean algebra.
+
+    \item  Draw a Karnaugh map for a function with three inputs (A, B, C) and output F = Σ(0, 2, 4, 6).  Simplify the expression using the map.
+
+    \item  What is a multiplexer (MUX)?  Explain its functionality and provide a diagram of a 4-to-1 MUX. (Image would be included as recitation1q18.jpg or .png)
+
+
+    \item  What is a demultiplexer (DEMUX)? Explain its functionality and provide a diagram of a 1-to-4 DEMUX. (Image would be included as recitation1q19.jpg or .png)
+
+    \item  Design a circuit using only NOR gates that implements an OR gate.
+
+
+    \item  Design a circuit using only NAND gates that implements an AND gate.
+
+
+    \item  Explain the concept of De Morgan's Law and provide examples of its application.
+
+
+    \item  Convert the following binary numbers into Gray code:
+    \begin{itemize}
+        \item (a) 101101
+        \item (b) 001110
+    \end{itemize}
+
+    \item Convert the following Gray code numbers into binary:
+    \begin{itemize}
+        \item (a) 110110
+        \item (b) 011001
+    \end{itemize}
+
+    \item Write a C++ program that calculates the factorial of a given integer. The program should handle invalid input (negative numbers) gracefully.
+
+
+    \item Write a Python program that finds the largest number in a list of numbers.
+
+
+    \item Write a Python function that checks if a given string is a palindrome.
+
+
+    \item Write a C++ function that reverses a given string.
+
+
+    \item Explain the difference between a while loop and a for loop in C++.  Provide examples of each.
+
+
+    \item Explain the concept of recursion in programming. Provide a simple example of a recursive function.
+
+
+    \item  Consider the following C++ program. Do not run it.  What will be printed?
+    \begin{verbatim}
+#include <iostream>
+
+using namespace std;
+
+int main() {
+  int x = 5;
+  int y = 10;
+  int z = x + y;
+  cout << "The sum of x and y is: " << z << endl;
+  return 0;
+}
+    \end{verbatim}
+
+
+    \item Take a screenshot of your Linux terminal showing the successful compilation and execution of a simple “Hello, world!” program. (Image would be included as recitation1q32.jpg or .png)
+
+    \item  Take a screenshot of your Linux environment showing a file manager with at least three files or directories visible. (Image would be included as recitation1q33.jpg or .png)
+\end{enumerate}
+
+\end{document}

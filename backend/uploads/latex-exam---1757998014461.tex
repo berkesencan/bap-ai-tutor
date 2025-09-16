@@ -1,0 +1,71 @@
+\documentclass[12pt]{article}
+
+% Essential packages only - no unnecessary dependencies
+\usepackage[margin=1in]{geometry}
+\usepackage{array}
+\usepackage{enumitem}
+
+% Remove page numbers
+\pagestyle{empty}
+
+% Configure itemize formatting to match original
+\setlist[itemize]{leftmargin=15pt,itemsep=2pt,parsep=0pt,topsep=3pt}
+
+\begin{document}
+
+% Header - exact match to original PDF
+\begin{center}
+{\large\bfseries CSCI-UA.0480-051: Parallel Computing}
+
+\vspace{0.2cm}
+
+{\normalsize\bfseries Practice Exam}
+
+\vspace{0.1cm}
+
+{\normalsize\bfseries Total: 100 points}
+\end{center}
+
+\vspace{0.4cm}
+
+Determine the asymptotic relationship between f(n) = n log n and g(n) = n<sup>1.5</sup>.
+
+
+\vspace{0.3cm}
+Prove or disprove: If f(n) = O(g(n)) and g(n) is unbounded, then 2<sup>f(n)</sup> = O(2<sup>g(n)</sup>).
+
+
+\vspace{0.3cm}
+Solve the recurrence relation T(n) = 2T(n/2) + n log n using the Master Theorem or a recursion tree method.  Show your work and state any assumptions.
+
+
+\vspace{0.3cm}
+What is the value of T(16) if T(n) = T(n/4) + 1 for n > 1 and T(1) = 1?
+
+
+\vspace{0.3cm}
+Explain why the recurrence T(n) = 2T(n/2) + n is solvable using the Master Theorem, but T(n) = 2T(n/2) + n log n is not.
+
+
+\vspace{0.3cm}
+Which of the following is NOT a correct asymptotic relationship?
+
+
+\vspace{0.3cm}
+Design a divide-and-conquer algorithm to find the maximum and minimum elements in an unsorted array. Write a recurrence relation for its running time and solve it using the Master Theorem.
+
+
+\vspace{0.3cm}
+Give an example of a recurrence relation that has a solution of Θ(n log log n).
+
+
+\vspace{0.3cm}
+Prove that if f(n) = Θ(g(n)), then f(n) = O(g(n)) and f(n) = Ω(g(n)).
+
+
+\vspace{0.3cm}
+What is the difference between big-O, big-Omega, and big-Theta notation in the context of algorithm analysis?
+
+
+
+\end{document}

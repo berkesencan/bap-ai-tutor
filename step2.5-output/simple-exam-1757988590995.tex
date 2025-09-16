@@ -1,0 +1,124 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+
+\begin{document}
+
+\title{CS-UY 2413: Design \& Analysis of Algorithms}
+\author{Prof. Lisa Hellerstein}
+\date{Fall 2024 \\ New York University}
+
+\maketitle
+
+\section*{Homework 2}
+Due 11:59pm Monday, Sep 30, New York time.
+
+By handing in the homework you are agreeing to the Homework Rules; see EdStem.
+
+Our Master Theorem: The version of the Master Theorem that we covered in class is on the last page of this homework. We won’t be covering the version of the Master Theorem in the textbook and you’re not responsible for knowing it. (But you may find it interesting!)
+
+Reminder: For $r \neq 1$, $r^0 + r^1 + \dots + r^k = \frac{r^{k+1} - 1}{r - 1}$.
+
+% INTERACTIVE_QUESTION_START: Q1
+\begin{enumerate}
+    \item For each example, indicate whether $f = o(g)$ (little-oh), $f = \omega(g)$ (little-omega), or $f = \Theta(g)$ (big-Theta). No justification is necessary.
+    \begin{enumerate}
+        \item $f(n) = 2^n$, $g(n) = n^{100}$
+        \item $f(n) = n^2 \log n$, $g(n) = n^2$
+        \item $f(n) = n \log n$, $g(n) = n \log(n^2)$
+        \item $f(n) = \sum_{i=1}^n i^2$, $g(n) = n^3$
+        \item $f(n) = \log_2 n$, $g(n) = \log_{16} n$
+    \end{enumerate}
+\end{enumerate}
+% INTERACTIVE_QUESTION_END: Q1
+
+% INTERACTIVE_QUESTION_START: Q2
+\begin{enumerate}
+    \setcounter{enumi}{1}
+    \item Give a formal proof of the following statement: If $f(n) \ge 1$ for all $n \in \mathbb{N}$, $g(n) \ge 1$ for all $n \in \mathbb{N}$, $f(n) = \Omega(g(n))$, and $g(n)$ is unbounded (meaning $\lim_{n \to \infty} g(n) = \infty$) then $\log_2 f(n) = \Omega(\log g(n))$.
+    Use the formal definition of big-Omega in your answer. In your proof, you can use the fact that the value of $\log_2 n$ increases as $n$ increases.
+    Note that a similar statement with exponential functions is not true: If $f(n) = 2^n$ and $g(n) = n$, then $f(n) = \Omega(g(n))$, but $2^{2^n}$ is not $\Omega(2^n)$.
+\end{enumerate}
+% INTERACTIVE_QUESTION_END: Q2
+
+% INTERACTIVE_QUESTION_START: Q3
+\begin{enumerate}
+    \setcounter{enumi}{2}
+    \item For each of the following recurrences, determine whether Our Master Theorem (on the last page of this HW) can be applied to the recurrence. If it can, use it to give the solution to the recurrence in $\Theta$ notation; no need to give any details. If not, write “Our Master Theorem does not apply.”
+    \begin{enumerate}
+        \item $T(n) = 2T(n/2) + n \log n$
+        \item $T(n) = 9T(n/3) + n$
+        \item $T(n) = T(n/2) + 1$
+    \end{enumerate}
+\end{enumerate}
+% INTERACTIVE_QUESTION_END: Q3
+
+% INTERACTIVE_QUESTION_START: Q4
+\begin{enumerate}
+    \setcounter{enumi}{3}
+    \item Our Master Theorem can be applied to a recurrence of the form $T(n) = aT(n/b) + n^d$, where $a, b, d$ are constants with $a > 0$, $b > 1$, $d > 0$. Consider instead a recurrence of the form $T_{new}(n) = aT_{new}(n/b) + n \log_d n$ where $a > 0$, $b > 1$, $d > 1$ (and $T(1) = 1$).
+    For each of the following, state whether the given property of $T_{new}$ is true. If so, explain why it is true. If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook, don’t use it in your explanation.)
+    \begin{enumerate}
+        \item $T_{new}(n) = O(n^2)$ if $\log_b a < 2$
+        \item $T_{new}(n) = \Omega(n \log n)$
+    \end{enumerate}
+\end{enumerate}
+% INTERACTIVE_QUESTION_END: Q4
+
+% INTERACTIVE_QUESTION_START: Q5
+\begin{enumerate}
+    \setcounter{enumi}{4}
+    \item Consider the recurrence $T(n) = 2T(n/2) + n \log n$ for $n > 1$, and $T(1) = 1$.
+    \begin{enumerate}
+        \item Compute the value of $T(4)$, using the recurrence. Show your work.
+        \item Use a recursion tree to solve the recurrence and get a closed-form expression for $T(n)$, when $n$ is a power of 2. (Check that your expression is correct by plugging in $n = 4$ and comparing with your answer to (a).)
+        \item Suppose that the base case is $T(2) = 3$, instead of $T(1) = 1$. What is the solution to the recurrence in this case, for $n \ge 2$?
+    \end{enumerate}
+\end{enumerate}
+% INTERACTIVE_QUESTION_END: Q5
+
+% INTERACTIVE_QUESTION_START: Q6
+\begin{enumerate}
+    \setcounter{enumi}{5}
+    \item Consider a variation of mergesort that works as follows: If the array has size 1, return. Otherwise, divide the array into fourths, rather than in half. Recursively sort each fourth using this variation of mergesort. Then merge the first (leftmost) fourth with the second fourth. Then merge the result with the third fourth, and finally merge that result with the last fourth.
+    \begin{enumerate}
+        \item Write a recurrence for the running time of this variation of mergesort. It should be similar to the recurrence for ordinary mergesort. Assume $n$ is a power of 4.
+        \item Apply Our Master Theorem to the recurrence to get the running time of the algorithm, in theta notation. Show your work.
+    \end{enumerate}
+\end{enumerate}
+% INTERACTIVE_QUESTION_END: Q6
+
+% INTERACTIVE_QUESTION_START: Q7
+\begin{enumerate}
+    \setcounter{enumi}{6}
+    \item Consider the following recursive sorting algorithm. Assume $n$ is a power of 2. (Note: This is not a version of mergesort. No merges are performed.)
+    \begin{itemize}
+        \item If the array has only one element, return.
+        \item Recursively sort the first half of the elements in the array.
+        \item Recursively sort the second half of the elements in the array.
+        \item Recursively sort the first half of the elements in the array again.
+        \item Recursively sort the last half of the elements in the array again.
+    \end{itemize}
+    \begin{enumerate}
+        \item Prove that the algorithm is correct by showing that the array will be sorted after the four recursive calls are performed, assuming the four recursive calls correctly sort their (sub)arrays. Note that the middle element of the array is included in each of the 4 recursive calls.
+        \item Write a recurrence expressing the running time of the algorithm.
+        \item Apply Our Master Theorem to your recurrence. What is the running time of the algorithm, in theta notation?
+    \end{enumerate}
+\end{enumerate}
+% INTERACTIVE_QUESTION_END: Q7
+
+\begin{theorem}[Our Master Theorem]
+Let $a, b, d, n_0$ be constants such that $a > 0$, $b > 1$, $d \ge 0$ and $n_0 > 0$.
+Let $T(n) = aT(n/b) + \Theta(n^d)$ for when $n \ge n_0$, and $T(n) = \Theta(1)$ when $0 \le n < n_0$. Then,
+\[
+T(n) = \begin{cases}
+\Theta(n^d \log n) & \text{if } d = \log_b a \\
+\Theta(n^{\log_b a}) & \text{if } d < \log_b a \\
+\Theta(n^d) & \text{if } d > \log_b a
+\end{cases}
+\]
+We assume here that $T(n)$ is a function defined on the natural numbers. We use $aT(n/b)$ to mean $a'T(\lfloor n/b \rfloor) + a''T(\lceil n/b \rceil)$ where $a', a'' > 0$ such that $a' + a'' = a$.
+\end{theorem}
+
+\end{document}
