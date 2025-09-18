@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AiTutorChat from '../components/AiTutorChat';
+import AnswerKeyViewer from '../components/AnswerKeyViewer';
 import { generateStudyPlan, explainConcept, generatePracticeQuestions, testGemini, processPracticeExam, downloadPDF } from '../services/api';
 import { FaBookOpen, FaClipboardList, FaQuestion, FaLightbulb, FaSpinner, FaComments, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import './AiTutorPage.css';
@@ -436,7 +437,9 @@ const QuestionDisplay = ({
   onAnswerChange, 
   userAnswer, 
   isGrading, 
-  onGrade 
+  onGrade,
+  renderOnlyQuestion = false,
+  renderOnlyAnswer = false
 }) => {
   const [processedText, setProcessedText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -489,25 +492,29 @@ const QuestionDisplay = ({
     }
   };
 
+  const charCount = (userAnswer || '').length;
+
   return (
     <div className="question-display">
-      {/* Question Text */}
-      <div className="question-text">
-        {isProcessing ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
-            <div className="btn-spinner small"></div>
-            <span>Processing question...</span>
-          </div>
-        ) : (
-          <div 
-            dangerouslySetInnerHTML={{ __html: processedText }}
-            style={{ lineHeight: '1.6' }}
-          />
-        )}
-      </div>
+      {/* Question Text (hidden when renderOnlyAnswer) */}
+      {!renderOnlyAnswer && (
+        <div className="question-text">
+          {isProcessing ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
+              <div className="btn-spinner small"></div>
+              <span>Processing question...</span>
+            </div>
+          ) : (
+            <div 
+              dangerouslySetInnerHTML={{ __html: processedText }}
+              style={{ lineHeight: '1.6' }}
+            />
+          )}
+        </div>
+      )}
 
       {/* Multiple Choice Options */}
-      {actualQuestionData && actualQuestionData.type === 'multiple_choice' && (
+      {!renderOnlyQuestion && actualQuestionData && actualQuestionData.type === 'multiple_choice' && (
         <div className="multiple-choice-options">
           {actualQuestionData.options && actualQuestionData.options.map((option, optionIndex) => (
             <label key={optionIndex} className="choice-option">
@@ -526,21 +533,38 @@ const QuestionDisplay = ({
       )}
 
       {/* Text Answer (for non-multiple choice) */}
-      {(!actualQuestionData || actualQuestionData.type === 'single' || isOldFormat) && (
-        <div className="text-answer">
+      {!renderOnlyQuestion && (!actualQuestionData || actualQuestionData.type === 'single' || isOldFormat) && (
+        <div className="answer-editor">
+          <div className="answer-toolbar">
+            <div className="answer-toolbar-left">
+              <span className="answer-toolbar-title">Your Answer</span>
+            </div>
+            <div className="answer-toolbar-right">
+              <span className="char-counter">{charCount} chars</span>
+              {onGrade && (
+                <button
+                  onClick={() => onGrade(index)}
+                  disabled={isGrading || !userAnswer}
+                  className="btn-primary"
+                >
+                  {isGrading ? 'Grading...' : 'Grade'}
+                </button>
+              )}
+            </div>
+          </div>
           <textarea
             value={userAnswer || ''}
             onChange={handleTextAnswerChange}
             className="answer-textarea"
             placeholder="Type your answer here..."
             disabled={isGrading}
-            rows="4"
+            rows="5"
           />
         </div>
       )}
 
       {/* Grade Button */}
-      {onGrade && userAnswer && (
+      {!renderOnlyQuestion && onGrade && actualQuestionData && actualQuestionData.type === 'multiple_choice' && userAnswer && (
         <button
           onClick={() => onGrade(index)}
           disabled={isGrading}
@@ -1267,8 +1291,37 @@ Generate ${questionsForm.count} high-quality practice questions now:`;
       return;
     }
     
-    // Create a grading prompt that includes point-based scoring
-    let gradingPrompt = `GRADE THIS ANSWER - OBJECTIVE CHECKLIST
+    // 🎯 CHECK QUESTION TYPE FOR DIFFERENT GRADING STRATEGIES
+    const questionData = practiceQuestionDetection && practiceQuestionDetection[index];
+    const isMultipleChoice = questionData && questionData.type === 'multiple_choice';
+    
+    console.log(`[Grading] Practice Question ${index + 1}: Type = ${questionData?.type || 'unknown'}, MC = ${isMultipleChoice}`);
+    
+    // Create different grading prompts based on question type
+    let gradingPrompt;
+    
+    if (isMultipleChoice) {
+      // 🔥 MULTIPLE CHOICE: ALL-OR-NOTHING GRADING
+      gradingPrompt = `GRADE THIS MULTIPLE CHOICE ANSWER - ALL OR NOTHING
+
+QUESTION: ${questionText}
+STUDENT ANSWER: "${answerText}"
+MAX POINTS: ${maxPoints}
+
+MULTIPLE CHOICE GRADING RULES:
+1. Identify the correct answer choice (A, B, C, D, etc.)
+2. Check if student selected the EXACT correct option
+3. Award FULL points for correct answer, ZERO for incorrect
+4. No partial credit for multiple choice questions
+
+RESPONSE FORMAT:
+CORRECT ANSWER: [The correct choice with brief explanation]
+STUDENT SELECTED: ${answerText}
+POINTS: [Either ${maxPoints} or 0]/${maxPoints}
+FEEDBACK: [Brief explanation of why this is correct/incorrect]`;
+    } else {
+      // 📝 OPEN-ENDED: PARTIAL POINTS SYSTEM (existing logic)
+      gradingPrompt = `GRADE THIS ANSWER - OBJECTIVE CHECKLIST
 
 QUESTION: ${questionText}
 STUDENT ANSWER: "${answerText}"
@@ -1293,6 +1346,7 @@ STUDENT COVERAGE: [Which requirements are met - YES/NO for each]
 POINTS: X/${maxPoints}
 FEEDBACK: [Brief explanation]
 CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
+    }
 
     console.log(`Sending grading prompt for Q${index + 1} to testGemini:`, gradingPrompt);
 
@@ -1417,6 +1471,11 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
     setChatMessage(''); 
     // Switch to the chat tab
     setActiveTab('chat');
+  };
+
+  // Handle Answer Key viewing
+  const handleViewAnswerKey = (answerKeyData) => {
+    AnswerKeyViewer.open(answerKeyData);
   };
 
   // Handle Practice Exam form changes
@@ -1727,8 +1786,37 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
       return;
     }
     
-    // Create grading prompt with point-based scoring (same as practice questions)
-    let gradingPrompt = `GRADE THIS ANSWER - OBJECTIVE CHECKLIST
+    // 🎯 CHECK QUESTION TYPE FOR DIFFERENT GRADING STRATEGIES
+    const questionData = practiceExamDetection && practiceExamDetection[index];
+    const isMultipleChoice = questionData && questionData.type === 'multiple_choice';
+    
+    console.log(`[Grading] Question ${index + 1}: Type = ${questionData?.type || 'unknown'}, MC = ${isMultipleChoice}`);
+    
+    // Create different grading prompts based on question type
+    let gradingPrompt;
+    
+    if (isMultipleChoice) {
+      // 🔥 MULTIPLE CHOICE: ALL-OR-NOTHING GRADING
+      gradingPrompt = `GRADE THIS MULTIPLE CHOICE ANSWER - ALL OR NOTHING
+
+QUESTION: ${questionText}
+STUDENT ANSWER: "${answerText}"
+MAX POINTS: ${maxPoints}
+
+MULTIPLE CHOICE GRADING RULES:
+1. Identify the correct answer choice (A, B, C, D, etc.)
+2. Check if student selected the EXACT correct option
+3. Award FULL points for correct answer, ZERO for incorrect
+4. No partial credit for multiple choice questions
+
+RESPONSE FORMAT:
+CORRECT ANSWER: [The correct choice with brief explanation]
+STUDENT SELECTED: ${answerText}
+POINTS: [Either ${maxPoints} or 0]/${maxPoints}
+FEEDBACK: [Brief explanation of why this is correct/incorrect]`;
+    } else {
+      // 📝 OPEN-ENDED: PARTIAL POINTS SYSTEM (existing logic)
+      gradingPrompt = `GRADE THIS ANSWER - OBJECTIVE CHECKLIST
 
 QUESTION: ${questionText}
 STUDENT ANSWER: "${answerText}"
@@ -1753,6 +1841,7 @@ STUDENT COVERAGE: [Which requirements are met - YES/NO for each]
 POINTS: X/${maxPoints}
 FEEDBACK: [Brief explanation]
 CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
+    }
 
     console.log(`Sending grading prompt for Practice Exam Q${index + 1} to testGemini:`, gradingPrompt);
 
@@ -2327,14 +2416,6 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                     {practiceExamError && <div className="error-message">{practiceExamError}</div>}
                     {practiceExamResult && (
                       <div>
-                        {/* Debug info */}
-                        {console.log('Practice Exam Result:', {
-                          hasResult: !!practiceExamResult,
-                          pdfPath: practiceExamResult.pdfPath,
-                          subject: practiceExamResult.subject,
-                          difficulty: practiceExamResult.difficulty,
-                          fullResult: practiceExamResult
-                        })}
                         
                         {practiceExamResult.pdfPath && (
                           <div style={{ 
@@ -2407,6 +2488,18 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                                 </>
                               )}
                             </button>
+                            
+                            {/* Answer Key Button - clean */}
+                            {practiceExamResult.answerKey && (
+                              <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                                <button 
+                                  onClick={() => handleViewAnswerKey(practiceExamResult.answerKey)}
+                                  className="btn-answer-key"
+                                >
+                                  View Answer Key
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                         
@@ -2471,7 +2564,8 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                               practiceExamDetection.map((questionData, index) => (
                               <div key={index} className="question-item">
                                 <div className="question-header">
-                                  <div className="question-number">
+                                  <div className="question-meta">
+                                    <div className="question-number">
                                       {/* FIXED: Extract question number from question text instead of using index */}
                                       <span>
                                         {(() => {
@@ -2492,17 +2586,30 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                                           return `Q${index + 1}`;
                                         })()}
                                       </span>
+                                    </div>
                                     {practiceExamPoints[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index] && (
-                                      <div style={{ 
-                                        fontSize: '12px', 
-                                        color: '#6b7280', 
-                                        fontWeight: 'normal',
-                                        marginTop: '2px'
-                                      }}>
+                                      <div className="question-points">
                                         ({practiceExamPoints[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]} pts)
                                       </div>
                                     )}
+                                    {questionData && questionData.type === 'multiple_choice' && (
+                                      <span className="question-type-indicator">Multiple Choice</span>
+                                    )}
                                   </div>
+                                  <div className="question-inline">
+                                    <QuestionDisplay 
+                                      questionData={questionData}
+                                      index={(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index} 
+                                      isExam={true}
+                                      onAnswerChange={handlePracticeExamAnswerChange}
+                                      userAnswer={practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.answer || ''}
+                                      isGrading={practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.isGrading || false}
+                                      onGrade={handleGradePracticeExamAnswer}
+                                      renderOnlyQuestion={true}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="question-body">
                                   <QuestionDisplay 
                                     questionData={questionData}
                                     index={(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index} 
@@ -2511,6 +2618,7 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                                     userAnswer={practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.answer || ''}
                                     isGrading={practiceExamAnswers[(questionData && typeof questionData.originalIndex === 'number') ? questionData.originalIndex : index]?.isGrading || false}
                                     onGrade={handleGradePracticeExamAnswer}
+                                    renderOnlyAnswer={true}
                                   />
                                 </div>
                                 
@@ -2629,22 +2737,33 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                 {practiceQuestionDetection.map((questionData, index) => (
                   <div key={index} className="question-item">
                     <div className="question-header">
-                      <div className="question-number">
-                        <span>Q{index + 1}</span>
-                        {questionData && questionData.type === 'multiple_choice' && (
-                          <span className="question-type-indicator">Multiple Choice</span>
-                        )}
+                      <div className="question-meta">
+                        <div className="question-number">
+                          <span>Q{index + 1}</span>
+                        </div>
                         {questionPoints[questionData ? questionData.originalIndex : index] && (
-                          <div style={{ 
-                            fontSize: '12px', 
-                            color: '#6b7280', 
-                            fontWeight: 'normal',
-                            marginTop: '2px'
-                          }}>
+                          <div className="question-points">
                             ({questionPoints[questionData ? questionData.originalIndex : index]} pts)
                           </div>
                         )}
+                        {questionData && questionData.type === 'multiple_choice' && (
+                          <span className="question-type-indicator">Multiple Choice</span>
+                        )}
                       </div>
+                      <div className="question-inline">
+                        <QuestionDisplay 
+                          questionData={questionData}
+                          index={questionData ? questionData.originalIndex : index}
+                          isExam={false}
+                          onAnswerChange={handleAnswerChange}
+                          userAnswer={userAnswers[questionData ? questionData.originalIndex : index]?.answer || ''}
+                          isGrading={userAnswers[questionData ? questionData.originalIndex : index]?.isGrading || false}
+                          onGrade={handleGradeSingleAnswer}
+                          renderOnlyQuestion={true}
+                        />
+                      </div>
+                    </div>
+                    <div className="question-body">
                       <QuestionDisplay 
                         questionData={questionData}
                         index={questionData ? questionData.originalIndex : index}
@@ -2653,26 +2772,27 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
                         userAnswer={userAnswers[questionData ? questionData.originalIndex : index]?.answer || ''}
                         isGrading={userAnswers[questionData ? questionData.originalIndex : index]?.isGrading || false}
                         onGrade={handleGradeSingleAnswer}
+                        renderOnlyAnswer={true}
                       />
                     </div>
                     
                     {/* Only show question-answer section for single questions, multiple choice is handled in QuestionDisplay */}
                     {(!questionData || questionData.type === 'single') && (
                       <div className="question-answer">
-                        <label className="answer-label">
-                          <span className="label-icon">✍️</span>
-                          Your Answer:
-                          {userScores[questionData ? questionData.originalIndex : index] !== undefined && userScores[questionData ? questionData.originalIndex : index] > 0 && (
-                            <span style={{ 
-                              marginLeft: '8px', 
-                              color: '#059669', 
-                              fontWeight: 'bold',
-                              fontSize: '14px'
-                            }}>
-                              Score: {userScores[questionData ? questionData.originalIndex : index]}/{questionPoints[questionData ? questionData.originalIndex : index] || 10} points
-                            </span>
-                          )}
-                        </label>
+                        <div className="answer-toolbar">
+                          <div className="answer-toolbar-left">
+                            <span className="label-icon">✍️</span>
+                            <span>Your Answer</span>
+                          </div>
+                          <div className="answer-toolbar-right">
+                            {userScores[questionData ? questionData.originalIndex : index] !== undefined && userScores[questionData ? questionData.originalIndex : index] > 0 && (
+                              <span style={{ color: '#059669', fontWeight: 700 }}>
+                                Score: {userScores[questionData ? questionData.originalIndex : index]}/{questionPoints[questionData ? questionData.originalIndex : index] || 10}
+                              </span>
+                            )}
+                            <span className="char-counter">{(userAnswers[questionData ? questionData.originalIndex : index]?.answer || '').length} chars</span>
+                          </div>
+                        </div>
                         <textarea
                           value={userAnswers[questionData ? questionData.originalIndex : index]?.answer || ''} 
                           onChange={(e) => handleAnswerChange(questionData ? questionData.originalIndex : index, e.target.value)}

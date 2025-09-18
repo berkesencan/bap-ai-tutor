@@ -1,63 +1,104 @@
 {
   "summary": {
-    "pdfPath": "/Users/peterperry/Desktop/NYU/Hackathons/bap-ai-tutor/backend/uploads/1758002413447-HW2-2.pdf",
-    "textLength": 4849,
-    "htmlLength": 57969,
+    "pdfPath": "/Users/berkesencan/Desktop/bap-ai-tutor-main/backend/uploads/1758001440762-recitation1_Spring_2024.pdf",
+    "textLength": 6240,
+    "htmlLength": 27755,
     "pageCount": 1,
     "fontSizes": [
+      26,
       22,
-      18,
-      12,
-      9
+      15,
+      6
     ],
     "colors": [
       "#000000"
     ],
-    "tableCount": 0,
-    "imageCount": 6,
+    "tableCount": 1,
+    "imageCount": 8,
     "errors": []
   },
-  "tables": [],
+  "tables": [
+    {
+      "type": "structured_table",
+      "rows": 3,
+      "columns": 3,
+      "data": [
+        [
+          "circuit will have two inputs A and B, and one output Y.",
+          "Your friend Rufus argues that this program has an infinite loop, and will therefore never end. Is he",
+          "see an error message, make sure that your program is saved is the right place."
+        ],
+        [
+          "Submit your answer as an image, in accordance with the instructions at the beginning of this document.",
+          "",
+          "In any case, ask your TA if you’re having trouble."
+        ],
+        [
+          "Introduction",
+          "(f) Take a screenshot of the Terminal showing the execution of your program. Submit this screenshot."
+        ]
+      ],
+      "htmlTable": "<p>Table structure not supported</p>",
+      "position": {
+        "top": 238,
+        "left": 145
+      },
+      "description": "Extracted Table Data"
+    }
+  ],
   "images": [
     {
       "type": "background",
       "index": 0,
-      "src": "page-1-1758002414496-en08xn.png",
+      "src": "page-1-1758001440850-kx2xgd.png",
       "purpose": "diagram_or_visual_content"
     },
     {
       "type": "background",
       "index": 1,
-      "src": "page-2-1758002414496-en08xn.png",
+      "src": "page-2-1758001440850-kx2xgd.png",
       "purpose": "diagram_or_visual_content"
     },
     {
       "type": "background",
       "index": 2,
-      "src": "page-3-1758002414496-en08xn.png",
+      "src": "page-3-1758001440850-kx2xgd.png",
+      "purpose": "diagram_or_visual_content"
+    },
+    {
+      "type": "background",
+      "index": 3,
+      "src": "page-4-1758001440850-kx2xgd.png",
       "purpose": "diagram_or_visual_content"
     },
     {
       "type": "inline",
       "index": 0,
-      "src": "page-1-1758002414496-en08xn.png",
+      "src": "page-1-1758001440850-kx2xgd.png",
       "alt": "background image",
       "purpose": "content_image"
     },
     {
       "type": "inline",
       "index": 1,
-      "src": "page-2-1758002414496-en08xn.png",
+      "src": "page-2-1758001440850-kx2xgd.png",
       "alt": "background image",
       "purpose": "content_image"
     },
     {
       "type": "inline",
       "index": 2,
-      "src": "page-3-1758002414496-en08xn.png",
+      "src": "page-3-1758001440850-kx2xgd.png",
+      "alt": "background image",
+      "purpose": "content_image"
+    },
+    {
+      "type": "inline",
+      "index": 3,
+      "src": "page-4-1758001440850-kx2xgd.png",
       "alt": "background image",
       "purpose": "content_image"
     }
   ],
-  "timestamp": "2025-09-16T06:00:14.647Z"
+  "timestamp": "2025-09-16T05:44:01.048Z"
 }

@@ -1,0 +1,105 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\title{New York University Tandon School of Engineering - Introduction to Operating Systems - Assignment 4}
+\author{}
+\date{Fall 2024}
+
+\begin{document}
+
+\maketitle
+
+\section*{Assignment 4 (10 points)}
+
+This assignment contains 10 problems.
+
+\subsection*{Problem 1 (2 points)}
+
+If you create a \texttt{main()} routine that calls \texttt{fork()} twice, then \texttt{execlp()} to run the \texttt{ls} command, and then calls \texttt{fork()} again, i.e., if it includes the following code:
+
+\begin{verbatim}
+pid_t x=-11, y=-22;
+x = fork();
+if(x==0) {
+    execlp("ls","ls",NULL);
+    perror("execlp failed");
+    exit(1);
+}
+if(x>0) y = fork();
+\end{verbatim}
+
+Assuming all \texttt{fork()} calls succeed, and \texttt{execlp} does not fail, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e., whether 0, -11, -22, or larger than 0). The process tree should only have one node for each process, and each line/arrow in the process tree diagram should represent a creation of a process, or alternatively a parent/child relationship. The process tree should be a snapshot just after all forks completed but before any process exits. *(Insert process tree diagram here)*
+
+
+\subsection*{Problem 2 (4 points)}
+
+Write a program that creates the process tree shown below.  The program should use only \texttt{fork()}.  The process tree should show the PID of each process. *(Insert process tree diagram here -  A tree with a parent and three children)*
+
+
+\subsection*{Problem 3 (4 points)}
+
+Write a program whose \texttt{main()} routine obtains a parameter \texttt{n} from the user (i.e., passed to your program when it was invoked from the shell, $n > 0$) and creates a child process. The child process shall then calculate the factorial of \texttt{n} and print the result. The parent waits for the child to exit and then prints the square of the factorial calculated by the child. Do not use IPC in your solution to this problem (i.e., neither shared memory nor message passing).
+
+
+\subsection*{Problem 4 (2 points)}
+
+Explain the difference between a zombie process and an orphan process.  Give an example code snippet that could create each.
+
+
+\subsection*{Problem 5 (3 points)}
+
+Describe a scenario where using \texttt{exec()} family of functions would be preferable to forking and running a program directly within the child process.
+
+
+\subsection*{Problem 6 (2 points)}
+
+What is the purpose of the \texttt{wait()} system call? What happens if a parent process doesn't call \texttt{wait()} for its child process?
+
+
+\subsection*{Problem 7 (3 points)}
+
+Write a C program that uses \texttt{fork()} to create two child processes. Each child process should print its own process ID and the process ID of its parent.  The parent process should wait for both child processes to finish before exiting.
+
+
+\subsection*{Problem 8 (2 points)}
+
+Illustrate with a code example how to use signals to gracefully handle interruptions (e.g., Ctrl+C) in a long-running process.
+
+
+\subsection*{Problem 9 (3 points)}
+
+Write a program that uses pipes to pass a string from a parent process to a child process. The child process should receive the string, reverse it, and print the reversed string to the standard output.
+
+
+\subsection*{Problem 10 (3 points)}
+
+Explain the concept of process scheduling and briefly describe two common scheduling algorithms (e.g., Round Robin, Shortest Job First).  Discuss their strengths and weaknesses.
+
+
+\section*{What to hand in (using Brightspace)}
+
+Please submit the following files individually:
+
+\begin{enumerate}
+    \item Source file(s) with appropriate comments. The naming should be similar to “\texttt{lab\#\_\$\_c}” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g., \texttt{lab4\_b.c}, for lab 4, question b OR \texttt{lab5\_1a} for lab 5, question 1a).
+    \item A single pdf file (for images + report/answers to short-answer questions), named “\texttt{lab\#.pdf}” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program, and the output of your program.
+    \end{itemize}
+    \item Your Makefile, if any. This is applicable only to kernel modules.
+\end{enumerate}
+
+\section*{RULES}
+
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied from other students, the internet, or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+\end{document}

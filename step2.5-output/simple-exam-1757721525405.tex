@@ -1,0 +1,127 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\title{CSCI-UA.0480-051: Parallel Computing Midterm Exam (March 14th, 2024)}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\textbf{Total: 100 points}
+
+\textbf{Important Notes -- READ BEFORE SOLVING THE EXAM}
+
+\begin{itemize}
+    \item If you perceive any ambiguity in any of the questions, state your assumptions clearly and solve the problem based on your assumptions. We will grade both your solutions and your assumptions.
+    \item This exam is take-home.
+    \item The exam is posted on Brightspace at the beginning of the March 14th lecture (2 pm EST).
+    \item You have up to 24 hours to submit on Brightspace (i.e., until March 15th, 2 pm EST), in the same way as you submit an assignment. However, unlike assignments, you can only submit once.
+    \item Your answers must be very focused. You may be penalized for giving wrong answers and for putting irrelevant information in your answers.
+    \item Your answer sheet must be organized as follows:
+    \begin{itemize}
+        \item The very first page of your answer must contain only:
+        \begin{itemize}
+            \item Your Last Name
+            \item Your First Name
+            \item Your NetID
+            \item Copy and paste the honor code shown in the rectangle at the bottom of this page.
+        \end{itemize}
+        \item In your answer sheet, answer one problem per page. The exam has seven main problems; each one must be answered on a separate page.
+    \end{itemize}
+    \item This exam consists of 7 problems, with a total of 100 points.
+    \item Your answers can be typed or written by hand (but with clear handwriting). It is up to you. But you must upload one PDF file containing all your answers.
+\end{itemize}
+
+\textbf{Honor code (copy and paste to the first page of your exam)}
+
+\begin{itemize}
+    \item You may use the textbook, slides, the class recorded lectures, the information in the discussion forums of the class on Brightspace, and any notes you have. But you may not use the internet.
+    \item You may NOT use communication tools to collaborate with other humans. This includes but is not limited to Google Chat, Messenger, Email, etc.
+    \item You cannot use LLMs such as ChatGPT, Gemini, Bard, etc.
+    \item Do not try to search for answers on the internet; it will show in your answer, and you will earn an immediate grade of 0.
+    \item Anyone found sharing answers, communicating with another student, searching the internet, or using prohibited tools (as mentioned above) during the exam period will earn an immediate grade of 0.
+    \item “I understand the ground rules and agree to abide by them. I will not share answers or assist another student during this exam, nor will I seek assistance from another student or attempt to view their answers.”
+\end{itemize}
+
+\section*{Problem 1}
+\begin{enumerate}
+    \item[a.] [10]  Explain the concept of Amdahl's Law.  How does it relate to the potential speedup achievable through parallelization?
+    \item[b.] [10] What are the key differences between OpenMP and MPI?  In what scenarios would you choose one over the other?
+    \item[c.] [10] Describe a scenario where false sharing could significantly degrade performance in a parallel program.  How could you mitigate this issue?
+    \item[d.] [6]  What is a race condition? Give a simple code example illustrating a race condition.
+\end{enumerate}
+
+\section*{Problem 2}
+Consider a parallel program that sorts an array of 10 million integers. The program uses 8 threads. The time taken to sort the array sequentially is 10 seconds. Assume the overhead of parallelization is negligible.
+
+\begin{enumerate}
+    \item[a.] [10] If the parallel program achieves perfect linear speedup, what is the runtime of the parallel program?
+    \item[b.] [10]  If the parallel program exhibits only 50% efficiency, what is the runtime of the parallel program?
+\end{enumerate}
+
+
+\section*{Problem 3}
+The following code calculates the sum of elements in an array.
+
+\begin{verbatim}
+#include <omp.h>
+#include <stdio.h>
+
+int main() {
+  int arr[100];
+  int sum = 0;
+  #pragma omp parallel for
+  for (int i = 0; i < 100; i++) {
+    arr[i] = i;
+    sum += arr[i];
+  }
+  printf("Sum: %d\n", sum);
+  return 0;
+}
+\end{verbatim}
+
+\begin{enumerate}
+    \item[a.] [15]  Explain why this code is incorrect. Create a table showing the potential values of `sum` depending on the number of threads and the order of execution.
+    \item[b.] [5] Correct the code to accurately calculate the sum in parallel using OpenMP.
+\end{enumerate}
+
+
+\section*{Problem 4}
+Consider a system with 4 cores. We have a task graph represented by a Directed Acyclic Graph (DAG) where each node represents a task and each edge represents a dependency between tasks.
+
+\begin{enumerate}
+    \item[a.] [10]  Draw a sample DAG with at least 5 nodes and specify the dependencies.
+    \item[b.] [10]  Propose a scheduling algorithm to execute the tasks on the 4 cores, minimizing the overall execution time. Explain your choices.
+\end{enumerate}
+
+
+\section*{Problem 5}
+\begin{enumerate}
+    \item[a.] [10] Explain the concept of load balancing in parallel computing.  Why is it important?
+    \item[b.] [10] Describe a technique for dynamically load balancing tasks in a parallel program.
+\end{enumerate}
+
+\section*{Problem 6}
+Consider a parallel program that performs matrix multiplication.
+
+\begin{enumerate}
+    \item[a.] [10] Describe a naive parallel implementation of matrix multiplication.  What are its limitations?
+    \item[b.] [10] Describe an optimized parallel implementation that addresses the limitations of the naive approach.
+\end{enumerate}
+
+
+\section*{Problem 7}
+\begin{enumerate}
+    \item[a.] [5] What is a deadlock in concurrent programming? Give a simple example.
+    \item[b.] [5] Explain one strategy to prevent deadlocks.
+\end{enumerate}
+
+\end{document}

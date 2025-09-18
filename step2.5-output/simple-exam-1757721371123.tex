@@ -1,0 +1,87 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+
+\title{New York University Tandon School of Engineering - Introduction to Operating Systems - Assignment 4}
+\author{}
+\date{Fall 2024}
+
+\begin{document}
+
+\maketitle
+
+\section*{Assignment 4 (7 problems, 10 points)}
+
+\subsection*{Problem 1 (2 points)}
+
+If you create a main() routine that calls fork() twice, i.e., if it includes the following code:
+
+\begin{verbatim}
+pid_t x=-11, y=-22;
+x = fork();
+if(x==0) y = fork();
+\end{verbatim}
+
+Assuming all fork() calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e., whether 0, -11, -22, or larger than 0). The process tree should only have one node for each process. The process tree should be a snapshot just after all forks completed but before any process exits. Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+\textbf{[Insert Process Tree Diagram Here]}
+
+
+\subsection*{Problem 2 (2 points)}
+
+Write a program that creates the process tree shown below:
+
+\textbf{[Insert Process Tree Diagram Here -  A different tree than Problem 1]}
+
+
+\subsection*{Problem 3 (2 points)}
+
+Write a C program that creates three child processes. Each child process should print its process ID and the ID of its parent process.  The parent process should wait for all three child processes to finish before exiting.
+
+
+\subsection*{Problem 4 (1 point)}
+
+Explain the difference between the \texttt{fork()} and \texttt{exec()} system calls in terms of their effect on a process's memory space and execution.
+
+
+\subsection*{Problem 5 (1 point)}
+
+Describe a scenario where using \texttt{fork()} followed by \texttt{exec()} would be preferable to only using \texttt{fork()}.
+
+
+\subsection*{Problem 6 (1 point)}
+
+What is the purpose of the \texttt{wait()} system call?  How does it help avoid zombie processes?
+
+
+\subsection*{Problem 7 (1 point)}
+
+Write a short C program that uses \texttt{fork()} to create a child process. The child process should execute the \texttt{ls -l} command, while the parent process waits for the child to complete and then prints "Child process finished".
+
+
+\section*{What to hand in (using Brightspace)}
+
+Please submit the following files individually:
+
+\begin{enumerate}
+    \item Source file(s) with appropriate comments. The naming should be similar to “\texttt{lab\#\_\$\_c}” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g., \texttt{lab4\_b.c}, for lab 4, question b OR \texttt{lab5\_1a} for lab 5, question 1a).
+    \item A single pdf file (for images + report/answers to short-answer questions), named “\texttt{lab\#.pdf}” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program, and the output of your program.
+    \end{itemize}
+    \item Your Makefile, if any. This is applicable only to kernel modules.
+\end{enumerate}
+
+\section*{RULES}
+
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied from other students, the internet, or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+\end{document}

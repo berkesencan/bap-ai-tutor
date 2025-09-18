@@ -1,0 +1,44 @@
+[
+  {
+    "id": "Q1",
+    "text": "1) A) (2 points) If you create a main() routine that calls twice, followed by a in the child process, i.e. if it includes the following code: [CODE SNIPPET] pid_t x=-11, y=-22; x = fork(); if(x==0) y = fork(); if(y==0) fork(); [/CODE SNIPPET] Assuming all calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e. whether 0, -11, -22, or larger than 0). Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes. The process tree should be a snapshot just after all forks completed but before any process exists. Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.",
+    "rawLatex": "\\section*{1) A) (2 points)}\nIf you create a main() routine that calls \\texttt{fork()} twice, followed by a \\texttt{fork()} in the child process, i.e. if it includes the following code:\n\\begin{verbatim}\npid_t x=-11, y=-22;\nx = fork();\nif(x==0) y = fork();\nif(y==0) fork();\n\\end{verbatim}\nAssuming all \\texttt{fork()} calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e. whether 0, -11, -22, or larger than 0).\nNote that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes.\nThe process tree should be a snapshot just after all forks completed but before any process exists.\nEach line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.",
+    "points": null
+  },
+  {
+    "id": "Q2",
+    "text": "1) B) (4 points) Write a program that creates the process tree shown below:",
+    "rawLatex": "\\section*{1) B) (4 points)}\nWrite a program that creates the process tree shown below:\n\\textit{(A process tree diagram showing a parent process forking three times, resulting in a total of 4 processes in the tree would be inserted here.)}",
+    "points": null
+  },
+  {
+    "id": "Q3",
+    "text": "2) (4 points) Write a program whose main routine obtains two parameters, a and b, from the user (i.e., passed to your program when it was invoked from the shell, a and b are positive integers). The program creates a child process. The child process calculates a to the power of b (a<sup>b</sup>) and prints the result. The parent process waits for the child to finish and then prints the sum of a and b. Do not use IPC in your solution. Handle potential errors such as invalid input (e.g., non-positive integers).",
+    "rawLatex": "\\section*{2) (4 points)}\nWrite a program whose main routine obtains two parameters, a and b, from the user (i.e., passed to your program when it was invoked from the shell, a and b are positive integers).  The program creates a child process. The child process calculates a to the power of b (a<sup>b</sup>) and prints the result.  The parent process waits for the child to finish and then prints the sum of a and b.  Do not use IPC in your solution. Handle potential errors such as invalid input (e.g., non-positive integers).",
+    "points": null
+  },
+  {
+    "id": "Q4",
+    "text": "3) (2 points) Explain the difference between a zombie process and an orphan process. Give an example scenario that could lead to the creation of each.",
+    "rawLatex": "\\section*{3) (2 points)}\nExplain the difference between a zombie process and an orphan process.  Give an example scenario that could lead to the creation of each.",
+    "points": null
+  },
+  {
+    "id": "Q5",
+    "text": "4) (2 points) Describe a situation where using system calls would be preferable to forking a new process and running the code within the child process. Explain your reasoning.",
+    "rawLatex": "\\section*{4) (2 points)}\nDescribe a situation where using \\texttt{exec()} system calls would be preferable to forking a new process and running the code within the child process. Explain your reasoning.",
+    "points": null
+  },
+  {
+    "id": "Q6",
+    "text": "5) A) (2 points) If a process calls and then immediately calls , what happens to the child process, if any? What if the parent calls first? 5) B) (2 points) What is the purpose of the system call? Explain how it works and what problems it helps to avoid.",
+    "rawLatex": "\\section*{5) A) (2 points)}\nIf a process calls \\texttt{fork()} and then immediately calls \\texttt{exit()}, what happens to the child process, if any?  What if the parent calls \\texttt{exit()} first?\n\n\\section*{5) B) (2 points)}\nWhat is the purpose of the \\texttt{wait()} system call? Explain how it works and what problems it helps to avoid.",
+    "points": null
+  },
+  {
+    "id": "Q7",
+    "text": "6) (4 points) Write a C program that creates two child processes. The first child process calculates the factorial of a number n (provided as a command-line argument). The second child process calculates the sum of numbers from 1 to n. Both children should print their results. The parent process waits for both children to finish and then prints the difference between the factorial and the sum. Error handling for invalid input (e.g., non-positive n) is required. Do not use IPC.",
+    "rawLatex": "\\section*{6) (4 points)}\nWrite a C program that creates two child processes. The first child process calculates the factorial of a number n (provided as a command-line argument). The second child process calculates the sum of numbers from 1 to n.  Both children should print their results. The parent process waits for both children to finish and then prints the difference between the factorial and the sum.  Error handling for invalid input (e.g., non-positive n) is required.  Do not use IPC.",
+    "points": null
+  }
+]

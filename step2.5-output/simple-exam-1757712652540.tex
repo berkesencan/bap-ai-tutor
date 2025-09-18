@@ -1,0 +1,92 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{forest}
+
+\begin{document}
+
+\textbf{New York University} \\
+\textbf{Tandon School of Engineering} \\
+\textbf{Department of Computer Science and Engineering} \\
+\textbf{Introduction to Operating Systems} \\
+\textbf{Fall 2024} \\
+\textbf{Assignment 4} \\
+(10 points)
+
+\textbf{Problem 1 (2 points)} If you create a main() routine that calls fork() twice, i.e., if it includes the following code:
+
+\texttt{pid\_t x=-11, y=-22;} \\
+\texttt{x = fork();}\\
+\texttt{if(x==0) y = fork();}\\
+
+Assuming all fork() calls succeed, draw a process tree, clearly indicating the values of x and y for each process.  The process tree should be a snapshot just after all forks completed but before any process exits.
+
+
+\begin{forest}
+  [Main (x=-11, y=-22)
+    [Child 1 (x=0, y=-22)]
+    [Child 2 (x>0, y=-22)]
+    [Child 3 (x>0, y=0)]
+    [Child 4 (x>0, y>0)]
+  ]
+\end{forest}
+
+\textbf{Problem 2 (4 points)} Write a program that creates the following process tree:
+
+\begin{forest}
+  [A
+    [B
+      [D]
+      [E]
+    ]
+    [C
+      [F]
+      [G]
+    ]
+  ]
+\end{forest}
+
+
+\textbf{Problem 3 (4 points)} Write a program whose main routine obtains a parameter n from the user (n>0) and creates a child process. The child process shall calculate the sum of the integers from 1 to n and print the result. The parent waits for the child to exit and then prints double the sum calculated by the child. Do not use IPC.
+
+
+\textbf{Problem 4 (2 points)}  Consider a system with three processes, P1, P2, and P3. P1 forks, creating P4. P2 then forks, creating P5.  Draw the process tree. Indicate parent-child relationships.
+
+
+\textbf{Problem 5 (3 points)} Write a C program that uses fork() to create two child processes. Each child process should print its process ID and the parent's process ID.  The parent process should wait for both children to finish before exiting.
+
+
+\textbf{Problem 6 (2 points)} Explain the difference between fork() and exec().
+
+
+\textbf{Problem 7 (3 points)}  Write a program that creates a child process. The child process calculates the factorial of a number (passed as a command line argument) and prints it. The parent process waits for the child and then prints a message indicating completion. Handle potential errors, like invalid input.
+
+
+\textbf{Problem 8 (2 points)} Draw a process tree resulting from the following code snippet:
+
+c
+pid_t pid1, pid2;
+pid1 = fork();
+if (pid1 == 0) {
+  pid2 = fork();
+} else {
+  pid2 = fork();
+}
+
+Assume all fork calls succeed.
+
+
+\textbf{Problem 9 (2 points)} What is the zombie process? How can it be avoided?
+
+
+\textbf{Problem 10 (4 points)}  Write a program that forks three times. Each process prints its level in the process tree (0 for the parent, 1 for its children, 2 for their children, and so on), its process ID, and its parent's process ID.  The parent waits for all its descendants to terminate.
+
+
+\textbf{What to hand in (using Brightspace): } ... (Instructions omitted for brevity)
+
+
+\textbf{RULES:} ... (Rules omitted for brevity)
+
+
+\end{document}

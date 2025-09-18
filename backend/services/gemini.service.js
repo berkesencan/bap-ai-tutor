@@ -82,7 +82,7 @@ class GeminiService {
     }
     
     // If we get here, all retries failed
-    throw new Error(`Failed to generate content with Gemini (${modelName}) after ${maxRetries + 1} attempts: ${lastError.message}`);
+    throw new Error(`Failed to generate content with Gemini (${modelName}) after ${maxRetries + 1} attempts: ${lastError?.message || 'Unknown error'}`);
     }
   
   /**
@@ -656,6 +656,138 @@ Generate the complete formatted exam now, matching the template exactly with enh
       return result;
     } catch (error) {
       console.error('=== ERROR IN GEMINI TEMPLATE FORMATTING ===');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate comprehensive answer key for practice exam questions
+   * @param {string} examContent - The exam questions content
+   * @param {string} subject - Subject area for context
+   * @param {Object} options - Additional options for answer key generation
+   * @returns {Promise<object>} - Generated answer key content
+   */
+  static async generateAnswerKey(examContent, subject, options = {}) {
+    try {
+      console.log('=== GENERATING ANSWER KEY ===');
+      console.log('Subject:', subject);
+      console.log('Exam content length:', examContent?.length || 0);
+      console.log('Options:', options);
+      console.log('GEMINI_API_KEY available:', !!process.env.GEMINI_API_KEY);
+      console.log('Environment NODE_ENV:', process.env.NODE_ENV);
+
+      const {
+        includeExplanations = true,
+        includePartialCredit = true,
+        includeRubrics = false,
+        difficulty = 'medium'
+      } = options;
+
+      const prompt = `TASK: Create a comprehensive ANSWER KEY for the following practice exam questions.
+
+EXAM QUESTIONS TO ANALYZE:
+${examContent}
+
+ANSWER KEY REQUIREMENTS:
+1. Provide complete, accurate answers for each question
+2. Include step-by-step solutions where applicable
+3. ${includeExplanations ? 'Add detailed explanations for each answer' : 'Focus on concise correct answers'}
+4. ${includePartialCredit ? 'Include partial credit guidelines for open-ended questions' : 'Provide full credit answers only'}
+5. ${includeRubrics ? 'Include detailed grading rubrics' : 'Standard grading guidelines'}
+6. Show all mathematical work and reasoning
+7. Explain why incorrect options are wrong (for multiple choice)
+8. Reference relevant concepts, formulas, or principles
+
+FORMAT YOUR ANSWER KEY EXACTLY AS:
+
+ANSWER KEY
+Subject: ${subject}
+Difficulty Level: ${difficulty}
+
+═══════════════════════════════════════════════════════════
+
+QUESTION 1: [Repeat the question text]
+
+CORRECT ANSWER: [The correct answer]
+
+SOLUTION STEPS:
+1. [First step of solution]
+2. [Second step of solution]
+3. [Continue as needed...]
+
+EXPLANATION:
+[Detailed explanation of the concept and why this answer is correct]
+
+${includePartialCredit ? `PARTIAL CREDIT GUIDELINES:
+- Full credit (100%): [Requirements for full points]
+- Partial credit (75%): [Requirements for 75% of points]  
+- Partial credit (50%): [Requirements for 50% of points]
+- Partial credit (25%): [Requirements for 25% of points]
+- No credit (0%): [What gets zero points]` : ''}
+
+${includeRubrics ? `GRADING RUBRIC:
+- Conceptual Understanding: [Points allocation]
+- Mathematical Accuracy: [Points allocation]
+- Problem-solving Process: [Points allocation]
+- Communication/Presentation: [Points allocation]` : ''}
+
+COMMON MISTAKES TO WATCH FOR:
+- [List potential student errors and misconceptions]
+
+═══════════════════════════════════════════════════════════
+
+QUESTION 2: [Repeat the question text]
+
+CORRECT ANSWER: [The correct answer]
+
+[Continue same format for all questions...]
+
+═══════════════════════════════════════════════════════════
+
+EXAM SUMMARY:
+- Total Questions: [Number]
+- Question Types: [List types: multiple choice, short answer, problem-solving, etc.]
+- Key Concepts Covered: [List main topics]
+- Estimated Grading Time: [Time estimate for instructor]
+
+GRADING TIPS FOR INSTRUCTORS:
+- [Helpful tips for consistent grading]
+- [Common student misconceptions to look for]
+- [Suggestions for providing feedback]
+
+IMPORTANT NOTES:
+- All mathematical work should be shown for full credit
+- Partial credit should be awarded for correct methodology even with minor errors
+- Look for alternative valid approaches to problems
+- Consider giving credit for well-reasoned explanations even if final answer is incorrect
+
+Generate this comprehensive answer key now, ensuring accuracy and educational value.`;
+
+      console.log('=== SENDING ANSWER KEY PROMPT TO GEMINI ===');
+      console.log('Prompt length:', prompt.length);
+
+      const result = await this._generateWithUsage(prompt, 'gemini-1.5-flash');
+      
+      console.log('=== ANSWER KEY GENERATION RESULT ===');
+      console.log('Result type:', typeof result);
+      console.log('Has text:', !!result?.text);
+      console.log('Text length:', result?.text?.length || 0);
+      console.log('Answer key preview:', result?.text?.substring(0, 300) || 'NO TEXT');
+
+      return {
+        answerKey: result.text,
+        subject: subject,
+        difficulty: difficulty,
+        options: options,
+        generatedAt: new Date().toISOString(),
+        usageMetadata: result.usageMetadata
+      };
+
+    } catch (error) {
+      console.error('=== ERROR IN ANSWER KEY GENERATION ===');
       console.error('Error type:', error.constructor.name);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);

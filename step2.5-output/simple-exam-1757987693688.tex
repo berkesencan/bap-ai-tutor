@@ -1,0 +1,228 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\begin{document}
+
+\title{CS-UY 1134 Lab 2 Summer 2023}
+\date{}
+\maketitle
+
+\section*{Lab 2 Overview}
+
+\begin{itemize}
+    \item This lab reviews asymptotic analysis, searching, and recursion.
+    \item Assumes review of chapters 3 and 4 of the textbook.  Refer to the text and lecture notes as needed.
+    \item Think before you code. Consider test cases that might cause failure.
+    \item Stay for the duration of the lab. Help others if you finish early; complete unfinished work outside of lab time.
+    \item TAs are available for questions during lab and office hours.
+\end{itemize}
+
+\section*{Part A: Asymptotic Analysis and Searching (2:00 PM - 3:50 PM)}
+
+\subsection*{Vitamins (30 minutes)}
+
+Big-O proof: If there exist constants $c$ and $n_0$ such that $f(n) \le c \cdot g(n)$ for every $n \ge n_0$, then $f(n) = O(g(n))$.
+
+Big-$\Theta$ proof: If there exist constants $c_1$, $c_2$, and $n_0$ such that $c_1 \cdot g(n) \le f(n) \le c_2 \cdot g(n)$ for every $n \ge n_0$, then $f(n) = \Theta(g(n))$.
+
+Big-$\Omega$ proof: If there exist constants $c$ and $n_0$ such that $f(n) \ge c \cdot g(n)$ for every $n \ge n_0$, then $f(n) = \Omega(g(n))$.
+
+\begin{enumerate}
+    \item Use the formal proof of big-O and big-$\Theta$ to show the following (10 minutes):
+    \begin{itemize}
+        \item $3n^3 + 2n - 1$ is $O(n^3)$
+        \item $\frac{2n^3 + n}{n^2 + 1}$ is $O(n)$
+        \item $2n^2 + 7n + 1$ is $\Theta(n^2)$
+    \end{itemize}
+    \item State True or False and explain why for the following (5 minutes):
+    \begin{itemize}
+        \item $5n^2 \log(n)$ is $O(n^3)$
+        \item $5n^2 \log(n)$ is $\Theta(n^2 \log n)$
+    \end{itemize}
+    \item For each $f(n)$, write the summation results and provide a tight bound $\Theta(f(n))$ (5 minutes).  Given $n$ numbers:
+    \begin{itemize}
+        \item $2 + 2 + 2 + \dots + 2 = \_\_\_\_\_\_\_\_ = \Theta(\_\_\_\_\_\_\_\_)$
+        \item $n^2 + n^2 + n^2 + \dots + n^2 = \_\_\_\_\_\_\_\_ = \Theta(\_\_\_\_\_\_\_\_)$
+        \item $n + 2n + 3n + \dots + n^2 = \_\_\_\_\_\_\_\_ = \Theta(\_\_\_\_\_\_\_\_)$
+    \end{itemize}
+    Given $\log_2(n)$ numbers, where $n$ is a power of 2:
+    \begin{itemize}
+        \item $1 + 4 + 16 + \dots + n^2 = \_\_\_\_\_\_\_\_ = \Theta(\_\_\_\_\_\_\_\_)$
+        \item $n^2 + n^2/4 + n^2/16 + \dots + 1 = \_\_\_\_\_\_\_\_ = \Theta(\_\_\_\_\_\_\_\_)$
+        \item $1 + 2 + 3 + \dots + \log_2(n) = \_\_\_\_\_\_\_\_ = \Theta(\_\_\_\_\_\_\_\_)$
+    \end{itemize}
+    \item For each code snippet, find $f(n)$ for which the algorithm's time complexity is $\Theta(f(n))$ in its worst-case run and explain why (10 minutes).
+    \begin{verbatim}
+a) def func(lst):
+    for i in range(len(lst)//2):
+        if (lst[i] == 0):
+            return
+
+b) def func(lst):
+    for i in range(len(lst)):
+        if (lst[i] > 10):
+            print("i =", i)
+        else:
+            return
+
+c) def func(lst):
+    for i in range(len(lst)):
+        for j in range(i,len(lst)):
+            if (i*j) in lst:
+                print("i*j = ", i*j)
+
+d) def func(n):
+    for i in range(int(n**(0.5))):
+        for j in range(i):
+            if (i+j) > n:
+                print("i+j = ", i+j)
+
+e) def func(n):
+    for i in range(n):
+        for j in range(n//2):
+            print("i+j = ", i+j)
+    \end{verbatim}
+\end{enumerate}
+
+\subsection*{Coding (45 minutes)}
+
+\begin{enumerate}
+    \item Write a function that rotates a list by $k$ positions to the left in $\Theta(n)$ time. Do not create a new list, and do not use list methods like \texttt{pop} or \texttt{append}.
+    \begin{verbatim}
+def rotate_list(lst, k):
+    """
+    : lst type: list[]
+    : k type: int
+    : return type: None
+    """
+    \end{verbatim}
+    \item Write a function to move all even numbers to the beginning of a list of integers, maintaining the order of even and odd numbers. The solution must be in-place and run in $\Theta(n)$ time. Do not use list methods like \texttt{pop} or \texttt{append}.
+    \begin{verbatim}
+def move_evens(nums):
+    """
+    : nums type: list[int]
+    : return type: None
+    """
+    \end{verbatim}
+    \item Write a function that performs binary search on a sorted list of unique integers and returns the index of a given integer, or -1 if not found. The solution must not modify the list and must run in $\Theta(\log(n))$ time.
+    \begin{verbatim}
+def binary_search_integer(lst, num):
+    """
+    : lst type: list[int]
+    : num type: int
+    : return type: int
+    """
+    \end{verbatim}
+\end{enumerate}
+
+\section*{Part B: Recursion (4:00 PM - 5:50 PM)}
+
+\subsection*{Coding (65 minutes)}
+
+\begin{enumerate}
+    \item Write a recursive function that returns the product of all numbers from 1 to $n$.
+    \begin{verbatim}
+def product_to(n):
+    """
+    : n type: int
+    : return type: int
+    """
+    \end{verbatim}
+    \item Give a recursive implementation for a linear search algorithm.
+    \begin{verbatim}
+def linear_search(lst, low, high, val):
+    """
+    : lst type: list[int]
+    : val type: int
+    : low type, high type: int
+    : return type: int
+    """
+    \end{verbatim}
+    \item Write a recursive function to find the minimum element in a non-empty, non-sorted list of numbers.
+    \begin{itemize}
+        \item Determine the runtime of the following implementation:
+        \begin{verbatim}
+def find_min(lst):
+    if len(lst) == 1:
+        return lst[0]
+    #base case
+    prev = find_min(lst[1:])
+    if prev < lst[0]:
+        return prev
+    return lst[0]
+        \end{verbatim}
+        \item Update the function parameters to include \texttt{low} and \texttt{high} to specify the range of indices to consider. The runtime must be linear.
+        \begin{verbatim}
+def find_min(lst, low, high):
+    """
+    : lst type: list[int]
+    : low, high type: int
+    : return type: int
+    """
+    \end{verbatim}
+    \end{itemize}
+    \item Write a recursive function that returns a tuple containing the number of uppercase and lowercase letters in a given string. The runtime must be linear.
+    \begin{verbatim}
+def uplow_count(word, low, high):
+    """
+    : word type: str
+    : low, high type: int
+    : return type: tuple (int, int)
+    """
+    \end{verbatim}
+    \item Write a recursive function that checks if a given string is a palindrome (reads the same forwards and backward), ignoring spaces and punctuation.
+    \begin{verbatim}
+def is_palindrome(text):
+    """
+    : text type: str
+    : return type: bool
+    """
+    \end{verbatim}
+    \item Write a recursive function that calculates the nth Fibonacci number.
+    \begin{verbatim}
+def fibonacci(n):
+    """
+    : n type: int
+    : return type: int
+    """
+    \end{verbatim}
+    \item Write a recursive function that reverses a string.
+    \begin{verbatim}
+def reverse_string(text):
+    """
+    : text type: str
+    : return type: str
+    """
+    \end{verbatim}
+\end{enumerate}
+
+\subsection*{Vitamins (15 minutes)}
+
+Trace the execution and analyze the running time of each code snippet, including drawing the recursion tree and determining the asymptotic runtime.
+
+\begin{verbatim}
+a. def func1(n):
+    # Draw out func1(16)
+    if (n <= 1):
+        return 1
+    else:
+        return 2 * func1(n-1)
+
+b. def func2(n):
+    # Draw out func2(16)
+    if (n <= 1):
+        return 10
+    else:
+        return 1 + func2(n//4)
+
+c. def func3(lst) # Draw out func3([1, 2, 3, 4, 5, 6, 7, 8])
+    if (len(lst) == 1):
+        return lst[0]*2
+    else:
+        return lst[0] + func3(lst[1:])
+\end{verbatim}
+
+
+\end{document}

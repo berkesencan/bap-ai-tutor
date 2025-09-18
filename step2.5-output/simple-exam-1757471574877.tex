@@ -1,0 +1,95 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\title{CS-UY 2413: Design \& Analysis of Algorithms \\ Homework 2}
+\author{Prof. Lisa Hellerstein \\ New York University \\ Fall 2024}
+\date{Due 11:59pm Monday, Sep 30, New York time.}
+
+\begin{document}
+
+\maketitle
+
+\textbf{By handing in the homework you are agreeing to the Homework Rules; see EdStem.}
+
+\textbf{Our Master Theorem:} The version of the Master Theorem that we covered in class is on the last page of this homework. We won’t be covering the version of the Master Theorem in the textbook and you’re not responsible for knowing it. (But you may find it interesting!)
+
+Reminder: For $r \neq 1$, $r^0 + r^1 + \dots + r^k = \frac{r^{k+1} - 1}{r - 1}$.
+
+\section*{Problem 1}
+For each example, indicate whether $f = o(g)$ (little-oh), $f = \omega(g)$ (little-omega), or $f = \Theta(g)$ (big-Theta). No justification is necessary.
+
+(a) $f(n) = 2n^2 + 5n$, $g(n) = n^2$
+(b) $f(n) = \log_2 n$, $g(n) = n^{0.1}$
+(c) $f(n) = n \log n$, $g(n) = n^2$
+(d) $f(n) = \sum_{i=1}^n i^2$, $g(n) = n^3$
+(e) $f(n) = 7^n$, $g(n) = 2^n$
+
+\section*{Problem 2}
+Give a formal proof of the following statement: If $f(n) \ge 1$ for all $n \in \mathbb{N}$, $g(n) \ge 1$ for all $n \in \mathbb{N}$, $f(n) = O(g(n))$, and $g(n)$ is unbounded (meaning $\lim_{n \to \infty} g(n) = \infty$) then $\sqrt{f(n)} = O(\sqrt{g(n)})$.
+Use the formal definition of big-Oh in your answer. In your proof, you can use the fact that the value of $\sqrt{n}$ increases as $n$ increases.
+
+
+\section*{Problem 3}
+For each of the following recurrences, determine whether Our Master Theorem (on the last page of this HW) can be applied to the recurrence. If it can, use it to give the solution to the recurrence in $\Theta$ notation; no need to give any details. If not, write “Our Master Theorem does not apply.”
+
+(a) $T(n) = 2T(n/2) + n \log n$
+(b) $T(n) = 9T(n/3) + n^2$
+(c) $T(n) = T(n/2) + 1$
+(d) $T(n) = 4T(n/2) + n^2 \log n$
+
+
+\section*{Problem 4}
+Our Master Theorem can be applied to a recurrence of the form $T(n) = aT(n/b) + n^d$, where $a, b, d$ are constants with $a > 0$, $b > 1$, $d > 0$. Consider instead a recurrence of the form $T_{new}(n) = aT_{new}(n/b) + n \log_d n$ where $a > 0$, $b > 1$, $d > 1$ (and $T(1) = 1$).
+
+For each of the following, state whether the given property of $T_{new}$ is true. If so, explain why it is true. If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook, don’t use it in your explanation.)
+
+(a) $T_{new}(n) = O(n^2)$ if $\log_b a < 1$
+(b) $T_{new}(n) = \Omega(n^{\log_b a} \log n)$
+
+
+\section*{Problem 5}
+Consider the recurrence $T(n) = 2T(n/2) + n \log n$ for $n > 1$, and $T(1) = 1$.
+
+(a) Compute the value of $T(4)$, using the recurrence. Show your work.
+(b) Use a recursion tree to attempt to solve the recurrence and get a closed-form expression for $T(n)$, when $n$ is a power of 2. (You may find it difficult to find a precise closed form.  Try to get an upper bound).
+(c) Suppose that the base case is $T(2) = 3$, instead of $T(1) = 1$. What is the solution to the recurrence in this case, for $n \ge 2$?
+
+
+\section*{Problem 6}
+Consider a variation of mergesort that works as follows: If the array has size 1, return. Otherwise, divide the array into quarters, rather than in half. Recursively sort each quarter using this variation of mergesort. Then merge the first (leftmost) quarter with the second quarter. Next, merge the third quarter with the fourth quarter. Finally, merge the results of the first two merges.
+
+(a) Write a recurrence for the running time of this variation of mergesort. It should be similar to the recurrence for ordinary mergesort. Assume $n$ is a power of 4.
+(b) Apply Our Master Theorem to the recurrence to get the running time of the algorithm, in theta notation. Show your work.
+
+\section*{Problem 7}
+Consider the following recursive algorithm. Assume $n$ is a power of 2.
+
+\begin{itemize}
+    \item If the array has only one element, return.
+    \item Recursively process the first half of the array.
+    \item Recursively process the second half of the array.
+    \item Recursively process the first half of the array again.
+    \item Perform $n$ operations.
+\end{itemize}
+
+(a) Write a recurrence expressing the running time of the algorithm.
+(b) Apply Our Master Theorem to your recurrence. What is the running time of the algorithm, in theta notation?
+
+
+\section*{Our Master Theorem}
+\begin{theorem}
+Let $a, b, d, n_0$ be constants such that $a > 0$, $b > 1$, $d \ge 0$ and $n_0 > 0$.
+Let $T(n) = aT(n/b) + \Theta(n^d)$ for when $n \ge n_0$, and $T(n) = \Theta(1)$ when $0 \le n < n_0$. Then,
+\[
+T(n) = \begin{cases}
+\Theta(n^d \log n) & \text{if } d = \log_b a \\
+\Theta(n^{\log_b a}) & \text{if } d < \log_b a \\
+\Theta(n^d) & \text{if } d > \log_b a
+\end{cases}
+\]
+We assume here that $T(n)$ is a function defined on the natural numbers. We use $aT(n/b)$ to mean $a'T(\lfloor n/b \rfloor) + a''T(\lceil n/b \rceil)$ where $a', a'' > 0$ such that $a' + a'' = a$.
+\end{theorem}
+
+\end{document}

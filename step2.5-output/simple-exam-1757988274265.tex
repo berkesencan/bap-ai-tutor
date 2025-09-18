@@ -1,0 +1,80 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\title{New York University \\ Tandon School of Engineering \\ Department of Computer Science and Engineering \\ Introduction to Operating Systems \\ Fall 2024 \\ Assignment 4 (10 points)}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+% INTERACTIVE_QUESTION_START: Q1
+\section*{A) (2 points)}
+
+If you create a main() routine that calls fork() twice, i.e., if it includes the following code:
+
+\begin{verbatim}
+pid_t x=-11, y=-22;
+x = fork();
+if(x==0) y = fork();
+\end{verbatim}
+
+Assuming all fork() calls succeed, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e., whether 0, -11, -22, or larger than 0).  Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes. The process tree should be a snapshot just after all forks completed but before any process exists. Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.
+
+\textbf{(Insert Process Tree Diagram Here)}
+
+% INTERACTIVE_QUESTION_END: Q1
+
+
+% INTERACTIVE_QUESTION_START: Q2
+\section*{B) (4 points)}
+
+Write a program that creates the process tree shown below:
+
+\textbf{(Insert Process Tree Diagram Here)}  (This should be a tree with at least 4 processes, showing parent-child relationships)
+
+
+% INTERACTIVE_QUESTION_END: Q2
+
+
+% INTERACTIVE_QUESTION_START: Q3
+\section*{C) (4 points)}
+
+Write a program whose main routine obtains two parameters, n and m, from the user (i.e., passed to your program when it was invoked from the shell, n>2, m>0). The program creates m child processes. Each child process calculates and prints the sum of the first n natural numbers. The parent waits for all children to exit before printing a final message indicating completion.  Do not use IPC in your solution to this problem (i.e., neither shared memory nor message passing).
+
+
+\section*{What to hand in (using Brightspace): }
+
+Please submit the following files individually:
+
+1) Source file(s) with appropriate comments. The naming should be similar to “lab\#\_\$.c” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g., \texttt{lab4\_b.c}, for lab 4, question b OR \texttt{lab5\_1a} for lab 5, question 1a).
+
+2) A single pdf file (for images + report/answers to short-answer questions), named “lab\#.pdf” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program, and the output of your program.
+    \end{itemize}
+
+3) Your Makefile, if any. This is applicable only to kernel modules.
+
+
+\section*{RULES:}
+
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied from other students, the internet, or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+% INTERACTIVE_QUESTION_END: Q3
+
+
+\end{document}

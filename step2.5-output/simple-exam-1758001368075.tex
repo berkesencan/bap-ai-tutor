@@ -1,0 +1,144 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\begin{document}
+
+\title{CSCI-UA.0480-051: Parallel Computing \\ Midterm Exam (March 14th, 2024)}
+\author{}
+\date{}
+\maketitle
+
+\textbf{Total: 100 points}
+
+\textbf{Important Notes - READ BEFORE SOLVING THE EXAM}
+
+\begin{itemize}
+    \item If you perceive any ambiguity in any of the questions, state your assumptions clearly and solve the problem based on your assumptions. We will grade both your solutions and your assumptions.
+    \item This exam is take-home.
+    \item The exam is posted on Brightspace, at the beginning of the March 14th lecture (2pm EST).
+    \item You have up to 24 hours to submit on Brightspace (i.e. till March 15th 2pm EST), in the same way as you submit an assignment. However, unlike assignments, you can only submit once.
+    \item Your answers must be very focused. You may be penalized for giving wrong answers and for putting irrelevant information in your answers.
+    \item Your answer sheet must be organized as follows:
+    \begin{itemize}
+        \item The very first page of your answer must contain only:
+        \begin{itemize}
+            \item Your Last Name
+            \item Your First Name
+            \item Your NetID
+            \item Copy and paste the honor code shown below.
+        \end{itemize}
+        \item In your answer sheet, answer one problem per page. The exam has seven main problems, each one must be answered in a separate page.
+    \end{itemize}
+    \item This exam consists of 7 problems, with a total of 100 points.
+    \item Your answers can be typed or written by hand (but with clear handwriting). It is up to you. But you must upload one pdf file containing all your answers.
+\end{itemize}
+
+\textbf{Honor code (copy and paste to the first page of your exam)}
+\begin{itemize}
+    \item You may use the textbook, slides, the class recorded lectures, the information in the discussion forums of the class on Brightspace, and any notes you have. But you may not use the internet.
+    \item You may NOT use communication tools to collaborate with other humans. This includes but is not limited to Google-Chat, Messenger, E-mail, etc.
+    \item You cannot use LLMs such as chatGPT, Gemini, Bard, etc.
+    \item Do not try to search for answers on the internet, it will show in your answer, and you will earn an immediate grade of 0.
+    \item Anyone found sharing answers, communicating with another student, searching the internet, or using prohibited tools (as mentioned above) during the exam period will earn an immediate grade of 0.
+    \item “I understand the ground rules and agree to abide by them. I will not share answers or assist another student during this exam, nor will I seek assistance from another student or attempt to view their answers.”
+\end{itemize}
+
+\section*{Problem 1}
+a. [10] Suppose we have a core with only superscalar execution (i.e. no pipelining or hyperthreading). Will this core benefit from having a larger instruction cache? Justify your answer in 1-2 lines. \\
+b. [10] Can several threads be executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the distributed machine has one CPU only. \\
+c. [10] Can several processes, belonging to different users, be executed on a shared memory machine simultaneously? If yes explain how, in 1-2 lines. If not, explain why not. \\
+d. [6] If we have a two-way superscalar core, with each execution unit having its own branch predictor, how many branch predictors do we need in total? Justify.
+
+\section*{Problem 2}
+Suppose we have the following DAG that represents different tasks and their dependencies.
+
+(Imagine a DAG here with tasks A, B, C, D, E, F, G, H, where A and B are independent and feed into C, C and D feed into E, E and F feed into G, G and H are independent. )
+
+The following table shows the execution time of each task if we execute it on a core of type X and if we execute it on core of type Y. Each CPU type is optimized for some type of operations. That is, one type of CPU is not always faster than the other type for all tasks. You can ignore communication overhead among tasks.
+
+\begin{tabular}{|c|c|c|}
+\hline
+Task & CPU type X & CPU type Y \\ \hline
+A & 2 & 4 \\ \hline
+B & 3 & 2 \\ \hline
+C & 5 & 7 \\ \hline
+D & 7 & 5 \\ \hline
+E & 6 & 8 \\ \hline
+F & 4 & 6 \\ \hline
+G & 8 & 10 \\ \hline
+H & 3 & 5 \\ \hline
+\end{tabular}
+
+a. [10] What is the minimum number of CPUs of each type that we need to get the highest speedup over sequential execution on CPU of type X? Show which CPU will execute which task(s) and calculate the final speedup. \\
+b. [10] Repeat the problem above but using CPU of type Y. \\
+c. [10] Using better algorithm/programming, we can enhance the DAG a bit by adding an arrow. Adding an arrow means more dependency but potential better performance (e.g., pipelining). If you were allowed to add one arrow from the above DAG, which one would you add? And why?
+
+\section*{Problem 3}
+Suppose that MPI\_COMM\_WORLD consists of the four processes 0, 1, 2, and 3, and suppose the following code is executed after MPI has been initialized (\texttt{my\_rank} contains the rank of the executing process):
+
+\begin{verbatim}
+int x, y, z;
+switch(my_rank) {
+case 0:
+x=1; y=2; z=3;
+MPI_Send(&x, 1, MPI_INT, 1, 1, MPI_COMM_WORLD);
+MPI_Recv(&z, 1, MPI_INT, 3, 3, MPI_COMM_WORLD, &status);
+break;
+case 1:
+x=4; y=5; z=6;
+MPI_Recv(&x, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+MPI_Send(&y, 1, MPI_INT, 2, 2, MPI_COMM_WORLD);
+break;
+case 2:
+x=7; y=8; z=9;
+MPI_Recv(&y, 1, MPI_INT, 1, 2, MPI_COMM_WORLD, &status);
+MPI_Send(&x, 1, MPI_INT, 3, 4, MPI_COMM_WORLD);
+break;
+case 3:
+x=10; y=11; z=12;
+MPI_Recv(&z, 1, MPI_INT, 2, 4, MPI_COMM_WORLD, &status);
+MPI_Send(&z, 1, MPI_INT, 0, 3, MPI_COMM_WORLD);
+break;
+}
+\end{verbatim}
+
+a. [9 points] What will be the values of x, y, and z for each of the 4 processes after executing the above code?
+
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & P0 & P1 & P2 & P3 \\ \hline
+x &  &  &  &  \\ \hline
+y &  &  &  &  \\ \hline
+z &  &  &  &  \\ \hline
+\end{tabular}
+
+b. [5] Is there a possibility that the communication among the 4 processes executes out of order? If yes, explain the reason. If not, why not? \\
+c. [5] What will happen if we execute the above code with: \texttt{mpiexec -n 2} \\
+d. [5] What will happen if we remove the \texttt{break;} statement after \texttt{case 0:}?
+
+
+\section*{Problem 4}
+a. [5] Explain the concept of Amdahl's Law and how it relates to the scalability of parallel applications.  \\
+b. [5] If we have three threads that have the same type but different amounts of computation. And we assign each thread to a core. Does this necessarily mean we have load imbalance? Explain.
+
+\section*{Problem 5}
+Consider a parallel program that needs to compute the sum of a large array.  The array is divided into chunks, and each thread sums its chunk.  Then, a reduction operation is used to combine the partial sums.
+
+a. [10] Describe a simple algorithm to compute the sum using MPI, including code snippets. \\
+b. [10] Discuss potential bottlenecks and how to mitigate them.
+
+
+\section*{Problem 6}
+a. [10] Compare and contrast OpenMP and MPI in terms of their programming models and typical use cases.  Give examples of situations where one would be preferred over the other. \\
+b. [10] Explain the concept of false sharing in shared-memory programming and describe techniques to avoid it.
+
+
+\section*{Problem 7}
+a. [10] Describe the different levels of caching in a modern CPU architecture and explain their roles in performance. \\
+b. [10] Explain how cache coherence is maintained in a multicore system, and discuss potential performance implications of cache misses.
+
+
+\end{document}

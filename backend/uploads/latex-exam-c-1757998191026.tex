@@ -1,0 +1,71 @@
+\documentclass[12pt]{article}
+
+% Essential packages only - no unnecessary dependencies
+\usepackage[margin=1in]{geometry}
+\usepackage{array}
+\usepackage{enumitem}
+
+% Remove page numbers
+\pagestyle{empty}
+
+% Configure itemize formatting to match original
+\setlist[itemize]{leftmargin=15pt,itemsep=2pt,parsep=0pt,topsep=3pt}
+
+\begin{document}
+
+% Header - exact match to original PDF
+\begin{center}
+{\large\bfseries CSCI-UA.0480-051: Parallel Computing}
+
+\vspace{0.2cm}
+
+{\normalsize\bfseries Practice Exam}
+
+\vspace{0.1cm}
+
+{\normalsize\bfseries Total: 100 points}
+\end{center}
+
+\vspace{0.4cm}
+
+Determine the asymptotic relationship between f(n) = n log n and g(n) = n<sup>1.5</sup>.
+
+
+\vspace{0.3cm}
+Prove or disprove: If f(n) = O(g(n)) and g(n) is unbounded, then 2<sup>f(n)</sup> = O(2<sup>g(n)</sup>).
+
+
+\vspace{0.3cm}
+Apply the Master Theorem to solve the recurrence T(n) = 2T(n/2) + n log n.  Show your work.
+
+
+\vspace{0.3cm}
+Consider the recurrence T(n) = 3T(n/4) + n<sup>2</sup>.  Solve this recurrence using the Master Theorem.  Then, describe a divide-and-conquer algorithm that could lead to this recurrence.  Explain the algorithm's steps and how the recurrence reflects its runtime.
+
+
+\vspace{0.3cm}
+What is the value of T(16) if T(n) = T(n/2) + n, and T(1) = 1?
+
+
+\vspace{0.3cm}
+Which of the following is NOT a correct asymptotic notation for the function f(n) = 10n<sup>2</sup> + 5n + 2?
+
+
+\vspace{0.3cm}
+Give an example of a function f(n) such that f(n) = ω(n) and f(n) = o(n<sup>2</sup>).
+
+
+\vspace{0.3cm}
+Design a divide-and-conquer algorithm to find the maximum and minimum elements in an unsorted array.  Write a recurrence relation for the algorithm's runtime and solve it using the Master Theorem.
+
+
+\vspace{0.3cm}
+Explain why the recurrence T(n) = 2T(n/2) + n log n cannot be solved directly using the Master Theorem.
+
+
+\vspace{0.3cm}
+Prove that if f(n) = Θ(g(n)), then f(n) = O(g(n)) and f(n) = Ω(g(n)).
+
+
+
+\end{document}

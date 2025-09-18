@@ -1,0 +1,66 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{New York University \\ Tandon School of Engineering \\ Department of Computer Science and Engineering \\ Introduction to Operating Systems \\ Fall 2024 \\ Assignment 4 (10 points)}
+\date{}
+\maketitle
+
+%%QUESTION_START:Q1A%%
+\section*{A) (2 points)}
+If you create a main() routine that calls fork() twice, then execlp() once, i.e. if it includes the following code:
+\texttt{pid\_t x=-11, y=-22; \\
+x = fork(); \\
+if(x==0) y = fork(); \\
+if(y==0) execlp("/bin/ls", "ls", "-l", NULL);}
+
+Assuming all fork() and execlp() calls succeed, draw a process tree showing the parent-child relationships. Clearly indicate which processes execute  `/bin/ls` and which execute the original main() routine.  Each line/arrow in the process tree diagram shall represent a creation of a process, or alternatively a parent/child relationship.  The process tree should be a snapshot just after all forks completed but before any process exits.  Each node should contain the PID (you can assign arbitrary positive PIDs) and indicate whether it's running `/bin/ls` or the original main().
+
+
+%%QUESTION_END:Q1A%%
+
+%%QUESTION_START:Q1B%%
+\section*{B) (4 points)}
+Write a C program that creates the following process tree:
+
+       1
+      / \
+     2   3
+    / \
+   4   5
+
+Each process should print its process ID (PID) and its parent's process ID (PPID).  Use the `getpid()` and `getppid()` system calls.  The parent process (PID 1) should wait for all its children to finish before exiting.
+
+
+%%QUESTION_END:Q1B%%
+
+%%QUESTION_START:Q1C%%
+\section*{C) (4 points)}
+Write a C program that takes two command-line arguments: an integer `n` (n > 0) and a string `str`. The program should create `n` child processes. Each child process should print the string `str` followed by its process ID. The parent process should wait for all its children to finish before exiting.  Ensure proper error handling for invalid input (e.g., insufficient arguments or non-integer input for `n`).
+
+
+%%QUESTION_END:Q1C%%
+
+\section*{What to hand in (using Brightspace)}
+Please submit the following files individually:
+\begin{enumerate}
+    \item Source file(s) with appropriate comments. The naming should be similar to “lab\#\_\$.c” (\# is replaced with the assignment number and \$ with the question number within the assignment, e.g. lab4\_b.c, for lab 4, question c OR lab5\_1a for lab 5, question 1a).
+    \item A single pdf file (for images + report/answers to short-answer questions), named “lab\#.pdf” (\# is replaced by the assignment number), containing:
+    \begin{itemize}
+        \item Screenshot(s) of your terminal window showing the current directory, the command used to compile your program, the command used to run your program and the output of your program.
+    \end{itemize}
+    \item Your Makefile, if any. This is applicable only to kernel modules.
+\end{enumerate}
+
+
+\section*{RULES}
+\begin{itemize}
+    \item You shall use kernel version 4.x.x or above. You shall not use kernel version 3.x.x.
+    \item You may consult with other students about GENERAL concepts or methods but copying code (or code fragments) or algorithms is NOT ALLOWED and is considered cheating (whether copied form other students, the internet or any other source).
+    \item If you are having trouble, please ask your teaching assistant for help.
+    \item You must submit your assignment prior to the deadline.
+\end{itemize}
+
+\end{document}

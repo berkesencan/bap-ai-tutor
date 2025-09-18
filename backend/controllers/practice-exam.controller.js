@@ -127,12 +127,41 @@ class PracticeExamController {
     if (fs.existsSync(latexFile)) {
       try {
         const latexContent = fs.readFileSync(latexFile, 'utf8');
-        const extractedQuestions = PracticeExamController.extractQuestionsFromLatex(latexContent);
+        console.log('📄 LaTeX content length:', latexContent.length);
+        console.log('📄 LaTeX preview:', latexContent.substring(0, 500));
+        
+        let extractedQuestions = PracticeExamController.extractQuestionsFromLatex(latexContent);
+        console.log('🔍 Initial extraction found:', extractedQuestions.length, 'questions');
+        
+        // ENHANCED: If extraction fails, try alternative patterns specifically for OS homework
+        if (extractedQuestions.length === 0) {
+          console.log('⚠️ Initial extraction failed, trying alternative patterns...');
+          extractedQuestions = PracticeExamController.extractQuestionsWithFallback(latexContent);
+          console.log('🔍 Fallback extraction found:', extractedQuestions.length, 'questions');
+        }
+        
         if (extractedQuestions.length > 0) {
           questions = extractedQuestions.map(q => q.text).join('\n\n');
           const pdfQuestions = PracticeExamController.distributePointsUniversally(extractedQuestions, parsedQuestionPoints, parseInt(numQuestions));
           const interactiveQuestions = PracticeExamController.distributePointsForInteractive(extractedQuestions, parsedQuestionPoints);
           parsedQuestions = pdfQuestions;
+          
+          // 🗝️ GENERATE ANSWER KEY
+          let answerKeyData = null;
+          try {
+            console.log('=== GENERATING ANSWER KEY FOR PDF EXAM ===');
+            answerKeyData = await GeminiService.generateAnswerKey(questions, subject, {
+              includeExplanations: true,
+              includePartialCredit: true,
+              includeRubrics: false,
+              difficulty: difficulty
+            });
+            console.log('✅ Answer key generated successfully');
+          } catch (error) {
+            console.error('❌ Answer key generation failed:', error);
+            // Don't fail the entire request if answer key fails
+          }
+
           const responseData = {
             questions: questions,
             parsedQuestions: parsedQuestions,
@@ -140,7 +169,8 @@ class PracticeExamController {
             questionPoints: parsedQuestionPoints,
             subject: subject,
             difficulty: difficulty,
-            pdfPath: relativePdfPath
+            pdfPath: relativePdfPath,
+            answerKey: answerKeyData // 🗝️ Add answer key to response
           };
           return res.json({ success: true, data: responseData });
         } else {
@@ -181,6 +211,29 @@ class PracticeExamController {
       pdfPath: null
     });
 
+    // 🗝️ GENERATE ANSWER KEY FOR NON-PDF EXAM
+    let answerKeyData = null;
+    try {
+      console.log('=== GENERATING ANSWER KEY FOR NON-PDF EXAM ===');
+      console.log('📝 Questions text length:', result.text?.length || 0);
+      console.log('📝 Questions preview:', result.text?.substring(0, 200) || 'No text');
+      
+      answerKeyData = await GeminiService.generateAnswerKey(result.text, subject, {
+        includeExplanations: true,
+        includePartialCredit: true,
+        includeRubrics: false,
+        difficulty: difficulty || 'medium'
+      });
+      console.log('✅ Answer key generated successfully');
+      console.log('🗝️ Answer key data:', !!answerKeyData);
+      console.log('🗝️ Answer key text length:', answerKeyData?.answerKey?.length || 0);
+    } catch (error) {
+      console.error('❌ Answer key generation failed:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      // Don't fail the entire request if answer key fails
+    }
+
     let pdfPath = null;
     if (generatePDF && result.text) {
       try {
@@ -204,7 +257,8 @@ class PracticeExamController {
       questionPoints: parsedQuestionPoints,
       subject: subject,
       difficulty: difficulty,
-      pdfPath: pdfPath
+      pdfPath: pdfPath,
+      answerKey: answerKeyData // 🗝️ Add answer key to response
     };
 
     return res.json({ success: true, data: responseData });
@@ -235,6 +289,126 @@ class PracticeExamController {
       return AIController.distributePointsForInteractive(extractedQuestions, frontendPointDistribution);
     }
     return [];
+  }
+
+  /**
+   * Enhanced fallback extraction for difficult PDFs like OS_hw4
+   */
+  static extractQuestionsWithFallback(latexContent) {
+    console.log('🔧 FALLBACK: Enhanced question extraction...');
+    const questions = [];
+    
+    try {
+      // Method 1: Look for Problem sections with different patterns
+      const problemPatterns = [
+        /\\section\*?\{Problem\s+(\d+)[^}]*\}([\s\S]*?)(?=\\section\*?\{Problem\s+\d+|\\end\{document\}|$)/gi,
+        /\\section\*?\{Question\s+(\d+)[^}]*\}([\s\S]*?)(?=\\section\*?\{Question\s+\d+|\\end\{document\}|$)/gi,
+        /\\section\*?\{(\d+)\.[^}]*\}([\s\S]*?)(?=\\section\*?\{\d+\.|\\end\{document\}|$)/gi
+      ];
+      
+      for (const pattern of problemPatterns) {
+        const matches = [...latexContent.matchAll(pattern)];
+        console.log(`🔍 Pattern ${pattern} found ${matches.length} matches`);
+        
+        matches.forEach((match, index) => {
+          const questionNum = match[1];
+          const content = match[2];
+          
+          // Clean the content
+          const cleanContent = content
+            .replace(/\\begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}/g, '') // Remove environments
+            .replace(/\\[a-zA-Z]+\*?\{[^}]*\}/g, '') // Remove commands
+            .replace(/\\[a-zA-Z]+\*/g, '') // Remove commands without args
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (cleanContent.length > 50) {
+            questions.push({
+              text: `Q${questionNum}) ${cleanContent}`,
+              points: 10 // Default points
+            });
+            console.log(`✅ Extracted Question ${questionNum}: ${cleanContent.substring(0, 80)}...`);
+          }
+        });
+        
+        if (questions.length > 0) break; // Stop if we found questions
+      }
+      
+      // Method 2: If still no questions, look for enumerate items
+      if (questions.length === 0) {
+        console.log('🔍 Trying enumerate extraction...');
+        const itemMatches = latexContent.match(/\\item\s+([^\\]*(?:\\[^i][^t][^e][^m][^\\]*)*)/g);
+        
+        if (itemMatches) {
+          itemMatches.forEach((item, index) => {
+            const cleanItem = item
+              .replace(/\\item\s+/, '')
+              .replace(/\\[a-zA-Z]+\*?\{[^}]*\}/g, '')
+              .replace(/\\[a-zA-Z]+\*/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            
+            if (cleanItem.length > 30 && !cleanItem.toLowerCase().includes('honor code')) {
+              questions.push({
+                text: `Q${index + 1}) ${cleanItem}`,
+                points: 10
+              });
+              console.log(`✅ Extracted Item ${index + 1}: ${cleanItem.substring(0, 80)}...`);
+            }
+          });
+        }
+      }
+      
+      // Method 3: Last resort - split by meaningful patterns
+      if (questions.length === 0) {
+        console.log('🔍 Trying heuristic splitting...');
+        const lines = latexContent.split('\n');
+        let currentQuestion = '';
+        let questionCount = 0;
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          
+          // Skip LaTeX commands and short lines
+          if (trimmed.startsWith('\\') || trimmed.length < 10) continue;
+          
+          // Look for question indicators
+          if (trimmed.match(/^\d+\./) || 
+              trimmed.match(/^[a-z]\)/) || 
+              trimmed.match(/question|problem|what|how|why|explain|describe|calculate|find|solve|consider/i)) {
+            
+            // Save previous question
+            if (currentQuestion.trim().length > 50) {
+              questionCount++;
+              questions.push({
+                text: `Q${questionCount}) ${currentQuestion.trim()}`,
+                points: 10
+              });
+              console.log(`✅ Extracted Heuristic ${questionCount}: ${currentQuestion.substring(0, 80)}...`);
+            }
+            
+            currentQuestion = trimmed;
+          } else if (currentQuestion && trimmed.length > 0) {
+            currentQuestion += ' ' + trimmed;
+          }
+        }
+        
+        // Don't forget the last question
+        if (currentQuestion.trim().length > 50) {
+          questionCount++;
+          questions.push({
+            text: `Q${questionCount}) ${currentQuestion.trim()}`,
+            points: 10
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Fallback extraction failed:', error);
+    }
+    
+    console.log(`✅ Fallback extraction completed: ${questions.length} questions found`);
+    return questions;
   }
 }
 

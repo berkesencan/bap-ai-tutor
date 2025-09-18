@@ -1,0 +1,38 @@
+[
+  {
+    "id": "Q1",
+    "text": "1. For each example, indicate whether $f = o(g)$ (little-oh), $f = (g)$ (little-omega), or $f = (g)$ (big-Theta). No justification is necessary. (a) $f(n) = n n$, $g(n) = n^1.5$ (b) $f(n) = 2^n$, $g(n) = n^2$ (c) $f(n) = 7n^2 + 3n$, $g(n) = 10n^2$ (d) $f(n) = _i=1^n i^2$, $g(n) = n^3$ (e) $f(n) = _2 n$, $g(n) = _16 n$",
+    "rawLatex": "\\subsection*{1.}\nFor each example, indicate whether $f = o(g)$ (little-oh), $f = \\omega(g)$ (little-omega), or $f = \\Theta(g)$ (big-Theta). No justification is necessary.\n\n(a) $f(n) = n \\log n$, $g(n) = n^{1.5}$\n(b) $f(n) = 2^n$, $g(n) = n^2$\n(c) $f(n) = 7n^2 + 3n$, $g(n) = 10n^2$\n(d) $f(n) = \\sum_{i=1}^n i^2$, $g(n) = n^3$\n(e) $f(n) = \\log_2 n$, $g(n) = \\log_{16} n$",
+    "points": null
+  },
+  {
+    "id": "Q2",
+    "text": "2. Give a formal proof of the following statement: If $f(n) 1$ for all $n $, $g(n) 1$ for all $n $, $f(n) = (g(n))$, and $g(n)$ is unbounded (meaning $_n g(n) = $) then $_2 f(n) = ( g(n))$. Use the formal definition of big-Omega in your answer. In your proof, you can use the fact that the value of $_2 n$ increases as $n$ increases. Note that a similar statement with exponential functions is not true: If $f(n) = 2^n$ and $g(n) = n^2$, then $f(n) = (g(n))$, but $2^2^n$ is not $(2^n^2)$.",
+    "rawLatex": "\\subsection*{2.}\nGive a formal proof of the following statement: If $f(n) \\ge 1$ for all $n \\in \\mathbb{N}$, $g(n) \\ge 1$ for all $n \\in \\mathbb{N}$, $f(n) = \\Omega(g(n))$, and $g(n)$ is unbounded (meaning $\\lim_{n \\to \\infty} g(n) = \\infty$) then $\\log_2 f(n) = \\Omega(\\log g(n))$.\n\nUse the formal definition of big-Omega in your answer. In your proof, you can use the fact that the value of $\\log_2 n$ increases as $n$ increases.\n\nNote that a similar statement with exponential functions is not true: If $f(n) = 2^n$ and $g(n) = n^2$, then $f(n) = \\Omega(g(n))$, but $2^{2^n}$ is not $\\Omega(2^{n^2})$.",
+    "points": null
+  },
+  {
+    "id": "Q3",
+    "text": "3. For each of the following recurrences, determine whether Our Master Theorem (on the last page of this HW) can be applied to the recurrence. If it can, use it to give the solution to the recurrence in $$ notation; no need to give any details. If not, write “Our Master Theorem does not apply.” (a) $T(n) = 2T(n/2) + n n$ (b) $T(n) = 9T(n/3) + n^2$ (c) $T(n) = T(n/2) + n^2$ (d) $T(n) = 4T(n/2) + 1$",
+    "rawLatex": "\\subsection*{3.}\nFor each of the following recurrences, determine whether Our Master Theorem (on the last page of this HW) can be applied to the recurrence. If it can, use it to give the solution to the recurrence in $\\Theta$ notation; no need to give any details. If not, write “Our Master Theorem does not apply.”\n\n(a) $T(n) = 2T(n/2) + n \\log n$\n(b) $T(n) = 9T(n/3) + n^2$\n(c) $T(n) = T(n/2) + n^2$\n(d) $T(n) = 4T(n/2) + 1$",
+    "points": null
+  },
+  {
+    "id": "Q4",
+    "text": "4. Our Master Theorem can be applied to a recurrence of the form $T(n) = aT(n/b) + n^d$, where $a$, $b$, $d$ are constants with $a > 0$, $b > 1$, $d > 0$. Consider instead a recurrence of the form $T_new(n) = aT_new(n/b) + n _d n$ where $a > 0$, $b > 1$, $d > 1$ (and $T(1) = 1$). For each of the following, state whether the given property of $T_new$ is true. If so, explain why it is true. If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook, don’t use it in your explanation.) (a) $T_new(n) = O(n^2)$ if $_b a = 2$ (b) $T_new(n) = (n^_b a n)$",
+    "rawLatex": "\\subsection*{4.}\nOur Master Theorem can be applied to a recurrence of the form $T(n) = aT(n/b) + n^d$, where $a$, $b$, $d$ are constants with $a > 0$, $b > 1$, $d > 0$. Consider instead a recurrence of the form $T_{new}(n) = aT_{new}(n/b) + n \\log_d n$ where $a > 0$, $b > 1$, $d > 1$ (and $T(1) = 1$).\n\nFor each of the following, state whether the given property of $T_{new}$ is true. If so, explain why it is true. If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook, don’t use it in your explanation.)\n\n(a) $T_{new}(n) = O(n^2)$ if $\\log_b a = 2$\n(b) $T_{new}(n) = \\Omega(n^{\\log_b a} \\log n)$",
+    "points": null
+  },
+  {
+    "id": "Q5",
+    "text": "5. Consider the recurrence $T(n) = 2T(n/2) + n^2$ for $n > 1$, and $T(1) = 1$. (a) Compute the value of $T(4)$, using the recurrence. Show your work. (b) Use a recursion tree to solve the recurrence and get a closed-form expression for $T(n)$, when $n$ is a power of 2. (Check that your expression is correct by plugging in $n = 4$ and comparing with your answer to (a).) (c) Suppose that the base case is $T(2) = 5$, instead of $T(1) = 1$. What is the solution to the recurrence in this case, for $n 2$?",
+    "rawLatex": "\\subsection*{5.}\nConsider the recurrence $T(n) = 2T(n/2) + n^2$ for $n > 1$, and $T(1) = 1$.\n\n(a) Compute the value of $T(4)$, using the recurrence. Show your work.\n(b) Use a recursion tree to solve the recurrence and get a closed-form expression for $T(n)$, when $n$ is a power of 2. (Check that your expression is correct by plugging in $n = 4$ and comparing with your answer to (a).)\n(c) Suppose that the base case is $T(2) = 5$, instead of $T(1) = 1$. What is the solution to the recurrence in this case, for $n \\ge 2$?",
+    "points": null
+  },
+  {
+    "id": "Q6",
+    "text": "6. Consider a variation of mergesort that works as follows: If the array has size 1, return. Otherwise, divide the array into fourths, rather than in half. Recursively sort each fourth using this variation of mergesort. Then merge the first (leftmost) fourth with the second fourth. Then merge the result with the third fourth, and finally merge that result with the last fourth. (a) Write a recurrence for the running time of this variation of mergesort. It should be similar to the recurrence for ordinary mergesort. Assume $n$ is a power of 4. (b) Apply Our Master Theorem to the recurrence to get the running time of the algorithm, in theta notation. Show your work.",
+    "rawLatex": "\\subsection*{6.}\nConsider a variation of mergesort that works as follows: If the array has size 1, return. Otherwise, divide the array into fourths, rather than in half. Recursively sort each fourth using this variation of mergesort. Then merge the first (leftmost) fourth with the second fourth. Then merge the result with the third fourth, and finally merge that result with the last fourth.\n\n(a) Write a recurrence for the running time of this variation of mergesort. It should be similar to the recurrence for ordinary mergesort. Assume $n$ is a power of 4.\n(b) Apply Our Master Theorem to the recurrence to get the running time of the algorithm, in theta notation. Show your work.",
+    "points": null
+  }
+]

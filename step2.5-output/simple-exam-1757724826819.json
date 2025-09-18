@@ -1,0 +1,44 @@
+[
+  {
+    "id": "Q1",
+    "text": "A) (2 points) If you create a main() routine that calls twice, followed by a call to , i.e. if it includes the following code: [CODE SNIPPET] pid_t x=-11, y=-22; x = fork(); if(x==0) y = fork(); if(y>0) execl(\"/bin/ls\", \"ls\", \"-l\", NULL); [/CODE SNIPPET] Assuming all calls succeed, and replaces the process image, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e. whether 0, -11, -22, or larger than 0). Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes. The process tree should be a snapshot just after all forks completed but before any process exits (except for the process that executed execl).",
+    "rawLatex": "\\section*{A) (2 points)}\nIf you create a main() routine that calls \\texttt{fork()} twice, followed by a call to \\texttt{execl()}, i.e. if it includes the following code:\n\\begin{verbatim}\npid_t x=-11, y=-22;\nx = fork();\nif(x==0) y = fork();\nif(y>0) execl(\"/bin/ls\", \"ls\", \"-l\", NULL);\n\\end{verbatim}\nAssuming all \\texttt{fork()} calls succeed, and \\texttt{execl} replaces the process image, draw a process tree similar to that of Fig. 3.8 (page 116) in your textbook, clearly indicating the values of x and y for each process in the tree (i.e. whether 0, -11, -22, or larger than 0).  Note that the process tree should only have one node for each process and thus the number of nodes should be equal to the number of processes. The process tree should be a snapshot just after all forks completed but before any process exits (except for the process that executed execl).",
+    "points": null
+  },
+  {
+    "id": "Q2",
+    "text": "B) (4 points) Write a program that creates the following process tree: [CODE SNIPPET] P1 / \\ P2 P3 / \\ | P4 P5 P6 [/CODE SNIPPET] Where P1 is the parent process, and P2, P3, P4, P5, P6 are its children and grandchildren. Each process should print its process ID.",
+    "rawLatex": "\\section*{B) (4 points)}\nWrite a program that creates the following process tree:\n\n\\begin{verbatim}\n       P1\n      /  \\\n     P2   P3\n    / \\   |\n   P4 P5  P6\n\\end{verbatim}\nWhere P1 is the parent process, and P2, P3, P4, P5, P6 are its children and grandchildren.  Each process should print its process ID.",
+    "points": null
+  },
+  {
+    "id": "Q3",
+    "text": "C) (4 points) Write a program whose main routine obtains two parameters from the user (a and b, passed as command-line arguments). The program should create a child process. The child process computes and prints the greatest common divisor (GCD) of a and b using Euclid's algorithm. The parent process waits for the child to finish and then prints the least common multiple (LCM) of a and b, calculated using the relationship LCM(a,b) = (a*b)/GCD(a,b).",
+    "rawLatex": "\\section*{C) (4 points)}\nWrite a program whose main routine obtains two parameters from the user (a and b, passed as command-line arguments). The program should create a child process. The child process computes and prints the greatest common divisor (GCD) of a and b using Euclid's algorithm. The parent process waits for the child to finish and then prints the least common multiple (LCM) of a and b, calculated using the relationship LCM(a,b) = (a*b)/GCD(a,b).",
+    "points": null
+  },
+  {
+    "id": "Q4",
+    "text": "D) (3 points) Explain the difference between and . What are the potential dangers of using ? Why is often considered obsolete?",
+    "rawLatex": "\\section*{D) (3 points)}\nExplain the difference between \\texttt{fork()} and \\texttt{vfork()}.  What are the potential dangers of using \\texttt{vfork()}?  Why is \\texttt{vfork()} often considered obsolete?",
+    "points": null
+  },
+  {
+    "id": "Q5",
+    "text": "E) (3 points) Write a C program that uses signals to handle a SIGINT (Ctrl+C) signal. When the signal is received, the program should gracefully terminate and print a message indicating it's exiting.",
+    "rawLatex": "\\section*{E) (3 points)}\nWrite a C program that uses signals to handle a SIGINT (Ctrl+C) signal. When the signal is received, the program should gracefully terminate and print a message indicating it's exiting.",
+    "points": null
+  },
+  {
+    "id": "Q6",
+    "text": "F) (4 points) Write a program that creates two child processes. The first child process prints the even numbers from 2 to 20. The second child process prints the odd numbers from 1 to 19. The parent process waits for both children to complete before exiting.",
+    "rawLatex": "\\section*{F) (4 points)}\nWrite a program that creates two child processes. The first child process prints the even numbers from 2 to 20. The second child process prints the odd numbers from 1 to 19.  The parent process waits for both children to complete before exiting.",
+    "points": null
+  },
+  {
+    "id": "Q7",
+    "text": "G) (4 points) Write a C program that creates a child process. The parent process sends a message to the child process using a pipe. The child process receives the message, reverses it (character by character), and sends the reversed message back to the parent process. The parent process then prints the reversed message. Ensure proper error handling for pipe creation and operations.",
+    "rawLatex": "\\section*{G) (4 points)}\nWrite a C program that creates a child process. The parent process sends a message to the child process using a pipe. The child process receives the message, reverses it (character by character), and sends the reversed message back to the parent process. The parent process then prints the reversed message.  Ensure proper error handling for pipe creation and operations.",
+    "points": null
+  }
+]

@@ -1,0 +1,136 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{CSCI-UA.0480-051: Parallel Computing \\ Midterm Exam (March 14th, 2024)}
+\author{}
+\date{}
+\maketitle
+
+\textbf{Total: 100 points}
+
+\textbf{Important Notes -- READ BEFORE SOLVING THE EXAM}
+
+\begin{itemize}
+    \item If you perceive any ambiguity in any of the questions, state your assumptions clearly and solve the problem based on your assumptions. We will grade both your solutions and your assumptions.
+    \item This exam is take-home.
+    \item The exam is posted on Brightspace, at the beginning of the March 14th lecture (2pm EST).
+    \item You have up to 24 hours to submit on Brightspace (i.e. till March 15th 2pm EST), in the same way as you submit an assignment. However, unlike assignments, you can only submit once.
+    \item Your answers must be very focused. You may be penalized for giving wrong answers and for putting irrelevant information in your answers.
+    \item Your answer sheet must be organized as follows:
+    \begin{itemize}
+        \item The very first page of your answer must contain only:
+        \begin{itemize}
+            \item Your Last Name
+            \item Your First Name
+            \item Your NetID
+            \item Copy and paste the honor code shown below.
+        \end{itemize}
+        \item In your answer sheet, answer one problem per page. The exam has ten main problems, each one must be answered in a separate page.
+    \end{itemize}
+    \item This exam consists of 10 problems, with a total of 100 points.
+    \item Your answers can be typed or written by hand (but with clear handwriting). It is up to you. But you must upload one pdf file containing all your answers.
+\end{itemize}
+
+\hrulefill
+
+\textbf{Honor code (copy and paste to the first page of your exam)}
+\begin{itemize}
+    \item You may use the textbook, slides, the class recorded lectures, the information in the discussion forums of the class on Brightspace, and any notes you have. But you may not use the internet.
+    \item You may NOT use communication tools to collaborate with other humans. This includes but is not limited to Google-Chat, Messenger, E-mail, etc.
+    \item You cannot use LLMs such as chatGPT, Gemini, Bard, etc.
+    \item Do not try to search for answers on the internet, it will show in your answer, and you will earn an immediate grade of 0.
+    \item Anyone found sharing answers, communicating with another student, searching the internet, or using prohibited tools (as mentioned above) during the exam period will earn an immediate grade of 0.
+    \item “I understand the ground rules and agree to abide by them. I will not share answers or assist another student during this exam, nor will I seek assistance from another student or attempt to view their answers.”
+\end{itemize}
+
+\hrulefill
+
+\section*{Problem 1}
+a. [10]  Suppose we have a core with only superscalar execution (i.e., no pipelining or hyperthreading). Will this core benefit from having a larger instruction cache? Justify your answer in 1-2 lines.
+
+b. [10] Can a single process be executed across multiple nodes in a distributed memory machine? If yes, explain how, in 1-2 lines. If not, explain why not.
+
+c. [10] Can several threads, belonging to different processes, be executed on a shared memory machine and get the same performance as when executed on a distributed memory machine? If yes explain how, in 1-2 lines. If not, explain why not. Assume each node of the shared memory machine has one CPU only.
+
+d. [6] If we have a two-way superscalar core, how many register files do we need to get the best performance? Justify.
+
+
+\section*{Problem 2}
+Consider a parallel task represented by the following directed acyclic graph (DAG):
+
+Task A: 5 units of computation time.
+Task B: 3 units of computation time. Depends on A.
+Task C: 2 units of computation time. Depends on A.
+Task D: 4 units of computation time. Depends on B and C.
+
+
+a. [10] Draw the DAG.
+
+b. [10] What is the minimum execution time if we have only one CPU?
+
+c. [10] What is the minimum execution time if we have two CPUs?  Show the CPU assignments.
+
+
+\section*{Problem 3}
+Suppose we have a program that performs matrix multiplication. The matrix is of size 1000x1000. We are using OpenMP.
+
+a. [8] Write a simple OpenMP code that divides the rows of the matrix amongst available threads and performs the multiplication.
+
+b. [7] Explain how you would modify the code to improve performance considering cache efficiency.
+
+c. [10] Discuss potential issues with scalability as we increase the number of threads.
+
+\section*{Problem 4}
+Explain how load balancing affects the performance of a parallel program. Describe different strategies for achieving effective load balancing in a parallel environment, and discuss the challenges involved in dynamically balancing loads.
+
+
+\section*{Problem 5}
+Suppose that MPI\_COMM\_WORLD consists of four processes (0, 1, 2, 3). Process 0 sends a message to process 2, and process 1 sends a message to process 3.  The messages are sent asynchronously using MPI\_Isend and MPI\_Irecv.
+
+a. [10] Write the MPI code that shows this scenario.
+
+b. [10] Explain potential problems if the program does not handle message ordering properly.
+
+
+\section*{Problem 6}
+a. [10] What are the advantages and disadvantages of using threads versus processes for parallel programming?
+
+b. [10] Describe a scenario where using threads would be preferable to processes, and vice versa.
+
+
+\section*{Problem 7}
+Consider a parallel program that sorts an array of 1 million integers using a merge sort algorithm.
+
+a. [10] Describe how you would parallelize this algorithm using OpenMP.
+
+b. [10] Analyze the scalability of your parallel implementation.
+
+
+\section*{Problem 8}
+A program uses a mutex to protect a shared variable.  Two threads, Thread A and Thread B, access the shared variable.
+
+a. [10] Describe a scenario where a race condition could occur even with the mutex.
+
+b. [10] Explain how to avoid this race condition.
+
+
+\section*{Problem 9}
+a. [10]  Compare and contrast shared memory and distributed memory parallel programming models.
+
+b. [10]  Give examples of programming paradigms and tools used for each model.
+
+
+\section*{Problem 10}
+Multiple Choice: Which of the following is NOT a common challenge in parallel programming?
+
+(a) Race conditions
+(b) Deadlocks
+(c) Cache coherency
+(d) Increased sequential execution time
+
+
+\end{document}

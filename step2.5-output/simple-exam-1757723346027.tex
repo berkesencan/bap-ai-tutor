@@ -1,0 +1,114 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{array}
+
+\begin{document}
+
+\title{CS-UY 2214 — Recitation 1}
+\date{}
+\maketitle
+
+\section*{Introduction}
+Complete the following exercises. Put your answers in a plain text file named \texttt{recitation1.txt}. Number your solution to each question. When you finish, submit your file on Gradescope. Then, in order to receive credit, you must ask your TA to check your work. Your work should be completed and checked during the recitation session.
+
+Please note that your solutions must be in a plain text file. Other formats, such as PDF, RTF, and Microsoft Word, will not be accepted. Here are some recommended editors that produce plain text files:
+\begin{itemize}
+    \item Notepad (comes with Windows)
+    \item TextEdit (comes with Mac OS); note that if you are using TextEdit, you need to select “Make Plain Text” from the Format menu before saving the file
+    \item gedit (available on most Linux distributions)
+    \item nano (available on most Linux distributions)
+    \item Sublime Text
+    \item VSCode
+    \item Atom
+    \item Vim
+    \item Emacs
+\end{itemize}
+
+For questions that require a solution expressed as an image, submit the image as a separate file. The image file should be named \texttt{recitationnqm}, where $n$ is the recitation number and $m$ is the question number; use an appropriate suffix (either jpg or png).
+
+\section*{Problems}
+\begin{enumerate}
+    \item Consider the following circuit.  [Insert Circuit Diagram Here as recitation1q1.jpg or .png]
+    Express the circuit as a boolean expression, using only AND, OR, and NOT. Provide a truth table for this circuit.
+
+    \item Using only AND, OR, and NOT gates, construct a circuit diagram that will calculate XOR. Your circuit will have two inputs A and B, and one output Y.
+    Submit your answer as an image, in accordance with the instructions at the beginning of this document. Your image may be a diagram created in a drawing program, or it may be a photograph of a hand-drawn diagram on paper. [Insert XOR Circuit Diagram Here as recitation1q2.jpg or .png]
+
+    \item Convert the following decimal numbers into binary.
+    \begin{itemize}
+        \item[(a)] 42
+        \item[(b)] 10
+    \end{itemize}
+
+    \item Convert the following binary numbers into decimal.
+    \begin{itemize}
+        \item[(a)] 1111
+        \item[(b)] 0101
+    \end{itemize}
+
+    \item Convert the following decimal numbers into hexadecimal.
+    \begin{itemize}
+        \item[(a)] 57
+        \item[(b)] 255
+    \end{itemize}
+
+    \item Convert the following hexadecimal numbers into binary.
+    \begin{itemize}
+        \item[(a)] 1a2b
+        \item[(b)] cafe
+    \end{itemize}
+
+    \item Convert the following decimal numbers into 8-bit binary 2’s complement. Write all the digits.
+    \begin{itemize}
+        \item[(a)] 67
+        \item[(b)] −67
+    \end{itemize}
+
+    \item Convert the following 8-bit binary unsigned numbers into decimal.
+    \begin{itemize}
+        \item[(a)] 01101101
+        \item[(b)] 10000000
+        \item[(c)] 00000001
+    \end{itemize}
+
+    \item Convert the following 8-bit binary 2’s complement numbers into decimal.
+    \begin{itemize}
+        \item[(a)] 10101010
+        \item[(b)] 00000101
+        \item[(c)] 01111111
+    \end{itemize}
+    \item Consider the following C++ program. Do not run it.
+    \begin{verbatim}
+#include <iostream>
+using namespace std;
+int main () {
+int i = -1;
+int count = 0;
+while (i < 0) {
+i--;
+count++;
+}
+cout << "Completed " << count << " iterations " << endl;
+return 0;
+}
+    \end{verbatim}
+    Your friend Rufus argues that this program has an infinite loop, and will therefore never end. Is he right or wrong? Justify your opinion with a persuasive explanation, but do not type in or run the program. Predict the output of the program.
+
+
+    \item For this class, you are required to use a Linux programming environment. Take this opportunity to set up such an environment. Use one of the options enumerated in the syllabus: Anubis, Vital, VirtualBox, WSL, or a proper Linux installation.
+    Log in to your Linux environment. Then, submit a screenshot of your working Linux programming environment. The screenshot should simply show the Linux desktop. You don’t need to do anything after you log in. [Insert Screenshot Here as recitation1q10.jpg or .png]
+
+    \item The course presumes a satisfactory knowledge of programming. In addition, we want to know that you are able to create, edit, and run programs in a Linux environment. Demonstrate that you can do programming under Linux by following these instructions. Your TA will help you if you get stuck.
+    \begin{itemize}
+        \item[(a)] Log in to your Linux environment: Anubis, Vital, VirtualBox, WSL, or a proper Linux installation.
+        \item[(b)] Open a text editor on your Linux environment.
+        \item[(c)] Use the text editor to write a program in either Python or C++. Your program should have the following behavior: The program will print out all the numbers from 1 to 10. For each number it will print if it is even or odd.
+        \item[(d)] After you’ve written the program, open a Terminal in your Linux environment.
+        \item[(e)] Run your program, after compiling it if necessary.
+        \item[(f)] Take a screenshot of the Terminal showing the execution of your program. Submit this screenshot. [Insert Screenshot Here as recitation1q11.jpg or .png]
+    \end{itemize}
+\end{enumerate}
+
+\end{document}
