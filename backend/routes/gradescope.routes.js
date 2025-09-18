@@ -17,4 +17,7 @@ router.get('/courses/:courseId/assignments', gradescopeController.getAssignments
 // Get assignment PDF
 router.get('/assignments/:courseId/:assignmentId/pdf', gradescopeController.getAssignmentPDF);
 
+// Health check
+router.get('/health', gradescopeController.health);
+
 module.exports = router;

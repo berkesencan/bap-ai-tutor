@@ -1,38 +1,34 @@
 \documentclass{article}
 \usepackage{amsmath}
 \usepackage{amsthm}
-\usepackage{amssymb}
+
+\title{CS-UY 2413: Design \& Analysis of Algorithms \\ Homework 2}
+\author{Prof. Lisa Hellerstein \\ New York University \\ Fall 2024}
+\date{Due 11:59pm Monday, Sep 30, New York time.}
 
 \begin{document}
 
-\title{CS-UY 2413: Design \& Analysis of Algorithms}
-\author{Prof. Lisa Hellerstein}
-\date{Fall 2024 \\ New York University}
-
 \maketitle
 
-\section*{Homework 2}
-Due 11:59pm Monday, Sep 30, New York time.
+\textit{By handing in the homework you are agreeing to the Homework Rules; see EdStem.}
 
-By handing in the homework you are agreeing to the Homework Rules; see EdStem.
+\textbf{Our Master Theorem:} The version of the Master Theorem that we covered in class is on the last page of this homework. We won’t be covering the version of the Master Theorem in the textbook and you’re not responsible for knowing it. (But you may find it interesting!)
 
-Our Master Theorem: The version of the Master Theorem that we covered in class is on the last page of this homework. We won’t be covering the version of the Master Theorem in the textbook and you’re not responsible for knowing it. (But you may find it interesting!)
+\textbf{Reminder:} For $r \neq 1$, $r^0 + r^1 + \dots + r^k = \frac{r^{k+1} - 1}{r - 1}$.
 
-Reminder: For $r \neq 1$, $r^0 + r^1 + \dots + r^k = \frac{r^{k+1}-1}{r-1}$.
+\section*{Problems}
 
 \begin{enumerate}
     \item For each example, indicate whether $f = o(g)$ (little-oh), $f = \omega(g)$ (little-omega), or $f = \Theta(g)$ (big-Theta). No justification is necessary.
     \begin{enumerate}
         \item $f(n) = 3(\log_3 n)^3$, $g(n) = n^{\frac{1}{3}}$
-        \item $f(n) = n$, $g(n) = n^{\frac{1}{3}}$
-        \item $f(n) = 5n$, $g(n) = 5n!$ (that’s factorial)
-        \item $f(n) = 5 \sum_{i=0}^n 41^i$, $g(n) = n^2$
+        \item $f(n) = n$, $g(n) = n^3$
+        \item $f(n) = 5n$, $g(n) = 5n!$
+        \item $f(n) = 5 \sum_{i=0}^n 4^{1i}$, $g(n) = n$
         \item $f(n) = \log_{10} n$, $g(n) = \log_5 n + \log_2 n$
     \end{enumerate}
 
-    \item Give a formal proof of the following statement: If $f(n) \geq 0$ for all $n \in \mathbb{N}$, $g(n) \geq 0$ for all $n \in \mathbb{N}$, $f(n) = O(g(n))$, and $g(n)$ is unbounded (meaning $\lim_{n\to\infty} g(n) = \infty$) then $\log_2 f(n) = O(\log g(n))$.
-    Use the formal definition of big-Oh in your answer. In your proof, you can use the fact that the value of $\log_2 n$ increases as $n$ increases.
-    Note that a similar statement with exponential functions is not true: If $f(n) = 3^n$ and $g(n) = n$, then $f(n) = O(g(n))$, but $2^{3^n}$ is not $O(2^n)$.
+    \item Give a formal proof of the following statement: If $f(n) \ge 0$ for all $n \in \mathbb{N}$, $g(n) \ge 0$ for all $n \in \mathbb{N}$, $f(n) = O(g(n))$, and $g(n)$ is unbounded (meaning $\lim_{n \to \infty} g(n) = \infty$) then $\log_2 f(n) = O(\log g(n))$. Use the formal definition of big-Oh in your answer. In your proof, you can use the fact that the value of $\log_2 n$ increases as $n$ increases. Note that a similar statement with exponential functions is not true: If $f(n) = 3^n$ and $g(n) = n$, then $f(n) = O(g(n))$, but $2^{3^n}$ is not $O(2^n)$.
 
     \item For each of the following recurrences, determine whether Our Master Theorem (on the last page of this HW) can be applied to the recurrence. If it can, use it to give the solution to the recurrence in $\Theta$ notation; no need to give any details. If not, write “Our Master Theorem does not apply.”
     \begin{enumerate}
@@ -41,8 +37,7 @@ Reminder: For $r \neq 1$, $r^0 + r^1 + \dots + r^k = \frac{r^{k+1}-1}{r-1}$.
         \item $T(n) = n^2 T(n/5) + 2$
     \end{enumerate}
 
-    \item Our Master Theorem can be applied to a recurrence of the form $T(n) = aT(n/b) + n^d$, where $a, b, d$ are constants with $a > 0$, $b > 1$, $d > 0$. Consider instead a recurrence of the form $T_{new}(n) = aT_{new}(n/b) + \log_d n$ where $a > 0$, $b > 1$, $d > 1$ (and $T(1) = 1$).
-    For each of the following, state whether the given property of $T_{new}$ is true. If so, explain why it is true. If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook, don’t use it in your explanation.)
+    \item Our Master Theorem can be applied to a recurrence of the form $T(n) = aT(n/b) + n^d$, where $a, b, d$ are constants with $a > 0$, $b > 1$, $d > 0$. Consider instead a recurrence of the form $T_{new}(n) = aT_{new}(n/b) + \log_d n$ where $a > 0$, $b > 1$, $d > 1$ (and $T(1) = 1$). For each of the following, state whether the given property of $T_{new}$ is true. If so, explain why it is true. If not, explain why it is not true. (Even if you know the version of the Master Theorem in the textbook, don’t use it in your explanation.)
     \begin{enumerate}
         \item $T_{new}(n) = O(n \log n)$ if $\log_b a = 1$
         \item $T_{new}(n) = \Omega(n^{\log_b a})$
@@ -52,7 +47,7 @@ Reminder: For $r \neq 1$, $r^0 + r^1 + \dots + r^k = \frac{r^{k+1}-1}{r-1}$.
     \begin{enumerate}
         \item Compute the value of $T(9)$, using the recurrence. Show your work.
         \item Use a recursion tree to solve the recurrence and get a closed-form expression for $T(n)$, when $n$ is a power of 3. (Check that your expression is correct by plugging in $n = 9$ and comparing with your answer to (a).)
-        \item Suppose that the base case is $T(3) = 5$, instead of $T(1) = 2$. What is the solution to the recurrence in this case, for $n \geq 3$?
+        \item Suppose that the base case is $T(3) = 5$, instead of $T(1) = 2$. What is the solution to the recurrence in this case, for $n \ge 3$?
     \end{enumerate}
 
     \item Consider a variation of mergesort that works as follows: If the array has size 1, return. Otherwise, divide the array into thirds, rather than in half. Recursively sort each third using this variation of mergesort. Then merge the first (leftmost) third with the middle third. Finally, merge the first two thirds with the last third.
@@ -76,19 +71,21 @@ Reminder: For $r \neq 1$, $r^0 + r^1 + \dots + r^k = \frac{r^{k+1}-1}{r-1}$.
     \end{enumerate}
 \end{enumerate}
 
-\section*{Theorem 0.1 (Our Master Theorem)}
-Let $a, b, d, n_0$ be constants such that $a > 0$, $b > 1$, $d \geq 0$ and $n_0 > 0$.
-Let $T(n) = aT(n/b) + \Theta(n^d)$ for when $n \geq n_0$, and $T(n) = \Theta(1)$ when $0 \leq n < n_0$. Then,
+\section*{Our Master Theorem}
+
+\begin{theorem}
+Let $a, b, d, n_0$ be constants such that $a > 0$, $b > 1$, $d \ge 0$ and $n_0 > 0$. Let $T(n) = aT(n/b) + \Theta(n^d)$ for when $n \ge n_0$, and $T(n) = \Theta(1)$ when $0 \le n < n_0$. Then,
 \[
 T(n) = \begin{cases}
-    \Theta(n^d \log n) & \text{if } d = \log_b a \\
-    \Theta(n^{\log_b a}) & \text{if } d < \log_b a \\
-    \Theta(n^d) & \text{if } d > \log_b a
+\Theta(n^d \log n) & \text{if } d = \log_b a \\
+\Theta(n^{\log_b a}) & \text{if } d < \log_b a \\
+\Theta(n^d) & \text{if } d > \log_b a
 \end{cases}
 \]
 We assume here that $T(n)$ is a function defined on the natural numbers. We use $aT(n/b)$ to mean $a'T(\lfloor n/b \rfloor) + a''T(\lceil n/b \rceil)$ where $a', a'' > 0$ such that $a' + a'' = a$.
+\end{theorem}
 
 \end{document}
 
 
-This LaTeX code provides a structured and formatted version of the homework problems.  Remember to compile this code using a LaTeX compiler (like pdflatex) to generate a PDF.  The image references in the original HTML are lost in this conversion and would need to be added manually if needed.  Also, the table from Problem 1 is recreated in textual form; you might want to use a LaTeX table environment for better formatting if you have the data in a tabular format.
+This LaTeX code provides a well-structured document for the homework assignment.  Remember to compile this with a LaTeX compiler (like pdflatex) to generate a PDF.  The  image files referenced in the original HTML are not included here; you'll need to  incorporate them appropriately in your LaTeX environment if needed.  Also note that some of the formatting (especially for problem 1) might need slight adjustments depending on your desired layout.

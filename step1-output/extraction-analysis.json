@@ -1,6 +1,6 @@
 {
   "summary": {
-    "pdfPath": "/Users/peterperry/Desktop/NYU/Hackathons/bap-ai-tutor/backend/uploads/1756425956597-HW2-2.pdf",
+    "pdfPath": "/Users/peterperry/Desktop/NYU/Hackathons/bap-ai-tutor/backend/uploads/1758002413447-HW2-2.pdf",
     "textLength": 4849,
     "htmlLength": 57969,
     "pageCount": 1,
@@ -22,42 +22,42 @@
     {
       "type": "background",
       "index": 0,
-      "src": "page-1-1756425959995-ynj624.png",
+      "src": "page-1-1758002414496-en08xn.png",
       "purpose": "diagram_or_visual_content"
     },
     {
       "type": "background",
       "index": 1,
-      "src": "page-2-1756425959995-ynj624.png",
+      "src": "page-2-1758002414496-en08xn.png",
       "purpose": "diagram_or_visual_content"
     },
     {
       "type": "background",
       "index": 2,
-      "src": "page-3-1756425959995-ynj624.png",
+      "src": "page-3-1758002414496-en08xn.png",
       "purpose": "diagram_or_visual_content"
     },
     {
       "type": "inline",
       "index": 0,
-      "src": "page-1-1756425959995-ynj624.png",
+      "src": "page-1-1758002414496-en08xn.png",
       "alt": "background image",
       "purpose": "content_image"
     },
     {
       "type": "inline",
       "index": 1,
-      "src": "page-2-1756425959995-ynj624.png",
+      "src": "page-2-1758002414496-en08xn.png",
       "alt": "background image",
       "purpose": "content_image"
     },
     {
       "type": "inline",
       "index": 2,
-      "src": "page-3-1756425959995-ynj624.png",
+      "src": "page-3-1758002414496-en08xn.png",
       "alt": "background image",
       "purpose": "content_image"
     }
   ],
-  "timestamp": "2025-08-29T00:06:00.273Z"
+  "timestamp": "2025-09-16T06:00:14.647Z"
 }

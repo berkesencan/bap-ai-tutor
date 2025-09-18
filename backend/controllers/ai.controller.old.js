@@ -1,3 +1,6 @@
+// TODO: DEPRECATED - Legacy AI controller
+// This file should be removed once RAG is fully deployed
+const flags = require('../config/flags');
 const { handleError } = require('../middleware/error.middleware');
 const GeminiService = require('../services/gemini.service');
 const aiService = require('../services/ai.service');

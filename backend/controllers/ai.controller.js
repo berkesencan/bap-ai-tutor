@@ -1,9 +1,12 @@
-// Main AI Controller - Orchestrates specialized controllers
+const { getRequestUserId } = require('../utils/requestUser');// Main AI Controller - Orchestrates specialized controllers
+const flags = require('../config/flags');
 const NeuralConquestController = require('./neural-conquest.controller');
-const PracticeExamController = require('./practice-exam.controller');
+// TODO: DEPRECATED - Legacy practice exam controller
+const PracticeExamController = flags.RAG_ENABLED ? null : require('./practice-exam.controller');
 const ChatController = require('./ai/chat.controller');
 const ContentGenerationController = require('./ai/content-generation.controller');
 const AnalysisController = require('./ai/analysis.controller');
+const aiService = require('../services/ai.service');
 
 class AIController {
   // ---------- Chat and Conversation Management ----------
@@ -12,11 +15,42 @@ class AIController {
   }
 
   static async getAvailableClassrooms(req, res) {
-    return ChatController.getAvailableClassrooms(req, res);
+    console.log('[AI Controller] getAvailableClassrooms called - delegating to ChatController');
+    try {
+      return await ChatController.getAvailableClassrooms(req, res);
+    } catch (error) {
+      console.error('[AI Controller] Error in getAvailableClassrooms delegation:', error);
+      throw error;
+    }
   }
 
   static async getIntegratedMaterials(req, res) {
     return ChatController.getIntegratedMaterials(req, res);
+  }
+
+  // Preload and cache materials/extractions for a context (course/classroom)
+  static async preloadContext(req, res) {
+    try {
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
+      const { contextId } = req.params;
+      const { type = 'course' } = req.query;
+
+      const result = await aiService.getIntegratedMaterials(userId, contextId, type);
+      // Force extraction pass by asking a no-op question that triggers extractor against assignments
+      await aiService.answerQuestion({
+        userId,
+        question: '[SYSTEM] preload context',
+        courseId: type === 'course' ? contextId : null,
+        classroomId: type === 'classroom' ? contextId : null,
+        context: ''
+      });
+      res.json({ success: true, data: { totalMaterials: result.totalMaterials, totalAssignments: result.totalAssignments } });
+    } catch (error) {
+      return require('../middleware/error.middleware').handleError(error, res);
+    }
   }
 
   static async testGemini(req, res) {
@@ -498,6 +532,7 @@ class AIController {
     else if (questionText.match(/list|identify|name|select/i)) complexity += 1;
     return Math.round(complexity);
   }
+
 }
 
 module.exports = AIController;

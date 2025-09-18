@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -37,6 +38,13 @@ const gradescopeRoutes = require('./routes/gradescope.routes');
 const classroomRoutes = require('./routes/classroom.routes');
 const usersRoutes = require('./routes/users.routes');
 const activityRoutes = require('./routes/activity.routes');
+const cacheRoutes = require('./routes/cache.routes');
+const ragRoutes = require('./routes/rag.routes');
+const gradescopeImportRoutes = require('./routes/gradescope-import.routes');
+const filesRoutes = require('./routes/files.routes');
+const debugRoutes = require('./routes/debug.routes');
+const devRoutes = require('./routes/dev.routes');
+const importStatusRoutes = require('./routes/import-status.routes');
 
 // Import middleware
 const { errorHandler } = require('./middleware/error.middleware');
@@ -141,7 +149,12 @@ const upload = multer({
   }
 });
 
-app.post('/api/ai/practice-exam', upload.single('pdf'), require('./controllers/ai.controller').generatePracticeExam);
+// TODO: DEPRECATED - Legacy practice exam endpoint
+// This should not be used when RAG is enabled
+const flags = require('./config/flags');
+if (!flags.RAG_ENABLED) {
+  app.post('/api/ai/practice-exam', upload.single('pdf'), require('./controllers/ai.controller').generatePracticeExam);
+}
 
 // Test form parsing (unprotected for debugging)
 app.post('/api/ai/test-form', upload.single('pdf'), require('./controllers/ai.controller').testFormParsing);
@@ -185,24 +198,50 @@ app.get('/api/ai/test-route', (req, res) => {
     message: 'Practice exam route is accessible',
     timestamp: new Date().toISOString(),
     routes: {
-      practiceExam: '/api/ai/practice-exam (POST with PDF upload)',
+      // practiceExam: '/api/ai/practice-exam (POST with PDF upload)', // DEPRECATED with RAG
       testForm: '/api/ai/test-form (POST with PDF upload)',
       downloadPdf: '/api/ai/download-pdf/:filename (GET)'
     }
   });
 });
 
-// Protected routes with auth middleware
-app.use('/api/assignments', authMiddleware, assignmentRoutes);
-app.use('/api/schedules', authMiddleware, scheduleRoutes);
-app.use('/api/courses', authMiddleware, courseRoutes);
-app.use('/api/study', authMiddleware, studyRoutes);
-app.use('/api/ai', authMiddleware, aiRoutes);
-app.use('/api/analytics', authMiddleware, analyticsRoutes);
-app.use('/api/gradescope', authMiddleware, gradescopeRoutes);
-app.use('/api/classrooms', authMiddleware, classroomRoutes);
-app.use('/api/users', authMiddleware, usersRoutes);
-app.use('/api/activities', authMiddleware, activityRoutes);
+// Global dev user shim - mount early so req.user is available in dev for ALL routes
+const devUserShim = require('./middleware/devUserShim');
+app.use(devUserShim);
+
+// Legacy route compatibility layer (dev-only)
+const legacyCompat = require('./routes/legacy-compat.routes');
+app.use(legacyCompat()); // no-op in prod; active in dev only
+
+// Conditional auth helper that respects DEV_NO_AUTH flag
+const maybeAuth = (req, res, next) => {
+  if (flags.DEV_NO_AUTH) {
+    console.log('[AUTH] Skipping auth (DEV_NO_AUTH=true)');
+    return next();
+  }
+  return authMiddleware(req, res, next);
+};
+
+// Protected routes with conditional auth
+app.use('/api/assignments', maybeAuth, assignmentRoutes);
+app.use('/api/schedules', maybeAuth, scheduleRoutes);
+app.use('/api/courses', maybeAuth, courseRoutes);
+app.use('/api/study', maybeAuth, studyRoutes);
+app.use('/api/ai', maybeAuth, aiRoutes);
+app.use('/api/analytics', maybeAuth, analyticsRoutes);
+app.use('/api/gradescope', maybeAuth, gradescopeRoutes);
+app.use('/api/classrooms', maybeAuth, classroomRoutes);
+app.use('/api/users', maybeAuth, usersRoutes);
+app.use('/api/activities', maybeAuth, activityRoutes);
+app.use('/api/cache', maybeAuth, cacheRoutes);
+app.use('/api/rag', maybeAuth, ragRoutes);
+app.use('/api/gradescope-import', maybeAuth, gradescopeImportRoutes);
+app.use('/api/files', maybeAuth, filesRoutes);
+app.use('/api/imports', maybeAuth, importStatusRoutes);
+app.use('/api/debug', debugRoutes);
+
+// Dev debug routes (dev-only)
+app.use('/api/dev', devRoutes());
 
 // Static file serving
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -257,6 +296,27 @@ server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
   console.log('🔌 Socket.IO enabled for real-time updates');
+  
+  // Log all mounted routes
+  console.log('\n📋 Mounted API Routes:');
+  console.log('  /api/auth - Authentication');
+  console.log('  /api/assignments - Assignment management');
+  console.log('  /api/schedules - Schedule management');
+  console.log('  /api/courses - Course management');
+  console.log('  /api/study - Study tools');
+  console.log('  /api/ai - AI services');
+  console.log('  /api/analytics - Analytics');
+  console.log('  /api/gradescope - Gradescope integration');
+  console.log('  /api/classrooms - Classroom management');
+  console.log('  /api/users - User management');
+  console.log('  /api/activities - Activities');
+  console.log('  /api/cache - Cache management');
+  console.log('  /api/rag - RAG services');
+  console.log('  /api/gradescope-import - Gradescope import');
+  console.log('  /api/files - File management');
+  console.log('  /api/imports - Import status tracking');
+  console.log('  /api/debug - Debug endpoints');
+  console.log('  /api/dev - Development endpoints');
   
   // Security status check
   console.log('🔒 Security Status:');

@@ -1,4 +1,4 @@
-const Assignment = require('../models/assignment.model');
+const { getRequestUserId } = require('../utils/requestUser');const Assignment = require('../models/assignment.model');
 const Course = require('../models/course.model');
 
 /**
@@ -15,7 +15,10 @@ class AssignmentController {
     try {
       const assignmentData = req.body;
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
       // Check if the course exists and user has access
       const course = await Course.getById(courseId);
@@ -57,7 +60,10 @@ class AssignmentController {
   static async getByCourse(req, res, next) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
       // Check if the course exists and user has access
       const course = await Course.getById(courseId);
@@ -150,10 +156,13 @@ class AssignmentController {
    */
   static async getAll(req, res, next) {
     try {
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
-      // Get regular assignments
-      let assignments = await Assignment.getByUserId(userId);
+      // Start with empty assignments array since all assignments are now stored in courses
+      let assignments = [];
       
       // Get assignments from user's courses with linked integrations
       const userCourses = await Course.getByUserId(userId);
@@ -172,9 +181,49 @@ class AssignmentController {
               parentBapCourseId: course.id,
               parentBapCourseName: course.name,
               parentBapCourseCode: course.code,
-              fromLinkedIntegration: true
+              fromLinkedIntegration: true,
+              // Add RAG metadata for document reading
+              raw: assignment.raw || {
+                platform: assignment.sourcePlatform || assignment.platform,
+                sourcePlatform: assignment.sourcePlatform || assignment.platform,
+                courseId: assignment.sourceIntegration,
+                assignmentId: assignment.externalId || assignment.id,
+                gsCourseId: assignment.sourceIntegration,
+                gsAssignmentId: assignment.externalId || assignment.id
+              }
             }));
             assignments = assignments.concat(courseAssignments);
+          } else {
+            // No aggregated data found, trigger aggregation for this user
+            console.log(`[Assignment Controller] No aggregated data found for ${course.name}, triggering aggregation`);
+            try {
+              await Course.aggregateUserLinkedIntegrationContent(course.id, userId);
+              
+              // Reload course data and try again
+              const updatedCourse = await Course.getById(course.id);
+              const updatedUserData = updatedCourse.userAggregatedData?.[userId];
+              if (updatedUserData && updatedUserData.assignments) {
+                const courseAssignments = updatedUserData.assignments.map(assignment => ({
+                  ...assignment,
+                  parentBapCourseId: course.id,
+                  parentBapCourseName: course.name,
+                  parentBapCourseCode: course.code,
+                  fromLinkedIntegration: true,
+                  raw: assignment.raw || {
+                    platform: assignment.sourcePlatform || assignment.platform,
+                    sourcePlatform: assignment.sourcePlatform || assignment.platform,
+                    courseId: assignment.sourceIntegration,
+                    assignmentId: assignment.externalId || assignment.id,
+                    gsCourseId: assignment.sourceIntegration,
+                    gsAssignmentId: assignment.externalId || assignment.id
+                  }
+                }));
+                assignments = assignments.concat(courseAssignments);
+                console.log(`[Assignment Controller] Successfully aggregated ${courseAssignments.length} assignments`);
+              }
+            } catch (aggregationError) {
+              console.error(`[Assignment Controller] Failed to aggregate content for course ${course.id}:`, aggregationError);
+            }
           }
         }
         // Fallback: Check legacy linked integrations
@@ -207,6 +256,35 @@ class AssignmentController {
               assignments = assignments.concat(integrationAssignments);
             }
           });
+        }
+        
+        // FALLBACK: Check for standalone assignments directly from assignment collection (legacy import method)
+        if (course.source === 'gradescope' && course.externalId) {
+          try {
+            const legacyAssignments = await Assignment.getByCourseId(course.id);
+            if (legacyAssignments && legacyAssignments.length > 0) {
+              console.log(`[Assignment Controller] Found ${legacyAssignments.length} legacy assignments for course ${course.name}`);
+              const courseAssignments = legacyAssignments.map(assignment => ({
+                ...assignment,
+                parentBapCourseId: course.id,
+                parentBapCourseName: course.name,
+                parentBapCourseCode: course.code,
+                fromLegacyImport: true,
+                // Add RAG metadata for PDF viewing
+                raw: {
+                  platform: assignment.platform || assignment.source,
+                  sourcePlatform: assignment.platform || assignment.source,
+                  courseId: course.externalId, // Use course.externalId for Gradescope course ID
+                  assignmentId: assignment.externalId || assignment.id,
+                  gsCourseId: course.externalId,
+                  gsAssignmentId: assignment.externalId || assignment.id
+                }
+              }));
+              assignments = assignments.concat(courseAssignments);
+            }
+          } catch (legacyError) {
+            console.error(`[Assignment Controller] Failed to fetch legacy assignments for course ${course.id}:`, legacyError);
+          }
         }
       }
       
@@ -261,7 +339,10 @@ class AssignmentController {
    */
   static async getUpcoming(req, res, next) {
     try {
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const { limit } = req.query;
       
       const assignments = await Assignment.getUpcoming(userId, limit ? parseInt(limit) : 10);
@@ -285,7 +366,10 @@ class AssignmentController {
    */
   static async getPast(req, res, next) {
     try {
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const { limit } = req.query;
       
       const assignments = await Assignment.getPast(userId, limit ? parseInt(limit) : 10);
@@ -310,7 +394,10 @@ class AssignmentController {
   static async getById(req, res, next) {
     try {
       const { assignmentId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
       const assignment = await Assignment.getById(assignmentId);
       
@@ -350,7 +437,10 @@ class AssignmentController {
     try {
       const { assignmentId } = req.params;
       const updateData = req.body;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
       const assignment = await Assignment.getById(assignmentId);
       
@@ -391,7 +481,10 @@ class AssignmentController {
   static async delete(req, res, next) {
     try {
       const { assignmentId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
       const assignment = await Assignment.getById(assignmentId);
       

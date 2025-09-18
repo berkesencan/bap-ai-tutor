@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useParams, Link } from 'react-router-dom';
-import { getCourses, getAllAssignments } from '../services/api';
+import { getAllAssignments } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import useCourseOptions from '../hooks/useCourseOptions';
 import './Assignments.css';
 
 function Assignments() {
   const [allAssignments, setAllAssignments] = useState([]);
-  const [allCourses, setAllCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCourseId, setSelectedCourseId] = useState('all');
   const { currentUser } = useAuth();
   const location = useLocation();
   const params = useParams();
+  
+  // Use the shared course options hook
+  const { loading: coursesLoading, courses: allCourses, error: coursesError } = useCourseOptions();
 
   // Parse courseId from URL to set the initial filter
   useEffect(() => {
@@ -22,25 +25,14 @@ function Assignments() {
     }
   }, [location.search, params.courseId]);
 
-  // Fetch all courses and all assignments once on component load
+  // Fetch assignments once on component load (courses come from hook)
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchAssignments = async () => {
       if (!currentUser) return;
       setLoading(true);
       setError(null);
       try {
-        const [coursesRes, assignmentsRes] = await Promise.all([
-          getCourses(),
-          getAllAssignments(),
-        ]);
-
-        if (coursesRes.success && coursesRes.data.courses) {
-          setAllCourses(coursesRes.data.courses);
-        } else {
-          console.error('Failed to fetch courses:', coursesRes);
-          setAllCourses([]);
-          throw new Error('Could not load your courses.');
-    }
+        const assignmentsRes = await getAllAssignments();
 
         if (assignmentsRes.success && assignmentsRes.data.assignments) {
           setAllAssignments(assignmentsRes.data.assignments);
@@ -50,14 +42,14 @@ function Assignments() {
           throw new Error('Could not load your assignments.');
         }
       } catch (err) {
-        console.error('Error fetching initial data:', err);
-        setError(err.message || 'Failed to load page data. Please try again later.');
+        console.error('Error fetching assignments:', err);
+        setError(err.message || 'Failed to load assignments. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInitialData();
+    fetchAssignments();
   }, [currentUser]);
 
   // Helper: map common US timezone abbreviations to offsets (hours relative to UTC)
@@ -155,23 +147,12 @@ function Assignments() {
       }
     });
 
-    // 3. Calculate assignment counts for each course
+    // 3. Use counts from the unified course service (authoritative source)
     const counts = {};
     allCourses.forEach(course => {
-      // Count assignments that belong to this course directly OR through integrations
-      const count = allAssignments.filter(assignment => {
-        // Direct course assignment
-        if (assignment.courseId === course.id) return true;
-        
-        // Assignment from linked integration
-        const bapCourseId = integrationToBapCourseMap.get(assignment.courseId);
-        return bapCourseId === course.id;
-      }).length;
-      
-      counts[course.id] = count;
-      
-      if (count > 0) {
-        console.log(`Course ${course.name} has ${count} assignments`);
+      counts[course.id] = course.counts?.assignments || 0;
+      if (counts[course.id] > 0) {
+        console.log(`Course ${course.name} has ${counts[course.id]} assignments (from service)`);
       }
     });
 
@@ -297,7 +278,7 @@ function Assignments() {
             </option>
             {allCourses.map(course => (
                     <option key={course.id} value={course.id}>
-                {course.name} ({courseAssignmentCounts[course.id] || 0})
+                {course.displayName || course.name} ({course.counts?.assignments || 0})
                     </option>
             ))}
               </select>

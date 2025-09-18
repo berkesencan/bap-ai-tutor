@@ -347,6 +347,126 @@ class GradescopeAuth {
       throw error;
     }
   }
+
+  /**
+   * Store session data (cookies, user agent, etc.)
+   * @param {string} userId - User ID
+   * @param {Object} sessionData - Session data object
+   * @returns {Promise<void>}
+   */
+  static async storeSessionData(userId, sessionData) {
+    try {
+      const authRef = db.collection('gradescope_auth').doc(userId);
+      
+      const updateData = {
+        sessionData: {
+          ...sessionData,
+          updatedAt: new Date()
+        },
+        lastValidatedAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      await authRef.update(updateData);
+      console.log(`Stored session data for user ${userId}`);
+    } catch (error) {
+      console.error('Error storing session data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get session data for a user
+   * @param {string} userId - User ID
+   * @returns {Promise<Object|null>} - Session data or null
+   */
+  static async getSessionData(userId) {
+    try {
+      const authRef = db.collection('gradescope_auth').doc(userId);
+      const authDoc = await authRef.get();
+      
+      if (!authDoc.exists) {
+        return null;
+      }
+      
+      const authData = authDoc.data();
+      return authData.sessionData || null;
+    } catch (error) {
+      console.error('Error getting session data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update authentication status
+   * @param {string} userId - User ID
+   * @param {boolean} isAuthenticated - Authentication status
+   * @param {string} error - Error message if any
+   * @returns {Promise<void>}
+   */
+  static async updateAuthStatus(userId, isAuthenticated, error = null) {
+    try {
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('[GRADESCOPE AUTH] updateAuthStatus called with invalid userId:', userId);
+        throw new Error('Invalid userId provided to updateAuthStatus');
+      }
+      
+      const authRef = db.collection('gradescope_auth').doc(userId);
+      
+      const updateData = {
+        isAuthenticated,
+        updatedAt: new Date(),
+        lastError: error
+      };
+      
+      if (isAuthenticated) {
+        updateData.lastValidatedAt = new Date();
+        updateData.failureCount = 0;
+      } else {
+        updateData.failureCount = await this.incrementFailureCount(userId);
+      }
+      
+      await authRef.update(updateData);
+      console.log(`Updated auth status for user ${userId}: ${isAuthenticated}`);
+    } catch (error) {
+      console.error('Error updating auth status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if session needs refresh
+   * @param {string} userId - User ID
+   * @returns {Promise<boolean>} - True if needs refresh
+   */
+  static async needsSessionRefresh(userId) {
+    try {
+      const authRef = db.collection('gradescope_auth').doc(userId);
+      const authDoc = await authRef.get();
+      
+      if (!authDoc.exists) {
+        return true;
+      }
+      
+      const authData = authDoc.data();
+      const lastValidated = authData.lastValidatedAt?.toDate();
+      
+      if (!lastValidated) {
+        return true;
+      }
+      
+      const maxAgeMin = parseInt(process.env.GRADESCOPE_SESSION_MAX_AGE_MIN) || 120;
+      const refreshAheadMin = parseInt(process.env.GRADESCOPE_SESSION_REFRESH_AHEAD_MIN) || 20;
+      const refreshThreshold = maxAgeMin - refreshAheadMin;
+      
+      const minutesSinceValidation = (Date.now() - lastValidated.getTime()) / (1000 * 60);
+      
+      return minutesSinceValidation >= refreshThreshold;
+    } catch (error) {
+      console.error('Error checking session refresh need:', error);
+      return true;
+    }
+  }
 }
 
 module.exports = GradescopeAuth; 

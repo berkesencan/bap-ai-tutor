@@ -56,8 +56,7 @@ const addIntegrationValidation = [
     .withMessage('Integration data must be an object'),
 ];
 
-// Apply authentication middleware to all routes
-router.use(authMiddleware);
+// Note: Authentication middleware is applied globally in index.js
 
 // Routes
 router.post('/', createClassroomValidation, ClassroomController.create);

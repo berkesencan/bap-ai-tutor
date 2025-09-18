@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { postChatMessage, testGemini, processPDF, processPDFWithMessage } from '../services/api';
+import { chatAsk, ragIngest, ragHealth, testGemini, processPDF, processPDFWithMessage, getGradescopeAssignmentPDF, api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip, FaUpload, FaFileAlt, FaChalkboardTeacher, FaUsers, FaCog, FaExternalLinkAlt, FaLayerGroup, FaCheck, FaClipboardList } from 'react-icons/fa';
+import useCourseOptions from '../hooks/useCourseOptions';
+import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaLightbulb, FaBookOpen, FaGraduationCap, FaQuestionCircle, FaVolumeUp, FaPaperclip, FaUpload, FaFileAlt, FaChalkboardTeacher, FaUsers, FaCog, FaExternalLinkAlt, FaLayerGroup, FaCheck, FaClipboardList, FaSync, FaTrashAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './AiTutorChat.css'; // Import the CSS file
 
@@ -25,6 +26,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   const [uploadMessage, setUploadMessage] = useState('');
   const [attachedFile, setAttachedFile] = useState(null);
   const [recentPDFs, setRecentPDFs] = useState([]); // Store recent PDF info for memory
+  const [refreshingItems, setRefreshingItems] = useState(new Set()); // Track which items are being refreshed
   const [showPDFDropdown, setShowPDFDropdown] = useState(false);
   const fileInputRef = useRef(null);
   
@@ -34,36 +36,57 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
   const chatContainerRef = useRef(null);
 
   // Updated course context states
-  const [availableCourses, setAvailableCourses] = useState({ teaching: [], enrolled: [], courses: [] });
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   const [courseMaterials, setCourseMaterials] = useState([]);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerItem, setViewerItem] = useState(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [viewerBlobUrl, setViewerBlobUrl] = useState(null);
+  
+  // RAG debug and indexing states
+  const [ragDebugInfo, setRagDebugInfo] = useState(null);
+  const [isIndexing, setIsIndexing] = useState(false);
+  const [indexingProgress, setIndexingProgress] = useState(null);
+  
+  // Use the shared course options hook
+  const { loading: coursesLoading, courses: availableCourses, error: coursesError } = useCourseOptions();
+  
+  // Filter out container courses from the dropdown
+  const visibleCourses = (availableCourses || []).filter(
+    c => !/^\s*My Gradescope Courses\s*$/i.test(c.name || c.displayName || '')
+  );
 
-  // Fetch available courses on component mount
-  useEffect(() => {
-    fetchAvailableCourses();
-  }, [currentUser]);
+  // Build a unified list of all context items (materials + assignments)
+  const allContextItems = React.useMemo(() => {
+    const materials = Array.isArray(courseMaterials?.materials) ? courseMaterials.materials : [];
+    const assignments = Array.isArray(courseMaterials?.assignments) ? courseMaterials.assignments : [];
 
-  const fetchAvailableCourses = async () => {
-    try {
-      if (!currentUser) return;
-      const token = await currentUser.getIdToken();
-      const response = await fetch('/api/ai/classrooms', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+    const normalizedMaterials = materials.map(m => ({
+      type: m.type || 'material',
+      name: m.name || m.title || 'Untitled material',
+      url: m.url || m.fileUrl || null,
+      sourceUrl: m.sourceUrl || m.link || null,
+      content: m.content || m.text || m.extractedText || m.summary || null,
+      raw: m
+    }));
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[AI Tutor] Received course data:', data.data);
-        setAvailableCourses(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching available courses:', error);
-    }
-  };
+    const normalizedAssignments = assignments.map(a => ({
+      type: 'assignment',
+      name: a.name || a.title || 'Untitled assignment',
+      url: a.url || a.fileUrl || null,
+      sourceUrl: a.sourceUrl || a.link || null,
+      content: a.description || a.instructions || a.text || null,
+      platform: a.platform || 'gradescope',
+      externalId: a.externalId,
+      raw: a.raw || a // Use a.raw if it exists, otherwise use the whole assignment
+    }));
+
+    return [...normalizedMaterials, ...normalizedAssignments];
+  }, [courseMaterials]);
+
+  // Courses are now loaded via the useCourseOptions hook
+  // No need for separate course fetching logic
 
   const handleCourseSelect = async (course) => {
     setSelectedCourse(course);
@@ -85,11 +108,129 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
           const data = await response.json();
           setCourseMaterials(data.data || {});
         }
+        
+        // Fetch RAG debug info
+        await fetchRagDebugInfo(course.id);
+        
+        // Auto-reconcile RAG index (non-blocking)
+        console.log('[COURSE SWITCH] auto-reconcile fired for course:', course.id);
+        fetch(`/api/rag/consistency/reindex/${course.id}`, { 
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => {
+          if (response.ok) {
+            console.log('[COURSE SWITCH] auto-reconcile completed for course:', course.id);
+            // Show toast notification
+            setUploadMessage('Syncing context...');
+            setTimeout(() => setUploadMessage(''), 2000);
+            // Refresh debug info after reconcile
+            fetchRagDebugInfo(course.id);
+          }
+        })
+        .catch(error => {
+          console.log('[COURSE SWITCH] auto-reconcile failed (non-blocking):', error.message);
+        });
       } catch (error) {
         console.error('Error fetching course materials:', error);
       }
     } else {
       setCourseMaterials({});
+    }
+  };
+
+  // Fetch RAG debug information
+  const fetchRagDebugInfo = async (courseId) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/rag/debug/report?courseId=${courseId}`, {
+        headers: {
+          'X-Dev-User-Id': 'dev-cli'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRagDebugInfo(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching RAG debug info:', error);
+    }
+  };
+
+  // Refresh RAG context for the selected course
+  const handleRefreshContext = async () => {
+    if (!selectedCourse || !currentUser) return;
+    
+    setIsIndexing(true);
+    setUploadMessage('Refreshing context...');
+    
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/rag/consistency/reindex/${selectedCourse.id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[REFRESH] Context refreshed:', data);
+        setUploadMessage('Context refreshed successfully!');
+        setTimeout(() => setUploadMessage(''), 3000);
+        
+        // Refresh debug info to update the badge
+        await fetchRagDebugInfo(selectedCourse.id);
+      } else {
+        setUploadMessage('Failed to refresh context');
+        setTimeout(() => setUploadMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error refreshing context:', error);
+      setUploadMessage('Failed to refresh context');
+      setTimeout(() => setUploadMessage(''), 3000);
+    } finally {
+      setIsIndexing(false);
+    }
+  };
+
+  // Index PDFs for the selected course
+  const handleIndexPDFs = async () => {
+    if (!selectedCourse) return;
+    
+    setIsIndexing(true);
+    setIndexingProgress({ message: 'Starting PDF indexing...', progress: 0 });
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/rag/index/course/${selectedCourse.id}`, {
+        method: 'POST',
+        headers: {
+          'X-Dev-User-Id': 'dev-cli'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setIndexingProgress({ 
+          message: `Indexed ${data.data.indexed} PDFs, skipped ${data.data.skipped}`, 
+          progress: 100 
+        });
+        
+        // Refresh RAG debug info
+        await fetchRagDebugInfo(selectedCourse.id);
+      } else {
+        setIndexingProgress({ message: 'Indexing failed', progress: 0 });
+      }
+    } catch (error) {
+      console.error('Error indexing PDFs:', error);
+      setIndexingProgress({ message: 'Indexing failed', progress: 0 });
+    } finally {
+      setIsIndexing(false);
+      setTimeout(() => setIndexingProgress(null), 3000);
     }
   };
 
@@ -120,38 +261,33 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
               {selectedCourse.type === 'course' ? <FaBookOpen /> : 
                selectedCourse.role === 'teacher' ? <FaChalkboardTeacher /> : <FaGraduationCap />}
             </div>
-            <div className="course-details">
-              <span className="course-name">{selectedCourse.name}</span>
-              <span className="course-meta">
-                {selectedCourse.subject && `${selectedCourse.subject} • `}
-                {selectedCourse.role}
-                {selectedCourse.totalIntegrations > 0 && (
-                  <span className="integration-count">
-                    • {selectedCourse.totalIntegrations} integrations
-                  </span>
-                )}
-              </span>
+            <div className="placeholder-text">
+              <span className="placeholder-title">{selectedCourse.displayName || selectedCourse.name}</span>
             </div>
-            <div className="selector-arrow">▼</div>
           </div>
         ) : (
           <div className="no-course-selected">
-            <FaUsers className="placeholder-icon" />
+            <div className="placeholder-icon"><FaUsers /></div>
             <div className="placeholder-text">
               <span className="placeholder-title">Select Course Context</span>
-              <span className="placeholder-subtitle">Choose a course for enhanced AI assistance</span>
+              <span className="placeholder-subtitle">Choose a course for enhanced AI</span>
             </div>
-            <div className="selector-arrow">▼</div>
           </div>
         )}
+        <div className="selector-arrow">▼</div>
       </button>
 
       {showCourseDropdown && (
-        <div className="course-dropdown">
-          <div className="dropdown-header">
-            <h3>Choose Course Context</h3>
-            <p>Select a course to get AI assistance tailored to your materials and integrations</p>
-          </div>
+        <>
+          <div 
+            className="course-dropdown-backdrop"
+            onClick={() => setShowCourseDropdown(false)}
+          />
+          <div className="course-dropdown">
+            <div className="dropdown-header">
+              <h3>Choose Course Context</h3>
+              <p>Select a course to get AI assistance with your materials</p>
+            </div>
           
           <div className="dropdown-content">
             {/* General AI Option */}
@@ -170,13 +306,13 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
             </button>
 
             {/* My Courses */}
-            {availableCourses.courses?.length > 0 && (
+            {availableCourses?.length > 0 && (
               <div className="course-section">
                 <div className="section-header">
                   <FaBookOpen className="section-icon" />
                   <span>My Courses</span>
                 </div>
-                {availableCourses.courses.map(course => (
+                {visibleCourses.map(course => (
                   <button
                     key={course.id}
                     onClick={() => handleCourseSelect(course)}
@@ -186,7 +322,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
                       <FaBookOpen />
                     </div>
                     <div className="option-content">
-                      <div className="option-title">{course.name}</div>
+                      <div className="option-title">{course.displayName || course.name}</div>
                       <div className="option-subtitle">
                         {course.subject && `${course.subject} • `}
                         {course.role}
@@ -218,10 +354,10 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
                           {course.totalIntegrations}
                         </span>
                       )}
-                      {course.totalAssignments > 0 && (
+                      {course.counts?.assignments > 0 && (
                         <span className="stat-item">
                           <FaFileAlt className="stat-icon" />
-                          {course.totalAssignments}
+                          {course.counts.assignments}
                         </span>
                       )}
                     </div>
@@ -286,7 +422,7 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
             )}
 
             {/* Empty State */}
-            {availableCourses.courses?.length === 0 && 
+            {visibleCourses?.length === 0 && 
              availableCourses.teaching?.length === 0 && 
              availableCourses.enrolled?.length === 0 && (
               <div className="empty-courses">
@@ -303,33 +439,287 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
             )}
           </div>
 
-          {/* Course Materials Preview */}
-          {selectedCourse && courseMaterials && (courseMaterials.totalMaterials > 0 || courseMaterials.totalAssignments > 0) && (
+          {/* Course Materials Preview - Compact */}
+          {selectedCourse && courseMaterials && (courseMaterials.materials?.length > 0 || courseMaterials.assignments?.length > 0) && (
             <div className="materials-preview">
               <div className="preview-header">
                 <FaLayerGroup className="preview-icon" />
-                <span>Available Materials</span>
-              </div>
-              <div className="preview-stats">
-                {courseMaterials.totalMaterials > 0 && (
-                  <span className="preview-stat">
-                    <FaFileAlt className="preview-stat-icon" />
-                    {courseMaterials.totalMaterials} materials
-                  </span>
-                )}
-                {courseMaterials.totalAssignments > 0 && (
-                  <span className="preview-stat">
-                    <FaClipboardList className="preview-stat-icon" />
-                    {courseMaterials.totalAssignments} assignments
-                  </span>
-                )}
+                <span>Available: {courseMaterials.materials?.length || 0} materials, {courseMaterials.assignments?.length || 0} assignments</span>
               </div>
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   );
+
+  const openMaterial = async (item) => {
+    console.log('--- [DEBUG] openMaterial START ---');
+    console.log('Clicked Item:', item);
+
+    try {
+      setViewerLoading(true);
+
+      // If item has a direct URL, open it directly
+      if (item.url && !item.url.startsWith('blob:')) {
+        console.log('[DEBUG] Item has a direct, non-blob URL. Opening directly.');
+        setViewerItem(item);
+        setViewerOpen(true);
+        return;
+      }
+
+      // Check if this is a Gradescope assignment
+      const isGradescope = (
+        item.platform?.toLowerCase() === 'gradescope' ||
+        item.source?.toLowerCase() === 'gradescope' ||
+        item.sourcePlatform?.toLowerCase() === 'gradescope' ||
+        item.raw?.platform?.toLowerCase() === 'gradescope'
+      );
+
+      if (!isGradescope) {
+        console.log('[DEBUG] Item is not a Gradescope item. Opening as text.');
+        setViewerItem(item);
+        setViewerOpen(true);
+        return;
+      }
+
+      console.log('[DEBUG] Item identified as Gradescope material.');
+      
+      // Get Gradescope course and assignment IDs
+      const courseId = item.raw?.gsCourseId || item.raw?.courseId;
+      const assignmentId = item.raw?.gsAssignmentId || item.raw?.assignmentId || item.externalId;
+
+      console.log(`[DEBUG] Gradescope IDs: courseId=${courseId}, assignmentId=${assignmentId}`);
+
+      if (!courseId || !assignmentId) {
+        console.error('[DEBUG] Missing Gradescope IDs. Opening as text.');
+        setViewerItem({ ...item, content: 'Missing Gradescope IDs. Cannot load PDF.' });
+        setViewerOpen(true);
+        return;
+      }
+
+      // Use the same API function as AssignmentPDFViewer
+      try {
+        const { getGradescopeAssignmentPDF } = await import('../services/api');
+        const result = await getGradescopeAssignmentPDF(courseId, assignmentId);
+        
+        if (result instanceof Blob) {
+          console.log('[DEBUG] Successfully fetched PDF blob. Creating URL.');
+          const blobUrl = URL.createObjectURL(result);
+          setViewerBlobUrl(blobUrl);
+          setViewerItem({ 
+            ...item, 
+            url: blobUrl, 
+            sourceUrl: `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}` 
+          });
+          setViewerOpen(true);
+        } else if (result && typeof result === 'object' && result.success === false) {
+          // Handle API error response
+          console.error('[DEBUG] API error response:', result);
+          
+          let errorMessage = 'Failed to load PDF. Please try again or open original.';
+          if (result.error) {
+            if (result.error.includes('session expired') || result.error.includes('reconnect')) {
+              errorMessage = 'Gradescope session expired. Please reconnect your account in the Connect page to view PDFs.';
+            } else if (result.error.includes('not available') || result.error.includes('programming assignment') || result.error.includes('submission access')) {
+              errorMessage = 'This assignment PDF is not available for download. It may be a programming assignment or require special access. Click "Open original" to view on Gradescope.';
+            } else if (result.status === 500 && result.error.includes('assignment PDF is not available')) {
+              errorMessage = 'This assignment PDF is not available for download. It may be a programming assignment or require special access. Click "Open original" to view on Gradescope.';
+            } else {
+              errorMessage = result.error;
+            }
+          }
+          
+          setViewerItem({ 
+            ...item, 
+            content: errorMessage, 
+            sourceUrl: `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}` 
+          });
+          setViewerOpen(true);
+        } else {
+          console.error('[DEBUG] Unexpected result type:', typeof result, result);
+          setViewerItem({ 
+            ...item, 
+            content: 'Failed to load PDF. Please try again or open original.', 
+            sourceUrl: `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}` 
+          });
+          setViewerOpen(true);
+        }
+      } catch (pdfError) {
+        console.error('[DEBUG] Error fetching PDF:', pdfError);
+        setViewerItem({ 
+          ...item, 
+          content: 'Failed to load PDF. Please try again or open original.', 
+          sourceUrl: `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}` 
+        });
+        setViewerOpen(true);
+      }
+
+    } catch (e) {
+      console.error('[DEBUG] Critical error in openMaterial:', e);
+      setViewerItem(item); // Show original item on error
+      setViewerOpen(true);
+    } finally {
+      setViewerLoading(false);
+      console.log('--- [DEBUG] openMaterial END ---');
+    }
+  };
+
+  const refreshMaterialAnalysis = async (material) => {
+    // Derive IDs robustly for Gradescope assignments/materials
+    const derivedCourseId = material.raw?.gsCourseId
+      || material.courseExternalId
+      || selectedCourse?.externalId
+      || selectedCourse?.raw?.externalId
+      || material.raw?.courseId
+      || null;
+
+    const derivedAssignmentId = material.raw?.gsAssignmentId
+      || material.externalId
+      || material.raw?.externalId
+      || material.raw?.id
+      || null;
+
+    if (!derivedCourseId || !derivedAssignmentId || !currentUser?.uid) {
+      console.error('Missing required data for cache refresh:', { material, derivedCourseId, derivedAssignmentId });
+      alert('Cannot refresh: missing course or assignment ID. Try opening the item once first.');
+      return;
+    }
+
+    const itemKey = `${derivedCourseId}-${derivedAssignmentId}`;
+    
+    try {
+      setRefreshingItems(prev => new Set(prev).add(itemKey));
+      
+      console.log(`[CACHE REFRESH] Clearing cache for ${material.name}...`);
+      
+      const response = await fetch('/api/cache/clear-document-cache', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await currentUser.getIdToken()}`
+        },
+        body: JSON.stringify({
+          courseId: String(derivedCourseId),
+          assignmentId: String(derivedAssignmentId),
+          userId: currentUser.uid
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log(`[CACHE REFRESH] ✅ Cache cleared for ${material.name}`);
+        alert(`✅ Analysis cache cleared for "${material.name}"\n\nNext time you ask about this document, it will be re-analyzed with the latest comprehensive extraction system!`);
+      } else {
+        console.error('[CACHE REFRESH] Failed:', result.error);
+        alert(`❌ Failed to clear cache: ${result.error}`);
+      }
+      
+    } catch (error) {
+      console.error('[CACHE REFRESH] Error:', error);
+      alert(`❌ Error clearing cache: ${error.message}`);
+    } finally {
+      setRefreshingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
+    }
+  };
+
+  const handleClearAllCache = async () => {
+    if (!currentUser) return;
+    
+    if (!window.confirm("Are you sure you want to clear the analysis cache for ALL your documents? This will trigger a fresh, full re-analysis next time you ask about any of them.")) {
+      return;
+    }
+
+    try {
+      console.log(`[CACHE CLEAR] Clearing all cache for user ${currentUser.uid}...`);
+      
+      const response = await fetch('/api/cache/clear-user-cache', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await currentUser.getIdToken()}`
+        },
+        body: JSON.stringify({ userId: currentUser.uid })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`✅ ${result.message}`);
+      } else {
+        alert(`❌ Failed to clear cache: ${result.error}`);
+      }
+      
+    } catch (error) {
+      alert(`❌ Error clearing cache: ${error.message}`);
+    }
+  };
+
+  const openSourceDocument = async (source) => {
+    console.log('[SOURCES] Opening source document:', source);
+    
+    try {
+      // Find the material in allContextItems by fileId
+      const material = allContextItems.find(item => 
+        item.raw?.id === source.fileId || 
+        item.raw?.gsAssignmentId === source.fileId ||
+        item.name === source.title ||
+        item.externalId === source.fileId
+      );
+      
+      if (material) {
+        // Open the material using existing openMaterial function
+        await openMaterial(material, source.page);
+      } else {
+        // Fallback: try to construct a Firebase Storage URL
+        const storageUrl = `https://firebasestorage.googleapis.com/v0/b/studyplan-81a4f.appspot.com/o/course-materials%2F${encodeURIComponent(source.fileId)}?alt=media`;
+        window.open(storageUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('[SOURCES] Error opening source document:', error);
+      alert(`Could not open ${source.title}. The document may no longer be available.`);
+    }
+  };
+
+  const getMaterialStatus = (item) => {
+    // Check if RAG is enabled
+    const RAG_ENABLED = import.meta.env.VITE_RAG_ENABLED === 'true';
+    if (!RAG_ENABLED) {
+      return null;
+    }
+    
+    // Check various indicators of indexing status
+    const hasExtractedContent = item.extractedContent && item.extractedContent.length > 1000;
+    const hasIndexMeta = item.indexMeta && item.indexMeta.chunkCount > 0;
+    const isProcessing = refreshingItems.has(`${item.raw?.gsCourseId}-${item.raw?.gsAssignmentId}`);
+    
+    if (isProcessing) {
+      return { status: 'processing', label: 'Processing' };
+    } else if (hasIndexMeta) {
+      return { status: 'indexed', label: `Indexed (${item.indexMeta.chunkCount} chunks)` };
+    } else if (hasExtractedContent) {
+      return { status: 'indexed', label: 'Indexed' };
+    } else if (item.type === 'assignment' && item.name.toLowerCase().includes('exam')) {
+      return { status: 'needs-ocr', label: 'Needs OCR' };
+    } else {
+      return { status: 'needs-indexing', label: 'Not Indexed' };
+    }
+  };
+
+  const closeViewer = () => {
+    setViewerOpen(false);
+    setViewerItem(null);
+    if (viewerBlobUrl) {
+      URL.revokeObjectURL(viewerBlobUrl);
+      setViewerBlobUrl(null);
+    }
+  };
 
   // Initialize audio element
   useEffect(() => {
@@ -547,31 +937,56 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
         // Clear the attached file
         setAttachedFile(null);
         } else {
-        // Regular chat message
+        // Regular chat message using RAG
         const chatPayload = {
-          message: userMessage,
-          history: chatHistory,
-          courseId: selectedCourse?.id,
-          classroomId: selectedCourse?.type === 'classroom' ? selectedCourse.id : null
+          sessionId: `user-${currentUser?.uid || 'anonymous'}-course-${selectedCourse?.id || 'default'}`,
+          courseId: selectedCourse?.id || 'cs-parallel-sp24', // Default for testing
+          message: userMessage
         };
         
-        response = await postChatMessage(chatPayload);
+        console.log('Using RAG chat with payload:', chatPayload);
+        response = await chatAsk(chatPayload);
           }
 
       console.log('Chat API Response:', response);
       setLastApiResponse(response);
 
         if (response.success) {
+          const data = response?.data || {};
+          let text = data.response || data.text || data.answer || '';
+          let sources = Array.isArray(data.sources) ? data.sources : [];
+
+          // RAG fallback if backend response is empty
+          if (!text || text.trim().length === 0) {
+            console.log('Backend response empty, falling back to RAG retrieve...');
+            const rr = await api.ragRetrieve({ courseId: chatPayload.courseId, query: userMessage });
+            const chunks = rr?.data?.chunks || rr?.chunks || [];
+            sources = chunks.map((c, i) => ({
+              title: c.title || c.heading || c.filename || `Doc ${i+1}`,
+              fileId: c.fileId,
+              page: c.page,
+              score: c.score
+            }));
+            if (chunks.length > 0) {
+              const titles = [...new Set(chunks.map(c => c.title || c.filename || 'a course document'))].slice(0,3).join(', ');
+              text = `Yes—found relevant context in ${chunks.length} chunk(s) from ${titles}. What specifically should I pull from these pages?`;
+            } else {
+              text = `I couldn't find matching context in the course documents. Try mentioning a title or page.`;
+            }
+          }
+
           const aiMessage = {
-          role: 'assistant',
-          content: response.data.response,
-          timestamp: new Date(),
-          materials: response.data.materials,
-            usageMetadata: response.data.usageMetadata
+            role: 'assistant',
+            content: text,
+            sources: sources,
+            timestamp: new Date(),
+            materials: response.data.materials, // Legacy materials
+            usageMetadata: response.data.usageMetadata || response.data.usage,
+            confidence: response.data.confidence
           };
           setChatHistory(prev => [...prev, aiMessage]);
         } else {
-        setError(response.message || 'Failed to get response from AI');
+        setError(response.error || response.message || 'Failed to get response from AI');
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -728,8 +1143,8 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
           <p className="chat-description">
               {selectedCourse ? (
                 <>
-                  Chatting with context from <strong>{selectedCourse.name}</strong> course.
-                  {courseMaterials.length > 0 && (
+                  Chatting with context from <strong>{selectedCourse.displayName || selectedCourse.name}</strong> course.
+                  {(courseMaterials.materials?.length > 0 || courseMaterials.assignments?.length > 0) && (
                     <span className="text-sm text-blue-600"> I have access to your course materials!</span>
                   )}
                 </>
@@ -797,17 +1212,130 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
         </div>
         <div className="chat-header-controls">
           <CourseSelector />
-          {selectedCourse && courseMaterials.length > 0 && (
-            <div className="classroom-materials-indicator">
-              <span className="text-xs text-white">
-                📚 {courseMaterials.length} course materials available
-              </span>
+          {selectedCourse && (
+            <div className="selected-course-meta">
+              {selectedCourse.role && (
+                <span className="meta-pill role-pill"><strong>Role:</strong> {selectedCourse.role}</span>
+              )}
+              {typeof selectedCourse.totalIntegrations === 'number' && (
+                <span className="meta-pill integrations-pill"><strong>Integrations:</strong> {selectedCourse.totalIntegrations}</span>
+              )}
+              {(allContextItems.length > 0) && (
+                <span className="meta-pill materials-pill"><strong>Context:</strong> {allContextItems.length} items</span>
+              )}
             </div>
           )}
         </div>
       </div>
 
       <div className="enhanced-messages-area">
+        {selectedCourse && allContextItems.length > 0 && (
+          <div className="course-materials-display">
+            <div className="materials-header">
+              <div className="materials-header-left">
+                <FaBookOpen className="header-icon" />
+              <div className="header-text">
+                <span className="header-title">Course Context Loaded</span>
+                <span className="header-subtitle">{allContextItems.length} items available from <strong>{selectedCourse.name}</strong></span>
+                
+                {/* Manual Refresh Button */}
+                <button 
+                  className="refresh-context-button"
+                  onClick={handleRefreshContext}
+                  disabled={isIndexing}
+                  title="Refresh RAG context for this course"
+                >
+                  <FaSync className={isIndexing ? 'spinning' : ''} />
+                  Refresh Context
+                </button>
+                
+                {/* RAG Debug Info */}
+                {ragDebugInfo && (
+                  <div className="rag-debug-info">
+                    <div className="rag-stats">
+                      <span className="stat">PDFs: {ragDebugInfo.docCounts.pdfDocs}</span>
+                      <span className="stat">Metadata: {ragDebugInfo.docCounts.metadataDocs}</span>
+                      <span className="stat">Chunks: {ragDebugInfo.docCounts.totalChunks}</span>
+                    </div>
+                    
+                    {ragDebugInfo.docCounts.pdfDocs === 0 && ragDebugInfo.docCounts.metadataDocs > 0 && (
+                      <div className="rag-warning">
+                        <span className="warning-text">Only assignment metadata is indexed. PDF content isn't available yet.</span>
+                        <button 
+                          className="index-pdfs-button"
+                          onClick={handleIndexPDFs}
+                          disabled={isIndexing}
+                        >
+                          {isIndexing ? <FaSpinner className="spinning" /> : <FaSync />}
+                          {isIndexing ? 'Indexing...' : 'Index PDFs now'}
+                        </button>
+                      </div>
+                    )}
+                    
+                    {indexingProgress && (
+                      <div className="indexing-progress">
+                        <span className="progress-text">{indexingProgress.message}</span>
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ width: `${indexingProgress.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              </div>
+              <button 
+                className="clear-cache-button" 
+                title="Clear all my cached document analyses. This will force a fresh, deep re-analysis for all documents."
+                onClick={handleClearAllCache}
+              >
+                <FaTrashAlt />
+              </button>
+            </div>
+            <div className="materials-list-container">
+              {allContextItems.map((item, index) => {
+                const materialStatus = getMaterialStatus(item);
+                return (
+                  <button key={index} className="material-file-item clickable" title={item.name} onClick={() => openMaterial(item)}>
+                    <FaFileAlt className="file-icon" />
+                    <span className="file-name">{item.name}</span>
+                    <div className="material-actions">
+                      {materialStatus && (
+                        <span className={`status-badge ${materialStatus.status}`} title={materialStatus.label}>
+                          {materialStatus.status === 'indexed' ? 'IDX' : 
+                           materialStatus.status === 'processing' ? 'PROC' :
+                           materialStatus.status === 'needs-ocr' ? 'OCR' : 'NEW'}
+                        </span>
+                      )}
+                      <span 
+                        className={`refresh-chip ${refreshingItems.has(`${item.raw?.gsCourseId}-${item.raw?.gsAssignmentId}`) ? 'refreshing' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); refreshMaterialAnalysis(item); }}
+                        title="Refresh Analysis - Clear cache and re-analyze with latest system"
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <FaSync className={refreshingItems.has(`${item.raw?.gsCourseId}-${item.raw?.gsAssignmentId}`) ? 'spinning' : ''} />
+                      </span>
+                      <span
+                        className="debug-chip"
+                        onClick={(e) => { e.stopPropagation(); alert(JSON.stringify(item, null, 2)); }}
+                        title="Show Raw Data"
+                        role="button"
+                        tabIndex={0}
+                      >
+                        {'{...}'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {chatHistory.length === 0 ? (
           <div className="enhanced-initial-prompt">
             <div 
@@ -942,6 +1470,53 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
                     )}
                     {/* Use the helper function for AI messages */} 
                     {(msg.sender === 'ai' || msg.role === 'ai') ? renderFormattedContent(msg.text || msg.content) : (msg.text || msg.content)}
+                    
+                    {/* Show materials list only when there's no assistant text */}
+                    {(msg.sender === 'ai' || msg.role === 'ai') && msg.materials && msg.materials.length > 0 && (!msg.text || !msg.content || (msg.text || msg.content).trim().length === 0) && (
+                      <div className="message-materials">
+                        <div className="materials-header">
+                          <FaBookOpen className="materials-icon" />
+                          <span>Available Materials ({msg.materials.length})</span>
+                        </div>
+                        <div className="materials-list">
+                          {msg.materials.map((material, materialIndex) => (
+                            <div key={materialIndex} className="material-item">
+                              <FaFileAlt className="material-file-icon" />
+                              <span className="material-name">{material.name || material.title || 'Untitled'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show sources panel for AI messages with sources */}
+                    {(msg.sender === 'ai' || msg.role === 'ai') && msg.sources && msg.sources.length > 0 && (
+                      <div className="message-sources">
+                        <div className="sources-header">
+                          <FaBookOpen className="sources-icon" />
+                          <span>Sources ({msg.sources.length})</span>
+                        </div>
+                        <div className="sources-list">
+                          {msg.sources.map((source, sourceIndex) => (
+                            <div 
+                              key={sourceIndex} 
+                              className="source-item"
+                              onClick={() => openSourceDocument(source)}
+                              title={`Open ${source.title}${source.page ? ` at page ${source.page}` : ''}`}
+                            >
+                              <FaFileAlt className="source-file-icon" />
+                              <span className="source-title">{source.title}</span>
+                              {source.page && <span className="source-page">p.{source.page}</span>}
+                              {source.score && (
+                                <span className="source-score" title={`Relevance: ${(source.score * 100).toFixed(1)}%`}>
+                                  {(source.score * 100).toFixed(0)}%
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1045,6 +1620,34 @@ const AiTutorChat = ({ message, setMessage, chatHistory, setChatHistory }) => {
           </span>
         </div>
       </form>
+
+      {/* Simple Material Viewer Modal (no external deps) */}
+      {viewerOpen && (
+        <div className="material-viewer-backdrop" onClick={closeViewer}>
+          <div className="material-viewer-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="viewer-header">
+              <span className="viewer-title">{viewerItem?.name || 'Material'}</span>
+              <button className="viewer-close" onClick={closeViewer}>×</button>
+            </div>
+            <div className="viewer-content">
+              {viewerLoading ? (
+                <div className="viewer-empty">Loading…</div>
+              ) : viewerItem?.url ? (
+                <iframe src={viewerItem.url} title={viewerItem?.name || 'Material'} className="viewer-iframe" />
+              ) : viewerItem?.content ? (
+                <pre className="viewer-text">{viewerItem.content}</pre>
+              ) : (
+                <div className="viewer-empty">No preview available for this item.</div>
+              )}
+              {viewerItem?.sourceUrl && (
+                <a className="viewer-external" href={viewerItem.sourceUrl} target="_blank" rel="noreferrer">
+                  Open original <FaExternalLinkAlt />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

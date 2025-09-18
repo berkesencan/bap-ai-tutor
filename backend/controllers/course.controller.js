@@ -1,6 +1,12 @@
 const Course = require('../models/course.model');
 const Assignment = require('../models/assignment.model');
 const { GradescopeService } = require('../services/gradescope.service');
+const { getServiceForUser } = require('./gradescope.controller');
+const { getRequestUserId } = require('../utils/requestUser');
+const { resolveEffectiveUser, isEffectiveMember } = require('../utils/effectiveUser');
+const { getUserVisibleCourses } = require('../services/courses.visible.service');
+const flags = require('../config/flags');
+const { db } = require('../config/firebase');
 
 /**
  * Course controller for handling course-related operations
@@ -15,7 +21,10 @@ class CourseController {
   static async create(req, res, next) {
     try {
       const courseData = req.body;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
       const course = await Course.create(courseData, userId);
       
@@ -38,21 +47,25 @@ class CourseController {
    */
   static async getAll(req, res, next) {
     try {
-      const userId = req.user.uid;
-      const { limit = 20, offset = 0 } = req.query;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
-      console.log(`[Course Controller] Getting courses for user ${userId} (limit: ${limit})`);
+      console.log(`[Course Controller] Getting visible courses for user ${userId}`);
       
-      const courses = await Course.getByUserId(userId, parseInt(limit), parseInt(offset));
+      // Use the new unified visible courses service
+      const { getUserVisibleCourses } = require('../services/courses.visible.service');
+      const courses = await getUserVisibleCourses(userId);
       
-      console.log(`[Course Controller] Found ${courses.length} courses for user`);
+      console.log(`[Course Controller] Found ${courses.length} visible courses for user`);
       
       res.status(200).json({
         success: true,
         data: {
           courses,
           totalFound: courses.length,
-          hasMore: courses.length >= parseInt(limit)
+          hasMore: false // No pagination for visible courses
         },
       });
     } catch (error) {
@@ -91,7 +104,7 @@ class CourseController {
       }
       
       // Check if the course belongs to the current user
-      if (course.userId !== req.user.uid) {
+      if (course.userId !== getRequestUserId(req)) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to access this course',
@@ -130,7 +143,7 @@ class CourseController {
       }
       
       // Check if the course belongs to the current user
-      if (course.userId !== req.user.uid) {
+      if (course.userId !== getRequestUserId(req)) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to update this course',
@@ -170,14 +183,14 @@ class CourseController {
       }
       
       // Check if the course belongs to the current user
-      if (course.userId !== req.user.uid) {
+      if (course.userId !== getRequestUserId(req)) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to delete this course',
         });
       }
       
-      await Course.delete(courseId, req.user.uid);
+      await Course.delete(courseId, getRequestUserId(req));
       
       res.status(200).json({
         success: true,
@@ -192,7 +205,10 @@ class CourseController {
   static async importFromGradescope(req, res) {
     try {
       const { courses, assignments } = req.body;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       // Process courses
       const importedCourses = [];
@@ -260,6 +276,20 @@ class CourseController {
 
             // Add assignment to database with all required parameters
             await Assignment.create(newAssignment, createdCourse.id, userId);
+            
+            // Auto-ingest assignment PDF into RAG if available
+            try {
+              const { autoIngestAssignmentPDF } = require('../auto-ingest-assignment');
+              await autoIngestAssignmentPDF(
+                createdCourse.id,  // Internal course ID
+                assignment.id,     // Gradescope assignment ID
+                userId,
+                newAssignment
+              );
+            } catch (ingestionError) {
+              console.warn(`[Course Import] Failed to auto-ingest assignment ${assignment.id}:`, ingestionError.message);
+              // Don't fail the import if ingestion fails
+            }
           }
         }
       }
@@ -282,11 +312,36 @@ class CourseController {
   // Manage Gradescope course imports (add/remove courses and assignments)
   static async manageGradescopeImports(req, res) {
     try {
-      const { selectedCourseIds, gradescopeCourses, assignments } = req.body;
-      const userId = req.user.uid;
+      const { selectedCourseIds } = req.body;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       console.log('Managing Gradescope imports for user:', userId);
       console.log('Selected course IDs:', selectedCourseIds);
+
+      // Fetch Gradescope courses and assignments data
+      const gradescopeService = await getServiceForUser(userId);
+      const allGSCourses = await gradescopeService.getCourses();       // <- ALWAYS an array of {id, name,...}
+      const gsCoursesArr =
+        Array.isArray(allGSCourses) ? allGSCourses
+        : Array.isArray(allGSCourses?.courses) ? allGSCourses.courses
+        : typeof allGSCourses === 'object' ? Object.values(allGSCourses)
+        : [];
+      
+      const assignments = {};
+      
+      // Fetch assignments for each selected course
+      for (const courseId of selectedCourseIds) {
+        try {
+          const courseAssignments = await gradescopeService.getAssignments(courseId);
+          assignments[courseId] = courseAssignments;
+        } catch (error) {
+          console.warn(`Failed to fetch assignments for course ${courseId}:`, error.message);
+          assignments[courseId] = [];
+        }
+      }
 
       // Get all currently imported Gradescope courses for this user
       const currentCourses = await Course.getByUserId(userId);
@@ -322,14 +377,15 @@ class CourseController {
         }
       }
 
-      // Add new courses and their assignments
+      // Add new courses and their assignments using modern linked integration system
       const addedCourses = [];
       for (const externalId of coursesToAdd) {
-        const gradescopeCourse = gradescopeCourses.find(course => course.id === externalId);
+        const gradescopeCourse = gsCoursesArr.find(course => String(course.id) === String(externalId));
         if (gradescopeCourse) {
-          console.log(`Adding course: ${gradescopeCourse.name} (${externalId})`);
+          console.log(`Adding course with linked integration: ${gradescopeCourse.name} (${externalId})`);
           
-          const newCourse = {
+          // 1. Create the integration course first
+          const integrationCourseData = {
             name: gradescopeCourse.name || 'Unnamed Course',
             code: gradescopeCourse.code || 'No Code',
             professor: 'Imported from Gradescope',
@@ -342,30 +398,27 @@ class CourseController {
             term: gradescopeCourse.term || null
           };
 
-          const createdCourse = await Course.create(newCourse, userId);
-          addedCourses.push(createdCourse);
+          const integrationCourse = await Course.create(integrationCourseData, userId);
+          console.log(`Created integration course: ${integrationCourse.id}`);
 
-          // Add assignments for this course
+          // 2. Add assignments to the integration course
           if (assignments[externalId] && assignments[externalId].length > 0) {
+            const Assignment = require('../models/assignment.model');
             for (const assignment of assignments[externalId]) {
               // Parse the due date properly
               let dueDate;
               if (assignment.dueDate) {
-                // If it's already a date string from datetime attribute, parse it
                 if (typeof assignment.dueDate === 'string' && assignment.dueDate.includes('-')) {
                   dueDate = new Date(assignment.dueDate);
                 } else {
-                  // Try to parse various date formats
                   dueDate = new Date(assignment.dueDate);
                 }
                 
-                // If parsing failed, set to null
                 if (isNaN(dueDate.getTime())) {
                   console.warn(`Invalid due date for assignment ${assignment.name}: ${assignment.dueDate}, setting as null`);
                   dueDate = null;
                 }
               } else {
-                console.warn(`No due date found for assignment ${assignment.name}, setting as null`);
                 dueDate = null;
               }
 
@@ -384,17 +437,82 @@ class CourseController {
                 files: []
               };
 
-              const Assignment = require('../models/assignment.model');
-              await Assignment.create(newAssignment, createdCourse.id, userId);
+              await Assignment.create(newAssignment, integrationCourse.id, userId);
               console.log(`Added assignment: ${assignment.name}`);
+              
+              // Auto-ingest assignment PDF into RAG if available
+              try {
+                const { autoIngestAssignmentPDF } = require('../auto-ingest-assignment');
+                await autoIngestAssignmentPDF(
+                  integrationCourse.id,  // Internal course ID
+                  assignment.id,     // Gradescope assignment ID
+                  userId,
+                  newAssignment,
+                  externalId  // Gradescope course ID
+                );
+              } catch (ingestionError) {
+                console.warn(`[Manage Import] Failed to auto-ingest assignment ${assignment.id}:`, ingestionError.message);
+                // Don't fail the import if ingestion fails
+              }
             }
           }
+
+          // 3. Find or create main BAP course for this user
+          let mainCourse = currentCourses.find(course => 
+            course.source === null && (
+              course.name.toLowerCase().includes('gradescope') ||
+              course.name.toLowerCase().includes('imported')
+            )
+          );
+
+          if (!mainCourse) {
+            // Create a main course to hold linked integrations
+            const mainCourseData = {
+              name: 'My Gradescope Courses',
+              code: 'GRADESCOPE',
+              description: 'Container for imported Gradescope courses',
+              source: null, // This is a native BAP course
+            };
+            mainCourse = await Course.create(mainCourseData, userId);
+            console.log(`Created main BAP course: ${mainCourse.id}`);
+          }
+
+          // 4. Link the integration course to the main course using the new system
+          const linkedIntegration = {
+            integrationId: integrationCourse.id,
+            platform: 'gradescope',
+            platformName: 'Gradescope',
+            courseName: integrationCourse.name,
+            courseCode: integrationCourse.code,
+            linkedAt: new Date(),
+            linkedBy: userId,
+            isActive: true
+          };
+
+          // Update main course with user-specific linked integration
+          const currentUserLinkedIntegrations = mainCourse.userLinkedIntegrations || {};
+          const userIntegrations = currentUserLinkedIntegrations[userId] || [];
+          userIntegrations.push(linkedIntegration);
+          currentUserLinkedIntegrations[userId] = userIntegrations;
+
+          await db.collection('courses').doc(mainCourse.id).update({
+            userLinkedIntegrations: currentUserLinkedIntegrations,
+            updatedAt: new Date()
+          });
+
+          console.log(`Linked integration ${integrationCourse.id} to main course ${mainCourse.id}`);
+
+          // 5. Trigger aggregation for this user
+          await Course.aggregateUserLinkedIntegrationContent(mainCourse.id, userId);
+          console.log(`Aggregated content for user ${userId} in course ${mainCourse.id}`);
+
+          addedCourses.push(integrationCourse);
         }
       }
 
       res.status(200).json({
         success: true,
-        message: 'Successfully updated Gradescope course imports',
+        message: 'Successfully updated Gradescope course imports using linked integration system',
         added: addedCourses.length,
         removed: coursesToRemove.length,
         addedCourses: addedCourses
@@ -414,7 +532,10 @@ class CourseController {
    */
   static async createCourse(req, res) {
     try {
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const courseData = req.body;
 
       console.log('Creating course with data:', JSON.stringify(courseData, null, 2));
@@ -462,8 +583,13 @@ class CourseController {
    */
   static async getUserCourses(req, res) {
     try {
-      const userId = req.user.uid;
-      const courses = await Course.getByUserId(userId);
+      const { effectiveReadUserId } = resolveEffectiveUser(req);
+      if (!effectiveReadUserId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
+      
+      // Use unified service to get user-visible courses with accurate counts
+      const courses = await getUserVisibleCourses(effectiveReadUserId);
 
       res.json({
         success: true,
@@ -487,7 +613,10 @@ class CourseController {
   static async getCourseById(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -498,11 +627,17 @@ class CourseController {
       }
 
       // Check if user is a member
-      if (!course.members.includes(userId)) {
+      const isMember = course.members.includes(userId);
+      if (!isMember && !(flags.DEV_NO_AUTH && (flags.DEV_IMPERSONATE || flags.DEV_RELAX_MEMBERSHIP))) {
         return res.status(403).json({
           success: false,
           message: 'Access denied'
         });
+      }
+      
+      // Log dev relax usage
+      if (flags.DEV_NO_AUTH && flags.DEV_RELAX_MEMBERSHIP && !isMember) {
+        console.warn(`[DEV] Membership relaxed for user ${userId}, course ${courseId}`);
       }
 
       // Add user role
@@ -529,7 +664,10 @@ class CourseController {
    */
   static async joinCourse(req, res) {
     try {
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const { joinCode, password } = req.body;
 
       console.log('Join course attempt:', {
@@ -592,7 +730,10 @@ class CourseController {
   static async leaveCourse(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const { newOwnerId } = req.body; // Optional: for ownership transfer
 
       await Course.leaveCourse(courseId, userId, newOwnerId);
@@ -624,7 +765,10 @@ class CourseController {
   static async transferOwnership(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const { newOwnerId } = req.body;
 
       if (!newOwnerId) {
@@ -665,7 +809,10 @@ class CourseController {
   static async updateCourse(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const updateData = req.body;
 
       // Validate that publicly joinable courses don't have passwords
@@ -706,7 +853,10 @@ class CourseController {
   static async deleteCourse(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       await Course.delete(courseId, userId);
 
@@ -737,7 +887,10 @@ class CourseController {
   static async addIntegration(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       const { platform, credentials } = req.body;
 
       if (!platform || !credentials) {
@@ -847,7 +1000,10 @@ class CourseController {
   static async removeIntegration(req, res) {
     try {
       const { courseId, platform } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const updatedCourse = await Course.removeIntegration(courseId, userId, platform);
 
@@ -871,7 +1027,10 @@ class CourseController {
   static async getUserIntegrations(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -910,7 +1069,10 @@ class CourseController {
   static async syncIntegration(req, res) {
     try {
       const { courseId, platform } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -1008,7 +1170,10 @@ class CourseController {
   static async getCourseAssignments(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -1049,7 +1214,10 @@ class CourseController {
   static async getCourseMaterials(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const { effectiveReadUserId } = resolveEffectiveUser(req);
+      if (!effectiveReadUserId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -1059,18 +1227,32 @@ class CourseController {
         });
       }
 
-      if (!course.members.includes(userId)) {
+      const isMember = await isEffectiveMember(req, courseId, course);
+      if (!isMember && !flags.DEV_NO_AUTH) {
         return res.status(403).json({
           success: false,
           message: 'Access denied'
         });
       }
 
+      // Get user-specific aggregated data if available
+      const userAggregatedData = course.userAggregatedData?.[effectiveReadUserId] || {};
+      
+      // Use aggregated assignments from userAggregatedData, fallback to assignments collection
+      const aggregatedAssignments = userAggregatedData.assignments || [];
+      const aggregatedMaterials = userAggregatedData.materials || [];
+      const aggregatedAnnouncements = userAggregatedData.announcements || [];
+      
       res.json({
         success: true,
         data: {
-          materials: course.materials || [],
-          totalCount: course.materials?.length || 0,
+          materials: aggregatedMaterials,
+          assignments: aggregatedAssignments,
+          announcements: aggregatedAnnouncements,
+          userAggregatedData: userAggregatedData,
+          totalMaterials: aggregatedMaterials.length,
+          totalAssignments: aggregatedAssignments.length,
+          totalCount: aggregatedMaterials.length + aggregatedAssignments.length,
           lastUpdated: course.updatedAt
         }
       });
@@ -1090,7 +1272,10 @@ class CourseController {
   static async getCourseAnalytics(req, res) {
     try {
       const { courseId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -1128,7 +1313,7 @@ class CourseController {
     try {
       const { courseId, memberId } = req.params;
       const { role } = req.body;
-      const requestingUserId = req.user.uid;
+      const requestingUserId = getRequestUserId(req);
 
       await Course.updateMemberRole(courseId, requestingUserId, memberId, role);
 
@@ -1147,7 +1332,7 @@ class CourseController {
   static async removeMember(req, res) {
     try {
       const { courseId, memberId } = req.params;
-      const requestingUserId = req.user.uid;
+      const requestingUserId = getRequestUserId(req);
 
       await Course.removeMember(courseId, requestingUserId, memberId);
 
@@ -1165,7 +1350,10 @@ class CourseController {
    */
   static async getAvailableIntegrations(req, res) {
     try {
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
       
       // Get all courses for the user
       const allCourses = await Course.getByUserId(userId);
@@ -1236,7 +1424,10 @@ class CourseController {
     try {
       const { courseId } = req.params;
       const { integrationIds } = req.body;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       if (!Array.isArray(integrationIds) || integrationIds.length === 0) {
         return res.status(400).json({
@@ -1301,7 +1492,10 @@ class CourseController {
   static async unlinkIntegrationFromCourse(req, res) {
     try {
       const { courseId, integrationId } = req.params;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -1342,7 +1536,10 @@ class CourseController {
   static async mergeIntegrationsIntoCourse(req, res) {
     try {
       const { integrationIds, courseData } = req.body;
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       console.log('Merging integrations with data:', JSON.stringify({ integrationIds, courseData }, null, 2));
       console.log('User ID:', userId);
@@ -1406,7 +1603,10 @@ class CourseController {
     try {
       const { courseId } = req.params;
       const { force } = req.query; // Allow force deletion
-      const userId = req.user.uid;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
 
       const course = await Course.getById(courseId);
       if (!course) {
@@ -1471,6 +1671,129 @@ class CourseController {
         success: false,
         message: 'Failed to delete integration course',
         error: error.message
+      });
+    }
+  }
+
+  /**
+   * Manually trigger RAG ingestion for all assignments in a course
+   * @route POST /api/courses/:courseId/ingest-assignments
+   */
+  static async ingestCourseAssignments(req, res) {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user.uid;
+
+      // Get course
+      const course = await Course.getById(courseId);
+      if (!course) {
+        return res.status(404).json({ success: false, error: 'Course not found' });
+      }
+
+      // Get all assignments for this course
+      const Assignment = require('../models/assignment.model');
+      const assignments = await Assignment.getByCourseId(courseId);
+      
+      if (assignments.length === 0) {
+        return res.json({
+          success: true,
+          message: 'No assignments found for this course',
+          ingested: 0,
+          failed: 0
+        });
+      }
+
+      // Create assignment metadata chunks for RAG (fallback when PDFs aren't available)
+      const { getIngestionService } = require('../ingestion/ingestion.service');
+      const ingestion = getIngestionService();
+      await ingestion.initialize();
+
+      let ingested = 0;
+      let failed = 0;
+      const results = [];
+
+      // Process each assignment
+      for (const assignment of assignments) {
+        try {
+          console.log(`[Manual Ingest] Processing assignment: ${assignment.title}`);
+          
+          // Create a text chunk from assignment metadata
+          const assignmentText = `
+Assignment: ${assignment.title}
+Description: ${assignment.description || 'No description available'}
+Platform: ${assignment.platform || 'Unknown'}
+Status: ${assignment.status || 'Unknown'}
+Due Date: ${assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'No due date'}
+Notes: ${assignment.notes || 'No additional notes'}
+          `.trim();
+
+          // Create a simple text chunk for RAG
+          const materialId = `assignment-metadata-${assignment.id}`;
+          const courseId = course.id;
+          
+          // Check if already ingested (skip for now to force re-ingestion)
+          const existingChunks = await ingestion.getChunksByFile(courseId, materialId);
+          if (existingChunks.length > 0) {
+            console.log(`[Manual Ingest] Assignment metadata already ingested, deleting and re-ingesting: ${assignment.title}`);
+            // Delete existing chunks to force re-ingestion
+            await ingestion.deleteChunksByFile(courseId, materialId);
+          }
+
+          // Create chunks from assignment metadata
+          const { v4: uuidv4 } = require('uuid');
+          const chunks = [{
+            id: uuidv4(),
+            course_id: courseId,
+            file_id: materialId,
+            page: 1,
+            heading_path: ['Assignment Information'],
+            text: assignmentText,
+            created_at: new Date().toISOString()
+          }];
+
+          console.log(`[Manual Ingest] Storing chunk for assignment ${assignment.title}:`, {
+            course_id: courseId,
+            file_id: materialId,
+            text: assignmentText.substring(0, 100) + '...'
+          });
+
+          // Store chunks in RAG system
+          await ingestion.storeChunks(chunks);
+          
+          results.push({
+            assignmentId: assignment.id,
+            title: assignment.title,
+            status: 'indexed',
+            chunkCount: chunks.length
+          });
+          ingested++;
+
+        } catch (error) {
+          console.error(`[Manual Ingest] Failed to ingest assignment ${assignment.id}:`, error);
+          results.push({
+            assignmentId: assignment.id,
+            title: assignment.title,
+            status: 'failed',
+            error: error.message
+          });
+          failed++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Processed ${assignments.length} assignments`,
+        ingested,
+        failed,
+        results
+      });
+
+    } catch (error) {
+      console.error('Error ingesting course assignments:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to ingest course assignments',
+        details: error.message
       });
     }
   }

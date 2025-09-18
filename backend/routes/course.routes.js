@@ -1,11 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const CourseController = require('../controllers/course.controller');
-const { verifyToken: authMiddleware } = require('../middleware/auth.middleware');
 const { db } = require('../config/firebase');
 
-// Apply authentication middleware to all routes
-router.use(authMiddleware);
+// Note: Authentication middleware is applied globally in index.js
 
 // Course management routes
 router.post('/', CourseController.createCourse);
@@ -30,6 +28,7 @@ router.delete('/:courseId/members/:memberId', CourseController.removeMember);
 router.get('/:courseId/assignments', CourseController.getCourseAssignments);
 router.get('/:courseId/materials', CourseController.getCourseMaterials);
 router.get('/:courseId/analytics', CourseController.getCourseAnalytics);
+router.post('/:courseId/ingest-assignments', CourseController.ingestCourseAssignments);
 
 // Integration management routes
 router.get('/:courseId/integrations', CourseController.getUserIntegrations);
