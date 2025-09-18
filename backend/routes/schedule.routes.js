@@ -65,6 +65,13 @@ router.put(
 router.delete('/events/:eventId', ScheduleController.deleteCalendarEvent);
 
 /**
+ * @route DELETE /api/schedules/events/:eventId/recurring
+ * @desc Delete recurring events with options (this, all, or following)
+ * @access Private
+ */
+router.delete('/events/:eventId/recurring', ScheduleController.deleteRecurringEvent);
+
+/**
  * @route POST /api/schedules/import/ics
  * @desc Import calendar events from ICS file
  * @access Private

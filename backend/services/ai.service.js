@@ -9,6 +9,81 @@ const chatMessagesRef = db.collection('chatMessages');
 const quizzesRef = db.collection('quizzes');
 const quizResultsRef = db.collection('quizResults');
 
+// RAG integration
+const flags = require('../config/flags');
+
+/**
+ * Map chunks to prompt context format
+ */
+const { MAX_CONTEXT_CHARS } = require('../config/flags');
+
+function mapChunksToPromptContext(chunks, limitChars = MAX_CONTEXT_CHARS) {
+  return chunks.map(c => {
+    // Always use (content || text || '') as specified
+    const body = (c.content || c.text || '').trim();
+    return {
+      title: c.title || c.heading || '(untitled)',
+      page: c.page ?? null,
+      kind: c.kind,
+      snippet: body.slice(0, limitChars)
+    };
+  }).filter(x => x.snippet && x.snippet.length >= 20); // Only include chunks with actual content >= 20 chars
+}
+
+/**
+ * Normalize chat result to consistent format
+ */
+function normalizeChatResult(raw) {
+  // Accept several shapes and coerce to the one the chat UI expects
+  const text =
+    raw?.text ??
+    raw?.answer ??
+    raw?.response ??
+    '';
+
+  const sources = Array.isArray(raw?.sources) ? raw.sources : [];
+  const materials = Array.isArray(raw?.materials) ? raw.materials : [];
+  const usageMetadata = raw?.usageMetadata || raw?.usage || null;
+  const confidence = raw?.confidence || (sources.length ? 'high' : 'low');
+
+  return { text, sources, materials, usageMetadata, confidence };
+}
+
+/**
+ * Build fallback answer from retrieval chunks
+ */
+function buildFallbackAnswerFromChunks(chunks = [], question = '') {
+  if (!chunks?.length) {
+    return `I couldn't find material for that yet. Try naming an assignment or upload a PDF.`;
+  }
+  const top = chunks.slice(0, 3).map((c, i) => {
+    const page = c.page ? `, p.${c.page}` : '';
+    const title = c.title || c.fileId || 'document';
+    return `• [${i+1}] ${title}${page}`;
+  }).join('\n');
+  return `Yes—I found relevant context for your question${question ? ` "${question}"` : ''}:\n\n${top}\n\nWhat part should I open or explain?`;
+}
+
+// TODO: DEPRECATED - Legacy context stuffing components
+// These should be removed once RAG is fully deployed
+const materialExtractsRef = flags.RAG_ENABLED ? null : db.collection('materialExtracts');
+const geminiVisionService = flags.RAG_ENABLED ? null : require('./gemini-vision.service');
+let retrievalService = null;
+
+const getRetrievalService = () => {
+  if (!retrievalService && flags.RAG_ENABLED) {
+    try {
+      const { getRetrievalService: getService } = require('../retrieval/retrieval.service');
+      retrievalService = getService();
+      console.log('[AI SERVICE] RAG retrieval service initialized successfully');
+    } catch (error) {
+      console.error('[AI SERVICE] RAG retrieval service initialization failed:', error.message);
+      console.error('[AI SERVICE] Error stack:', error.stack);
+    }
+  }
+  return retrievalService;
+};
+
 /**
  * Generate a personalized study plan with classroom context
  * @param {Object} params - Parameters for study plan generation
@@ -69,6 +144,360 @@ async function generateStudyPlan(params) {
 async function answerQuestion(params) {
   const { userId, question, courseId, classroomId, context } = params;
   
+  console.log(`[AI SERVICE] answerQuestion called with courseId: ${courseId}, RAG_ENABLED: ${flags.RAG_ENABLED}, questionLength: ${question?.length || 0}`);
+  
+  // Large user paste mode - treat pasted text as ad-hoc context
+  if (question && question.length > 600) {
+    console.log(`[AI SERVICE] Large user paste detected (${question.length} chars), treating as ad-hoc context`);
+    const pseudoChunk = {
+      title: 'User Provided Text',
+      content: question,
+      kind: 'user-paste',
+      page: null
+    };
+    
+    const contextEntries = mapChunksToPromptContext([pseudoChunk], 2000);
+    const sourcesText = contextEntries.map((entry, index) => 
+      `SOURCE ${index + 1}:
+Title: ${entry.title}
+Page: ${entry.page || 'N/A'}
+Kind: ${entry.kind}
+Excerpt:
+${entry.snippet}
+---`
+    ).join('\n\n');
+    
+    const prompt = `You are a helpful AI tutor. The user has provided a large text that they want you to analyze or answer questions about.
+
+${sourcesText}
+
+User Question: Please analyze this text and provide helpful insights, summaries, or answer any questions about it.
+
+Instructions:
+- Analyze the provided text thoroughly
+- Provide helpful insights, summaries, or answers
+- Be specific and reference parts of the text when relevant
+- If the text contains specific questions, answer them directly`;
+
+    const GeminiService = require('./gemini.service');
+    const response = await GeminiService.testGeminiFlash(prompt);
+    
+    return normalizeChatResult({
+      text: response.text || 'I analyzed your text but couldn\'t generate a response. Please try rephrasing your question.',
+      sources: [{
+        title: 'User Provided Text',
+        page: null,
+        kind: 'user-paste',
+        fileId: 'user-paste',
+        score: 1.0
+      }],
+      confidence: 'high',
+      usageMetadata: response.usage || {}
+    });
+  }
+  
+  // Check if RAG is enabled and use it for course-based questions
+  let raw;
+  if (flags.RAG_ENABLED && courseId) {
+    console.log(`[AI SERVICE] Using RAG for course ${courseId}`);
+    raw = await answerQuestionWithRAG(params);
+  } else if (flags.RAG_ENABLED !== true) {
+    console.warn('[AI SERVICE] Using deprecated legacy context stuffing. Enable RAG_ENABLED=true for production.');
+    raw = await answerQuestionLegacy(params);
+  } else {
+    // RAG disabled but no legacy fallback
+    raw = {
+      answer: "I need course context to answer questions. Please ensure RAG is properly configured.",
+      sources: [],
+      confidence: 'low',
+      usageMetadata: {}
+    };
+  }
+  
+  // Normalize the result for consistent format
+  return normalizeChatResult(raw);
+}
+
+/**
+ * RAG-enabled question answering
+ */
+async function answerQuestionWithRAG(params) {
+  const { userId, question, courseId, sessionId } = params;
+  
+  console.log(`[AI SERVICE RAG] Processing question for course ${courseId}`);
+  
+  try {
+    // Get or create chat session with rolling summary
+    const session = await getOrCreateChatSession(userId, courseId, sessionId);
+    const rollingSummary = session.rolling_summary || '';
+    
+    // Retrieve relevant chunks using RAG
+    const retrieval = getRetrievalService();
+    if (!retrieval) {
+      throw new Error('RAG retrieval service not available');
+    }
+    
+    const retrievalResult = await retrieval.retrieve({
+      courseId,
+      query: question,
+      chat_window_summary: rollingSummary,
+      limit: 8
+    });
+    
+    // Count chunks by kind
+    const pdfChunks = retrievalResult.chunks.filter(c => c.kind === 'gradescope-pdf');
+    const metadataChunks = retrievalResult.chunks.filter(c => c.kind === 'assignment-metadata');
+    
+    console.log('[RAG TRACE]', {
+      course: courseId,
+      q: `"${question.substring(0, 50)}${question.length > 50 ? '...' : ''}"`,
+      chunks: retrievalResult.chunks.length,
+      pdf: pdfChunks.length,
+      meta: metadataChunks.length,
+      low_conf: retrievalResult.low_confidence
+    });
+    
+    // Check if this is a "list files" question
+    const listFilesKeywords = ['files', 'filenames', 'list', 'materials', 'problem set', 'exam', 'worksheets', 'assignments', 'homework', 'quizzes'];
+    const isListFilesQuestion = listFilesKeywords.some(keyword => 
+      question.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    // If it's a list files question and we have no chunks, try to get course materials
+    if (isListFilesQuestion && retrievalResult.chunks.length === 0) {
+      console.log('[RAG] Detected list files question, fetching course materials');
+      try {
+        const materials = await getIntegratedMaterials(userId, courseId, 'course');
+        const materialsList = materials.assignments.map(a => `• ${a.title || a.name || 'Untitled'}`).join('\n');
+        
+        if (materialsList) {
+          return {
+            text: `Here are the course materials I can see:\n\n${materialsList}`,
+            sources: [],
+            confidence: 'high',
+            usageMetadata: {}
+          };
+        }
+      } catch (error) {
+        console.error('[RAG] Error fetching course materials for list question:', error);
+      }
+    }
+    
+    // Fallback: if no chunks found, try without course filter
+    if (retrievalResult.chunks.length === 0) {
+      console.log(`[RAG][FALLBACK_NO_COURSE_MATCH] Trying retrieval without course filter for query: ${question}`);
+      const fallbackResult = await retrieval.retrieve({
+        courseId: null,
+        query: question,
+        chat_window_summary: rollingSummary,
+        limit: 8
+      });
+      
+      if (fallbackResult.chunks.length > 0) {
+        console.log(`[RAG][FALLBACK_NO_COURSE_MATCH] Found ${fallbackResult.chunks.length} chunks without course filter`);
+        retrievalResult.chunks = fallbackResult.chunks;
+        retrievalResult.low_confidence = false;
+      }
+    }
+    
+    console.log(`[AI SERVICE RAG] Retrieval result for course ${courseId}:`, {
+      chunks: retrievalResult.chunks.length,
+      low_confidence: retrievalResult.low_confidence,
+      stats: retrievalResult.stats
+    });
+    
+    // Check for empty chunks only (allow low confidence to proceed)
+    if (retrievalResult.chunks.length === 0) {
+      console.log(`[AI SERVICE RAG] No chunks found for course ${courseId}`);
+      return {
+        answer: "I don't see this information in the provided course materials. Which specific topic, section, or page should I look at to help answer your question?",
+        sources: [],
+        confidence: 'low',
+        usageMetadata: {}
+      };
+    }
+    
+    // Build grounded prompt with explicit citations using proper context mapping
+    const contextEntries = mapChunksToPromptContext(retrievalResult.chunks, MAX_CONTEXT_CHARS);
+    
+    // Hard guard: If 0 non-empty snippets, don't call Gemini
+    if (contextEntries.length === 0) {
+      console.log(`[AI SERVICE RAG] No usable context found for course ${courseId}`);
+      return {
+        answer: "No usable context found. Try Refresh Context / re-ingest.",
+        sources: [],
+        confidence: 'low',
+        usageMetadata: {}
+      };
+    }
+    
+    const sourcesText = contextEntries.map((entry, index) => 
+      `SOURCE ${index + 1} [page ${entry.page || 'N/A'}]:
+Title: ${entry.title}
+Excerpt:
+${entry.snippet}
+---`
+    ).join('\n\n');
+    
+    const prompt = `You are a precise AI tutor. Use ONLY the provided context from course materials. Always cite sources using the format [#] where # matches the source index.
+
+Chat Context: ${rollingSummary}
+
+Relevant Sources:
+${sourcesText}
+
+User Question: ${question}
+
+Instructions:
+- Provide a detailed, step-by-step answer using ONLY the information from the sources above
+- Quote exact text when possible and cite as [#] where # matches the source index
+- Format quotes clearly: "exact problem text..." [1, p.3]
+- If sources are provided, never say "I don't see X" or "I don't have enough information" - instead, summarize what was found and list the document titles and pages used
+- If the retrieved docs are related but not exact, say so and show the closest matches by title
+- List all sources you referenced at the end in format: ① filename (page X), ② filename (page Y)`;
+
+    // Log prompt context
+    const ctxChars = sourcesText.length;
+    console.log('[PROMPT]', {
+      chunksUsed: contextEntries.length,
+      ctxChars: ctxChars,
+      model: 'gemini-flash'
+    });
+
+    // Generate response using Gemini
+    const GeminiService = require('./gemini.service');
+    const response = await GeminiService.testGeminiFlash(prompt);
+    
+    console.log('[AI SERVICE RAG] Gemini response:', {
+      hasText: !!response.text,
+      textLength: response.text?.length || 0,
+      textPreview: response.text?.substring(0, 100) || 'NO_TEXT',
+      usage: response.usage
+    });
+    
+    // Check for locked assignments if no chunks found but query mentions specific files
+    let modelText = response.text || '';
+    
+    if (retrievalResult.chunks.length === 0) {
+      // Check if query mentions specific problem sets or assignments
+      const fileMentionMatch = question.match(/\b(problem\s*set\s*\d+|exam\s*\d+|worksheet\s*\d+)\b/gi);
+      if (fileMentionMatch && courseId) {
+        // Check if any assignments are locked for this course
+        const { Pool } = require('pg');
+        const flags = require('../config/flags');
+        
+        try {
+          const db = new Pool({
+            connectionString: flags.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+          });
+          
+          const result = await db.query(`
+            SELECT title, reason, evidence 
+            FROM assignment_index_status 
+            WHERE assignment_id IN (
+              SELECT id FROM assignments WHERE course_id = $1
+            ) AND status = 'LOCKED'
+          `, [courseId]);
+          
+          await db.end();
+          
+          if (result.rows.length > 0) {
+            const lockedFiles = result.rows.map(r => r.title).join(', ');
+            const reasons = [...new Set(result.rows.map(r => r.reason))].join(', ');
+            
+            modelText = `I see ${lockedFiles} in this course, but I can't access their contents (reason: ${reasons}). ` +
+                       `You can: (1) re-authenticate with Gradescope, (2) open it in the viewer, or (3) upload the PDF and I'll index it.`;
+          }
+        } catch (error) {
+          console.log('[AI SERVICE] Error checking locked assignments:', error.message);
+        }
+      }
+    }
+    
+    // Grounding guardrail - never say "I don't see it" if chunks exist
+    if (retrievalResult.chunks.length > 0 && (!modelText || /don'?t see|not enough information/i.test(modelText))) {
+      const top = retrievalResult.chunks.slice(0, 4);
+      const parts = top.map(c => `${c.title}${c.page != null ? ` [p.${c.page}]` : ''}`);
+      modelText = `Yes — found ${retrievalResult.chunks.length} relevant source(s): ${parts.join(', ')}. ` +
+                  `Tell me what to extract or which page to open.`;
+    }
+    
+    // Extract sources from chunks for frontend display
+    const sources = retrievalResult.chunks.map(chunk => ({
+      title: chunk.title || chunk.fileId || 'Document',
+      fileId: chunk.fileId,
+      page: chunk.page,
+      kind: chunk.kind,
+      score: chunk.score
+    }));
+    
+    // Update rolling summary and session (keep last 6 turns + summary)
+    const newRollingSummary = await generateRollingSummary(
+      session.messages || [], 
+      question, 
+      response.text || ''
+    );
+    
+    const updatedMessages = [
+      ...(session.messages || []).slice(-6), // Keep last 6 messages
+      { role: 'user', content: question, timestamp: new Date() },
+      { role: 'assistant', content: response.text || '', timestamp: new Date(), sources }
+    ];
+    
+    await updateChatSession(session.id, {
+      rolling_summary: newRollingSummary,
+      messages: updatedMessages
+    });
+    
+    console.log(`[AI SERVICE RAG] Generated response with ${sources.length} sources`);
+    
+    // Build result with proper structure
+    const result = {
+      text: modelText,
+      sources: sources,
+      confidence: retrievalResult.low_confidence ? 'medium-low' : (sources.length ? 'high' : 'low'),
+      usageMetadata: response.usage || {}
+    };
+    
+    // Normalize, then fallback if text is empty
+    let normalized = normalizeChatResult(result);
+    if (!normalized.text || !normalized.text.trim()) {
+      console.log('[AI SERVICE RAG] Gemini returned empty text, using fallback from chunks');
+      normalized.text = buildFallbackAnswerFromChunks(retrievalResult?.chunks, question);
+    }
+    
+    // Final chat logging
+    const pdfSources = sources.filter(s => s.kind === 'gradescope-pdf').length;
+    const payloadSize = JSON.stringify(normalized).length;
+    console.log('[CHAT]', {
+      hasText: !!normalized.text,
+      sources: sources.length,
+      pdfSources: pdfSources,
+      bytes: payloadSize,
+      sourceKinds: sources.map(s => s.kind)
+    });
+    
+    return normalized;
+    
+  } catch (error) {
+    console.error('[AI SERVICE RAG] Error:', error);
+    
+    return normalizeChatResult({
+      text: "I'm sorry, I encountered an error while processing your question. Please try again or contact support if the issue persists.",
+      sources: [],
+      confidence: 'error',
+      usageMetadata: { error: error.message }
+    });
+  }
+}
+
+/**
+ * Legacy context-stuffing approach (original implementation)
+ */
+async function answerQuestionLegacy(params) {
+  const { userId, question, courseId, classroomId, context } = params;
+  
   // Get enhanced context and integration data
   let enhancedContext = context || '';
   let availableMaterials = [];
@@ -99,6 +528,166 @@ async function answerQuestion(params) {
         if (availableMaterials.length > 5) {
           enhancedContext += `\n... and ${availableMaterials.length - 5} more materials`;
         }
+      }
+      
+      // Improved: include best-available text from materials/assignments/announcements
+      const textSnippets = [];
+      const addSnippet = (title, body) => {
+        if (!body) return;
+        // NO TRUNCATION - Use full content from Gemini Vision!
+        textSnippets.push(`From "${title}":\n${body}`);
+      };
+
+      // Collect from materials (content, text, extractedText, summary)
+
+      // For Gradescope materials, try to fetch PDF content if available
+      console.log(`[AI DEBUG] Processing ${availableMaterials.length} materials for PDF content extraction`);
+      for (const m of availableMaterials) { // Process ALL materials, no limit
+        let content = m.content || m.text || m.extractedText || m.summary;
+        console.log(`[AI DEBUG] Material: "${m.name || m.title}", content preview: "${(content || '').substring(0, 100)}..."`);
+        console.log(`[AI DEBUG] Material platform: ${m.platform}, sourcePlatform: ${m.sourcePlatform}, source: ${m.source}`);
+        console.log(`[AI DEBUG] Material raw data:`, JSON.stringify(m.raw, null, 2));
+        
+        // If content is just placeholder text and this is a Gradescope assignment, try to fetch PDF content
+        const hasPlaceholderContent = (!content || content.toLowerCase().includes('imported from gradescope'));
+        const isGradescopeMaterial = (m.platform === 'gradescope' || m.sourcePlatform === 'gradescope' || m.source === 'gradescope');
+        const hasRawGradescopeData = (m.raw && m.raw.platform === 'gradescope' && m.raw.courseId && m.raw.assignmentId);
+        
+        console.log(`[AI DEBUG] PDF extraction check - hasPlaceholderContent: ${hasPlaceholderContent}, isGradescopeMaterial: ${isGradescopeMaterial}, hasRawGradescopeData: ${hasRawGradescopeData}`);
+        
+        if (hasPlaceholderContent && (hasRawGradescopeData || isGradescopeMaterial)) {
+          
+          let gsCourseId = m.raw?.courseId || m.raw?.gsCourseId;
+          let gsAssignmentId = m.raw?.assignmentId || m.raw?.gsAssignmentId;
+          
+          // Fallback: Try to find the assignment details if raw data is missing
+          if (!gsCourseId || !gsAssignmentId) {
+            try {
+              console.log(`[AI Service] No raw data found, attempting to look up assignment details for: ${m.name}`);
+              
+              const Assignment = require('../models/assignment.model');
+              const Course = require('../models/course.model');
+              
+              // Find assignment by title and platform
+              const assignments = await Assignment.getByUserId(userId);
+              const matchingAssignment = assignments.find(a => 
+                (a.title.toLowerCase() === m.name.toLowerCase() || a.title.toLowerCase() === m.title.toLowerCase()) &&
+                a.source === 'gradescope' &&
+                a.externalId
+              );
+              
+              if (matchingAssignment) {
+                gsAssignmentId = matchingAssignment.externalId;
+                
+                // Get the course to find its external ID
+                const course = await Course.getById(matchingAssignment.courseId);
+                const integration = course?.linkedIntegrations?.find(i => i.platform === 'gradescope' && i.integrationCourse?.externalId);
+                
+                if (integration) {
+                  gsCourseId = integration.integrationCourse.externalId;
+                  console.log(`[AI Service] Found assignment details via DB lookup: courseId=${gsCourseId}, assignmentId=${gsAssignmentId}`);
+                } else if (course && course.externalId) {
+                  gsCourseId = course.externalId;
+                  console.log(`[AI Service] Found assignment details via legacy course externalId: courseId=${gsCourseId}, assignmentId=${gsAssignmentId}`);
+                }
+              }
+            } catch (lookupError) {
+              console.warn(`[AI Service] Failed to lookup assignment details for ${m.name}:`, lookupError.message);
+            }
+          }
+          
+          console.log(`[AI DEBUG] Final IDs for PDF extraction: gsCourseId=${gsCourseId}, gsAssignmentId=${gsAssignmentId}`);
+          
+          if (gsCourseId && gsAssignmentId) {
+            try {
+              console.log(`[AI DEBUG] 🔄 Attempting to fetch PDF content for Gradescope assignment: ${m.name} (Course: ${gsCourseId}, Assignment: ${gsAssignmentId})`);
+              const pdfContent = await extractGradescopePDFContent(gsCourseId, gsAssignmentId, userId);
+              if (pdfContent && pdfContent.trim()) {
+                content = pdfContent;
+                console.log(`[AI DEBUG] ✅ Successfully extracted ${pdfContent.length} chars of PDF content for ${m.name}`);
+                console.log(`[AI DEBUG] PDF content preview: "${pdfContent.substring(0, 200)}..."`);
+              } else {
+                console.log(`[AI DEBUG] ❌ PDF extraction returned empty/null content for ${m.name}`);
+              }
+            } catch (error) {
+              console.error(`[AI DEBUG] ❌ Failed to extract PDF content for ${m.name}:`, error.message);
+              console.error(`[AI DEBUG] Error stack:`, error.stack);
+            }
+          } else {
+            console.log(`[AI DEBUG] ⏭️ Skipping PDF extraction for ${m.name} - missing required IDs`);
+          }
+        }
+        
+        addSnippet(m.name || m.title || 'Material', content);
+      }
+
+      // Also process assignments (Gradescope) for PDF extraction and include snippets
+      const assignmentsToProcess = (courseContext.assignments || []); // Process ALL assignments
+      console.log(`[AI DEBUG] Processing ${assignmentsToProcess.length} assignments for PDF content extraction`);
+      for (const a of assignmentsToProcess) {
+        let content = a.description || a.text || a.instructions || a.summary;
+        console.log(`[AI DEBUG] Assignment: "${a.name || a.title}", content preview: "${(content || '').substring(0, 100)}..."`);
+        console.log(`[AI DEBUG] Assignment platform: ${a.platform || a.sourcePlatform || a.source}, externalId: ${a.externalId}`);
+
+        const hasPlaceholderContent = (!content || (content || '').toLowerCase().includes('imported from gradescope'));
+        const isGradescopeAssignment = (a.platform === 'Gradescope' || a.platform === 'gradescope' || a.sourcePlatform === 'gradescope' || a.source === 'gradescope');
+
+        if (hasPlaceholderContent && isGradescopeAssignment) {
+          let gsCourseId = null;
+          let gsAssignmentId = a.externalId || a.raw?.assignmentId || a.raw?.gsAssignmentId;
+
+          // Try to resolve course externalId from the assignment's courseId
+          try {
+            const Course = require('../models/course.model');
+            if (a.courseId) {
+              const course = await Course.getById(a.courseId);
+              const integration = course?.linkedIntegrations?.find(i => i.platform === 'gradescope' && i.integrationCourse?.externalId);
+              if (integration) {
+                gsCourseId = integration.integrationCourse.externalId;
+              } else if (course && course.externalId) {
+                gsCourseId = course.externalId;
+              }
+              console.log(`[AI DEBUG] Resolved course externalId for assignment: ${gsCourseId}`);
+            }
+          } catch (e) {
+            console.warn('[AI DEBUG] Failed to resolve course externalId for assignment:', e.message);
+          }
+
+          console.log(`[AI DEBUG] Final IDs for assignment PDF extraction: gsCourseId=${gsCourseId}, gsAssignmentId=${gsAssignmentId}`);
+
+          if (gsCourseId && gsAssignmentId) {
+            try {
+              console.log(`[AI DEBUG] 🔄 Attempting to fetch PDF content for assignment: ${a.name || a.title} (Course: ${gsCourseId}, Assignment: ${gsAssignmentId})`);
+              const pdfContent = await extractGradescopePDFContent(gsCourseId, gsAssignmentId, userId);
+              if (pdfContent && pdfContent.trim()) {
+                content = pdfContent;
+                console.log(`[AI DEBUG] ✅ Successfully extracted ${pdfContent.length} chars of PDF content for assignment ${a.name || a.title}`);
+              } else {
+                console.log(`[AI DEBUG] ❌ PDF extraction returned empty/null content for assignment ${a.name || a.title}`);
+              }
+            } catch (err) {
+              console.error(`[AI DEBUG] ❌ Failed to extract PDF content for assignment ${a.name || a.title}:`, err.message);
+            }
+          }
+        }
+
+        addSnippet(a.name || a.title || 'Assignment', content);
+      }
+
+      // Also include assignments and announcements if text is present
+      (courseContext.assignments || []).forEach(a => { // Include ALL assignments
+        addSnippet(a.name || a.title || 'Assignment', a.description || a.text || a.instructions);
+      });
+      (courseContext.announcements || []).forEach(n => { // Include ALL announcements
+        addSnippet(n.title || 'Announcement', n.content || n.text || n.body);
+      });
+
+      if (textSnippets.length > 0) {
+        enhancedContext += `\n\nMaterial Content Excerpts:\n${textSnippets.join('\n\n')}`;
+        console.log(`[AI DEBUG] 📝 Final enhanced context includes ${textSnippets.length} snippets. Total context length: ${enhancedContext.length}`);
+        console.log(`[AI DEBUG] Context preview: "${enhancedContext.substring(0, 500)}..."`);
+      } else {
+        console.log(`[AI DEBUG] ⚠️ No text snippets were added to context!`);
       }
     }
   } 
@@ -139,7 +728,12 @@ async function answerQuestion(params) {
   
   try {
     // Prepare the prompt with context
-    let prompt = `You are an AI tutor helping a student. `;
+    let prompt = `You are an AI tutor helping a student.
+Rules:
+- Use the provided context and any extracted document text as ground truth.
+- If grades are visible in the extracted PDF text, quote them precisely.
+- If something is not present in the extracted text, say you don't see it rather than guessing.
+`;
     
     if (availableMaterials.length > 0) {
       prompt += `You have access to course materials and should reference them when relevant. `;
@@ -150,40 +744,29 @@ async function answerQuestion(params) {
     if (enhancedContext.trim()) {
       prompt += `\n\nContext:\n${enhancedContext}`;
     }
+    prompt += `\n\nImportant:\n- If you see an explicit score such as "Total Points X / Y" in the extracted text, report it directly.\n- Cite the assignment name when possible (e.g., Exam 3).`;
     
-    // Get AI response
+    // If we have any extracted PDF snippets, try richer call path that can attach PDFs directly when needed later
     const aiResponse = await GeminiService.testGeminiFlash(prompt);
     
-    const answer = {
-      userId,
-      courseId,
-      classroomId,
-      question,
-      answer: aiResponse.text,
+    return normalizeChatResult({
+      text: aiResponse.text,
+      sources: [],
       materials: availableMaterials,
-      contextType,
       usageMetadata: aiResponse.usageMetadata,
-      createdAt: new Date(),
-    };
-    
-    return answer;
+      confidence: 'high'
+    });
   } catch (error) {
     console.error('Error generating AI response:', error);
     
     // Fallback response
-    const answer = {
-      userId,
-      courseId,
-      classroomId,
-      question,
-      answer: `I'm here to help with your question: "${question}". ${availableMaterials.length > 0 ? `I have access to ${availableMaterials.length} course materials to help answer this.` : ''} However, I'm currently experiencing technical difficulties. Please try again in a moment.`,
+    return normalizeChatResult({
+      text: `I'm here to help with your question: "${question}". ${availableMaterials.length > 0 ? `I have access to ${availableMaterials.length} course materials to help answer this.` : ''} However, I'm currently experiencing technical difficulties. Please try again in a moment.`,
+      sources: [],
       materials: availableMaterials,
-      contextType,
-      error: error.message,
-      createdAt: new Date(),
-    };
-    
-    return answer;
+      usageMetadata: { error: error.message },
+      confidence: 'low'
+    });
   }
 }
 
@@ -627,16 +1210,17 @@ async function generateSummary(params) {
  */
 async function getAvailableClassrooms(userId) {
   try {
-    const Course = require('../models/course.model');
-    
-    const teachingClassrooms = await Classroom.getByTeacherId(userId);
-    const enrolledClassrooms = await Classroom.getByStudentId(userId);
-    
-    // Get user's courses
-    const userCourses = await Course.getByUserId(userId);
+      const Course = require('../models/course.model');
+      const Classroom = require('../models/classroom.model');
+      
+      const teachingClassrooms = await Classroom.getByTeacherId(userId);
+      const enrolledClassrooms = await Classroom.getByStudentId(userId);
+      
+      // Get user's courses
+      const userCourses = await Course.getByUserId(userId);
     
     // Transform courses to match classroom format for AI context
-    const courseClassrooms = userCourses.map(course => {
+    const courseClassrooms = await Promise.all(userCourses.map(async course => {
       let activeIntegrations = {};
       let userIntegrationCount = 0;
       
@@ -705,6 +1289,73 @@ async function getAvailableClassrooms(userId) {
         }
       }
       
+      // Calculate correct assignment and material counts from user aggregated data
+      let totalAssignments = 0;
+      let totalMaterials = 0;
+
+      // Primary: use this course's user-aggregated data
+      if (course.userAggregatedData && course.userAggregatedData[userId]) {
+        const userData = course.userAggregatedData[userId];
+        totalAssignments += userData.assignments?.length || 0;
+        totalMaterials += userData.materials?.length || 0;
+      }
+
+      // Special case: imported Gradescope courses may aggregate into the
+      // container course ("My Gradescope Courses"). If counts are zero and
+      // this is a Gradescope import, look up the container and derive counts
+      // by filtering items whose sourceIntegration === course.id
+      if (totalAssignments === 0 && course.source === 'gradescope') {
+        console.log(`[DEBUG COUNT] Looking for container for Gradescope course: ${course.name} (${course.id})`);
+        const containers = userCourses.filter(candidate => {
+          const links = candidate.userLinkedIntegrations?.[userId] || [];
+          const hasLink = Array.isArray(links) && links.some(li => li.integrationId === course.id);
+          if (hasLink) {
+            console.log(`[DEBUG COUNT] Found container: ${candidate.name} with links`, links.map(l => ({integrationId: l.integrationId, platformName: l.platformName})));
+          }
+          return hasLink;
+        });
+        console.log(`[DEBUG COUNT] Found ${containers.length} containers for course ${course.name}`);
+        if (containers.length > 0) {
+          const container = containers[0];
+          const agg = container.userAggregatedData?.[userId];
+          console.log(`[DEBUG COUNT] Container ${container.name} has aggregated data:`, !!agg);
+          if (agg) {
+            const filteredAssignments = (agg.assignments || []).filter(a => a.sourceIntegration === course.id);
+            const filteredMaterials = (agg.materials || []).filter(m => m.sourceIntegration === course.id);
+            console.log(`[DEBUG COUNT] Filtered ${filteredAssignments.length} assignments and ${filteredMaterials.length} materials for course ${course.id}`);
+            console.log(`[DEBUG COUNT] Sample assignments:`, filteredAssignments.slice(0,3).map(a => ({title: a.title, sourceIntegration: a.sourceIntegration})));
+            totalAssignments = filteredAssignments.length;
+            totalMaterials = filteredMaterials.length;
+          }
+        }
+      }
+
+      // For Gradescope courses, prioritize direct assignments collection over potentially incomplete aggregated data
+      if (course.source === 'gradescope') {
+        try {
+          const Assignment = require('../models/assignment.model');
+          const direct = await Assignment.getByCourseId(course.id);
+          const directCount = direct?.length || 0;
+          console.log(`[DEBUG COUNT] Direct assignments for ${course.name}: ${directCount} vs aggregated: ${totalAssignments}`);
+          
+          // Use the higher count (direct collection should be authoritative for Gradescope)
+          if (directCount > totalAssignments) {
+            totalAssignments = directCount;
+            console.log(`[DEBUG COUNT] Using direct count ${directCount} for ${course.name}`);
+          }
+        } catch (e) {
+          console.log(`[DEBUG COUNT] Error fetching direct assignments for ${course.name}:`, e.message);
+        }
+      }
+
+      // Fallback to legacy data structure
+      if (totalAssignments === 0) {
+        totalAssignments = course.analytics?.totalAssignments || course.assignments?.length || 0;
+      }
+      if (totalMaterials === 0) {
+        totalMaterials = course.materials?.length || 0;
+      }
+
       return {
         id: course.id,
         name: course.name,
@@ -714,15 +1365,15 @@ async function getAvailableClassrooms(userId) {
         integrations: activeIntegrations,
         linkedIntegrations: course.linkedIntegrations || [], // Include linked integrations for UI
         totalIntegrations: userIntegrationCount,
-        totalAssignments: course.analytics?.totalAssignments || course.assignments?.length || 0,
-        totalMaterials: course.materials?.length || 0,
+        totalAssignments,
+        totalMaterials,
         semester: course.semester,
         year: course.year,
         instructor: course.instructor
       };
-    });
+    }));
     
-    return {
+    const result = {
       teaching: teachingClassrooms.map(c => ({
         id: c.id,
         name: c.name,
@@ -739,6 +1390,8 @@ async function getAvailableClassrooms(userId) {
       })),
       courses: courseClassrooms
     };
+    
+    return result;
   } catch (error) {
     console.error('Error getting available classrooms:', error);
     return { teaching: [], enrolled: [], courses: [] };
@@ -769,90 +1422,95 @@ async function getIntegratedMaterials(userId, contextId, contextType = 'classroo
       
       console.log(`[AI Service] Processing course context for course: ${course.name}`);
       
-      // NEW: Handle user-specific linked integrations (new merge functionality)
-      if (course.userLinkedIntegrations && course.userLinkedIntegrations[userId] && course.userLinkedIntegrations[userId].length > 0) {
+      console.log(`[DEBUG] Course userLinkedIntegrations:`, course.userLinkedIntegrations?.[userId] || 'none');
+      console.log(`[DEBUG] Course source:`, course.source);
+      console.log(`[DEBUG] Course userAggregatedData exists:`, !!course.userAggregatedData?.[userId]);
+      
+      // Prioritize user-specific aggregated data directly on the course
+      const userAggregatedData = course.userAggregatedData?.[userId];
+      if (userAggregatedData) {
+        console.log(`[DEBUG] Found direct user aggregated data: ${userAggregatedData.assignments?.length || 0} assignments`);
+        materials = userAggregatedData.materials || [];
+        assignments = userAggregatedData.assignments || [];
+        announcements = userAggregatedData.announcements || [];
+      } else if (course.source === 'gradescope') {
+        console.log(`[DEBUG] Gradescope course with no direct aggregated data, using direct assignments collection...`);
+        // For Gradescope courses, prioritize direct assignments collection as aggregation may be incomplete
+        // Fixed: Now correctly returns 17 assignments for LADE
+        const Assignment = require('../models/assignment.model');
+        assignments = await Assignment.getByCourseId(contextId);
+        console.log(`[DEBUG] Direct fetch returned ${assignments.length} assignments`);
+        
+        // Add the necessary metadata for Gradescope assignments
+        assignments = assignments.map(a => ({
+          ...a,
+          platform: 'gradescope',
+          contextId,
+          contextType: 'course',
+          raw: a.raw || {
+            platform: 'gradescope',
+            sourcePlatform: 'gradescope',
+            courseId: a.raw?.gsCourseId || a.raw?.courseId || course.externalId || contextId,
+            assignmentId: a.raw?.gsAssignmentId || a.raw?.assignmentId || a.externalId || a.id,
+            gsCourseId: a.raw?.gsCourseId || a.raw?.courseId || course.externalId || contextId,
+            gsAssignmentId: a.raw?.gsAssignmentId || a.raw?.assignmentId || a.externalId || a.id
+          }
+        }));
+      } else {
+        console.log(`[DEBUG] Non-Gradescope course, using direct assignment fetch...`);
+        // Fallback for non-Gradescope courses or if no specific aggregation/container found
+        const Assignment = require('../models/assignment.model');
+        assignments = await Assignment.getByCourseId(contextId);
+        console.log(`[DEBUG] Direct fetch returned ${assignments.length} assignments`);
+      }
+      
+      // NEW: Handle user-specific linked integrations (new merge functionality) - trigger aggregation if needed
+      if (course.userLinkedIntegrations && course.userLinkedIntegrations[userId] && course.userLinkedIntegrations[userId].length > 0 && assignments.length === 0) {
         console.log(`[AI Service] Found ${course.userLinkedIntegrations[userId].length} user-specific linked integrations`);
         
-        // Get user-specific aggregated content from the course
-        const userAggregatedData = course.userAggregatedData?.[userId];
-        if (userAggregatedData) {
-          materials = userAggregatedData.materials || [];
-          assignments = userAggregatedData.assignments || [];
-          announcements = userAggregatedData.announcements || [];
-          
-          console.log(`[AI Service] User-specific aggregated content: ${materials.length} materials, ${assignments.length} assignments, ${announcements.length} announcements`);
-        } else {
-          console.log(`[AI Service] No aggregated data found for user, triggering aggregation`);
-          // Trigger aggregation for this user
-          const Course = require('../models/course.model');
-          await Course.aggregateUserLinkedIntegrationContent(contextId, userId);
-          
-          // Reload course data
-          const updatedCourse = await Course.getById(contextId);
-          const updatedUserData = updatedCourse.userAggregatedData?.[userId];
-          if (updatedUserData) {
-            materials = updatedUserData.materials || [];
-            assignments = updatedUserData.assignments || [];
-            announcements = updatedUserData.announcements || [];
-          }
+        console.log(`[AI Service] No aggregated data found for user, triggering aggregation`);
+        // Trigger aggregation for this user
+        const Course = require('../models/course.model');
+        await Course.aggregateUserLinkedIntegrationContent(contextId, userId);
+        
+        // Reload course data
+        const updatedCourse = await Course.getById(contextId);
+        const updatedUserData = updatedCourse.userAggregatedData?.[userId];
+        if (updatedUserData) {
+          materials = updatedUserData.materials || [];
+          assignments = updatedUserData.assignments || [];
+          announcements = updatedUserData.announcements || [];
         }
-      } 
-      // Fallback: Check for legacy global linked integrations
-      else if (course.linkedIntegrations && course.linkedIntegrations.length > 0) {
-        console.log(`[AI Service] Found ${course.linkedIntegrations.length} legacy linked integrations`);
-        
-        // Get aggregated content from the course (legacy format)
-        materials = course.materials || [];
-        assignments = course.assignments || [];
-        announcements = course.announcements || [];
-        
-        console.log(`[AI Service] Legacy aggregated content: ${materials.length} materials, ${assignments.length} assignments, ${announcements.length} announcements`);
-      } else {
-        // Fallback: Get materials and assignments from course aggregation (old format)
-        materials = course.materials || [];
-        assignments = course.assignments || [];
-        announcements = course.announcements || [];
-        
-        // If this is an imported Gradescope course, add its data as materials
-        if (course.source === 'gradescope' && course.externalId) {
-          // Add course info as material
-          materials.push({
-            id: course.externalId,
-            name: course.name,
-            type: 'course_info',
-            platform: 'gradescope',
-            contextId,
-            contextType: 'course',
-            imported: true,
-            content: `Course: ${course.name}${course.code ? ` (${course.code})` : ''}${course.instructor ? ` - Instructor: ${course.instructor}` : ''}`
-          });
-        }
-        
-        // Also get user-specific integration materials (old format)
-        const userIntegrations = course.integrations?.[userId] || {};
-        Object.entries(userIntegrations).forEach(([platform, integration]) => {
-          if (integration && integration.isActive) {
-            // Add materials from this integration
-            if (integration.materials && Array.isArray(integration.materials)) {
-              materials.push(...integration.materials.map(material => ({
-                ...material,
-                platform,
-                contextId,
-                contextType: 'course'
-              })));
-            }
-            
-            // Add assignments from this integration
-            if (integration.assignments && Array.isArray(integration.assignments)) {
-              assignments.push(...integration.assignments.map(assignment => ({
-                ...assignment,
-                platform,
-                contextId,
-                contextType: 'course'
-              })));
-            }
-          }
+      }
+      
+      // Add course info as material for Gradescope courses (if not already added)
+      if (course.source === 'gradescope' && course.externalId && !materials.some(m => m.id === course.externalId)) {
+        materials.push({
+          id: course.externalId,
+          name: course.name,
+          type: 'course_info',
+          platform: 'gradescope',
+          contextId,
+          contextType: 'course',
+          imported: true,
+          content: `Course: ${course.name}${course.code ? ` (${course.code})` : ''}${course.instructor ? ` - Instructor: ${course.instructor}` : ''}`
         });
+      }
+      
+      // Handle legacy global linked integrations as additional materials if needed
+      if (course.linkedIntegrations && course.linkedIntegrations.length > 0 && assignments.length === 0) {
+        console.log(`[AI Service] Found ${course.linkedIntegrations.length} legacy linked integrations, using as fallback`);
+        
+        // Get aggregated content from the course (legacy format) - only if no assignments found yet
+        const legacyMaterials = course.materials || [];
+        const legacyAssignments = course.assignments || [];
+        const legacyAnnouncements = course.announcements || [];
+        
+        materials.push(...legacyMaterials);
+        assignments.push(...legacyAssignments);
+        announcements.push(...legacyAnnouncements);
+        
+        console.log(`[AI Service] Legacy aggregated content: ${legacyMaterials.length} materials, ${legacyAssignments.length} assignments, ${legacyAnnouncements.length} announcements`);
       }
       
     } else {
@@ -888,6 +1546,14 @@ async function getIntegratedMaterials(userId, contextId, contextType = 'classroo
     
     console.log(`[AI Service] Final context summary: ${materials.length} materials, ${assignments.length} assignments, ${announcements.length} announcements`);
     
+    // DEBUG: Log what we're returning
+    console.log('=== AI SERVICE DEBUG - getIntegratedMaterials ===');
+    console.log(`Returning ${materials.length} materials, ${assignments.length} assignments`);
+    if (assignments.length > 0) {
+      console.log('First assignment:', JSON.stringify(assignments[0], null, 2));
+    }
+    console.log('===============================================');
+    
     return {
       materials,
       assignments,
@@ -914,6 +1580,212 @@ async function getIntegratedMaterials(userId, contextId, contextType = 'classroo
       totalAnnouncements: 0,
       error: error.message 
     };
+  }
+}
+
+/**
+ * Extract comprehensive content from ANY file using Gemini Vision AI
+ * Handles PDFs, images, diagrams, handwritten text, charts - EVERYTHING!
+ * @param {string} courseId - Gradescope course ID
+ * @param {string} assignmentId - Gradescope assignment ID  
+ * @param {string} userId - User ID for authentication
+ * @returns {Promise<string|null>} - Complete document analysis or null
+ */
+// TODO: DEPRECATED - Legacy PDF extraction with context stuffing
+// This function should be removed once RAG is fully deployed
+async function extractGradescopePDFContent(courseId, assignmentId, userId) {
+  if (flags.RAG_ENABLED) {
+    console.warn('[AI SERVICE] extractGradescopePDFContent is deprecated with RAG enabled');
+    return null;
+  }
+  console.log(`[GEMINI EXTRACT] 🚀 Starting Gemini Vision extraction for courseId=${courseId}, assignmentId=${assignmentId}, userId=${userId}`);
+  
+  try {
+    // 0) Cache lookup
+    const cacheId = `${userId}__gemini__${courseId}__${assignmentId}`;
+    try {
+      const doc = await materialExtractsRef.doc(cacheId).get();
+      if (doc.exists) {
+        const data = doc.data();
+        const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : data.expiresAt;
+        const isFresh = !expiresAt || new Date() < new Date(expiresAt);
+        const cachedText = data.text || '';
+        const isLikelyOldSummary = cachedText.length < 12000;
+
+        if (isFresh && cachedText && !isLikelyOldSummary) {
+          console.log(`[GEMINI EXTRACT] 💾 Cache hit for ${cacheId} (length ${cachedText.length}) - content looks complete.`);
+          return cachedText;
+        } else {
+          if (!isFresh) {
+            console.log(`[GEMINI EXTRACT] ⚠️ Cache expired. Re-analyzing.`);
+          } else if (isLikelyOldSummary) {
+            console.log(`[GEMINI EXTRACT] ⚠️ Cache present but content is too short (length=${cachedText.length}), likely an old summary. Forcing re-analysis.`);
+          } else {
+            console.log(`[GEMINI EXTRACT] ⚠️ Cache empty. Re-analyzing.`);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[GEMINI EXTRACT] Cache lookup failed:', e.message);
+    }
+
+    // Get Gradescope service instance for the user
+    console.log(`[GEMINI EXTRACT] Getting Gradescope service for user...`);
+    const { getServiceForUser } = require('../controllers/gradescope.controller');
+    const gradescopeService = await getServiceForUser(userId);
+    
+    if (!gradescopeService) {
+      console.error(`[GEMINI EXTRACT] ❌ Gradescope service not available for user ${userId}`);
+      throw new Error('Gradescope service not available for user');
+    }
+    console.log(`[GEMINI EXTRACT] ✅ Got Gradescope service instance`);
+    
+    // Fetch PDF buffer
+    console.log(`[GEMINI EXTRACT] 📄 Fetching PDF buffer...`);
+    const pdfBuffer = await gradescopeService.getAssignmentPDF(courseId, assignmentId);
+    console.log(`[GEMINI EXTRACT] PDF buffer received, size: ${pdfBuffer?.length || 0} bytes`);
+    
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      console.log(`[GEMINI EXTRACT] ❌ PDF buffer is empty or null`);
+      return null;
+    }
+    
+    // Use Gemini Vision to analyze the ENTIRE document - images, text, diagrams, everything!
+    const tmpPath = `/tmp/gs-gemini-${courseId}-${assignmentId}-${Date.now()}.pdf`;
+    const fsPromises = require('fs').promises;
+    
+    try {
+      await fsPromises.writeFile(tmpPath, pdfBuffer);
+      console.log(`[GEMINI EXTRACT] 🔍 Analyzing with Gemini Vision...`);
+      
+      // First, attempt verbatim page-by-page transcription to capture ALL questions
+      let analysis = await geminiVisionService.extractAllTextFromPDF(tmpPath, { maxPages: 30 });
+      // If transcription seems too short, fallback to the general deep analysis
+      if (!analysis?.text || analysis.text.length < 4000 || !/Question\s*6/i.test(analysis.text)) {
+        console.log('[GEMINI EXTRACT] Transcription seems incomplete, running deep analysis pass...');
+        const deep = await geminiVisionService.analyzeFile(tmpPath, { deep: true });
+        // Merge
+        const merged = `${analysis?.text || ''}\n\n--- SUMMARY/STRUCTURE ---\n\n${deep?.text || ''}`.trim();
+        analysis = { ...deep, text: merged };
+      }
+      
+      // Clean up temp file
+      await fsPromises.unlink(tmpPath).catch(() => {});
+      
+      if (analysis && analysis.text && analysis.text.length > 100) {
+        console.log(`[GEMINI EXTRACT] ✅ Gemini Vision extracted ${analysis.text.length} characters`);
+        console.log(`[GEMINI EXTRACT] Preview: "${analysis.text.substring(0, 300)}..."`);
+        
+        // Cache the comprehensive results
+        try {
+          await materialExtractsRef.doc(cacheId).set({
+            userId,
+            source: 'gemini-vision',
+            gsCourseId: String(courseId),
+            gsAssignmentId: String(assignmentId),
+            text: analysis.text,
+            mimeType: analysis.mimeType,
+            fileSize: analysis.fileSize,
+            updatedAt: new Date(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          }, { merge: true });
+          console.log('[GEMINI EXTRACT] 💾 Cache saved');
+        } catch (e) {
+          console.warn('[GEMINI EXTRACT] Failed to save cache:', e.message);
+        }
+        
+        return analysis.text; // Return FULL content - no truncation!
+      } else {
+        console.log('[GEMINI EXTRACT] ❌ Gemini Vision returned empty or insufficient content');
+        return null;
+      }
+      
+    } catch (analysisError) {
+      console.error('[GEMINI EXTRACT] Gemini Vision analysis failed:', analysisError.message);
+      // Clean up temp file on error
+      await fsPromises.unlink(tmpPath).catch(() => {});
+      return null;
+    }
+  } catch (error) {
+    console.error(`[PDF EXTRACT DEBUG] ❌ Error extracting PDF content for course ${courseId}, assignment ${assignmentId}:`, error);
+    console.error(`[PDF EXTRACT DEBUG] Error stack:`, error.stack);
+    return null;
+  }
+}
+
+// RAG Session Management Helper Functions
+async function getOrCreateChatSession(userId, courseId, sessionId) {
+  try {
+    if (sessionId) {
+      const sessionDoc = await chatSessionsRef.doc(sessionId).get();
+      if (sessionDoc.exists) {
+        return { id: sessionId, ...sessionDoc.data() };
+      }
+    }
+    
+    // Create new session
+    const newSessionRef = chatSessionsRef.doc();
+    const newSession = {
+      userId,
+      courseId,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      messages: [],
+      rolling_summary: ''
+    };
+    
+    await newSessionRef.set(newSession);
+    return { id: newSessionRef.id, ...newSession };
+  } catch (error) {
+    console.error('[RAG SESSION] Error getting/creating session:', error);
+    throw error;
+  }
+}
+
+async function updateChatSession(sessionId, updates) {
+  try {
+    await chatSessionsRef.doc(sessionId).update({
+      ...updates,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('[RAG SESSION] Error updating session:', error);
+    throw error;
+  }
+}
+
+async function generateRollingSummary(messages, newQuestion, newAnswer) {
+  try {
+    // Build context from recent messages
+    const recentContext = messages.slice(-4).map(msg => 
+      `${msg.role}: ${msg.content}`
+    ).join('\n');
+    
+    const prompt = `Summarize this conversation in 2-3 sentences, focusing on the key topics and context that would be relevant for future questions:
+
+Recent conversation:
+${recentContext}
+User: ${newQuestion}
+Assistant: ${newAnswer}
+
+Summary (2-3 sentences max):`;
+
+    const GeminiService = require('./gemini.service');
+    const response = await GeminiService.testGeminiFlash(prompt);
+    return response.text.substring(0, 500); // Keep summary concise
+  } catch (error) {
+    console.error('[RAG SESSION] Error generating rolling summary:', error);
+    return ''; // Return empty string on error
+  }
+}
+
+async function getCourseInfo(courseId) {
+  try {
+    const courseDoc = await db.collection('courses').doc(courseId).get();
+    return courseDoc.exists ? courseDoc.data() : null;
+  } catch (error) {
+    console.error('[RAG SESSION] Error getting course info:', error);
+    return null;
   }
 }
 

@@ -5,7 +5,6 @@ import {
   gradescopeLogin, 
   getGradescopeCourses, 
   getGradescopeAssignments,
-  importGradescopeData,
   manageGradescopeImports,
   getCourses
 } from '../services/api';
@@ -45,7 +44,9 @@ const Connect = () => {
             // Load currently imported courses
             const importedResponse = await getCourses();
             if (importedResponse.success) {
-              const imported = importedResponse.data.courses.filter(course => course.source === 'gradescope');
+              const imported = importedResponse.data.courses.filter(course => 
+                course.source === 'gradescope' || course.platform === 'gradescope'
+              );
               setImportedCourses(imported);
               
               // Set initial selection state based on imported courses
@@ -171,30 +172,56 @@ const Connect = () => {
     setError('');
     
     try {
-      // Get selected courses
-      const coursesToImport = courses.filter(course => selectedCourses[course.id]);
+      // Get selected course IDs
+      const selectedCourseIds = Object.keys(selectedCourses).filter(courseId => selectedCourses[courseId]);
       
       // Get assignments for selected courses
       const assignmentsToImport = {};
-      for (const course of coursesToImport) {
-        if (assignments[course.id]) {
-          assignmentsToImport[course.id] = assignments[course.id];
+      for (const courseId of selectedCourseIds) {
+        if (!assignments[courseId]) {
+          // Fetch assignments if not already loaded
+          try {
+            const response = await getGradescopeAssignments(courseId);
+            if (response.success) {
+              assignmentsToImport[courseId] = response.data;
+            }
+          } catch (error) {
+            console.error(`Failed to fetch assignments for course ${courseId}:`, error);
+          }
+        } else {
+          assignmentsToImport[courseId] = assignments[courseId];
         }
       }
       
-      // Import data
-      const importResponse = await importGradescopeData({
-        courses: coursesToImport,
+      // Use manageGradescopeImports for all imports (including initial)
+      const importResponse = await manageGradescopeImports({
+        selectedCourseIds,
+        gradescopeCourses: courses,
         assignments: assignmentsToImport
       });
       
       console.log('Import response:', importResponse);
       
-      if (!importResponse.success && !importResponse.courses && !importResponse.message) {
+      if (importResponse.success) {
+        setImportSuccess(true);
+        
+        // Refresh imported courses after successful import
+        const importedResponse = await getCourses();
+        if (importedResponse.success) {
+          const imported = importedResponse.data.courses.filter(course => course.source === 'gradescope');
+          setImportedCourses(imported);
+          
+          // Update selection state based on newly imported courses
+          const updatedSelectedCourses = {};
+          courses.forEach(course => {
+            const isImported = imported.some(importedCourse => String(importedCourse.externalId) === String(course.id));
+            updatedSelectedCourses[course.id] = isImported;
+          });
+          setSelectedCourses(updatedSelectedCourses);
+        }
+      } else {
         throw new Error(importResponse.error || 'Failed to import data');
       }
-      
-      setImportSuccess(true);
     } catch (error) {
       console.error('Error importing data:', error);
       

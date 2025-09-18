@@ -15,12 +15,32 @@ class GeminiService {
    * @param {number} baseDelay - Base delay in milliseconds for exponential backoff (default: 1000)
    * @returns {Promise<object>} - An object containing { text: string, usageMetadata: object | null }
    */
-  static async _generateWithUsage(prompt, modelName, maxRetries = 3, baseDelay = 1000) {
+  static async _generateWithUsage(prompt, modelName, maxRetries = 3, baseDelay = 1000, options = {}) {
     let lastError = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName });
+      // Default generation config for factual quoting
+      const generationConfig = {
+        temperature: 0.2,
+        topK: 20,
+        topP: 0.8,
+        maxOutputTokens: 2048,
+        ...options.generationConfig
+      };
+      
+      // System instruction for precise tutoring
+      const systemInstruction = options.systemInstruction || 
+        'You are a precise AI tutor. Use ONLY the provided context. ' +
+        'When possible, quote exact text and cite as [#] where # matches the source index. ' +
+        'If context is empty or unrelated, say so and suggest refreshing course context. Do NOT invent content.';
+      
+      const model = genAI.getGenerativeModel({ 
+        model: modelName,
+        generationConfig,
+        systemInstruction
+      });
+      
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
@@ -96,6 +116,45 @@ class GeminiService {
     const errorMessage = error.message?.toLowerCase() || '';
     return retryableMessages.some(msg => errorMessage.includes(msg));
   }
+
+  /**
+   * Generate content using arbitrary content parts (e.g., PDFs as inlineData) with usage metadata
+   * @param {Array} contentParts - Array of parts, e.g., [{ inlineData: { mimeType, data } }, { text }]
+   * @param {string} modelName
+   * @param {number} maxRetries
+   * @param {number} baseDelay
+   * @returns {Promise<object>} - { text, usageMetadata }
+   */
+  static async _generateWithParts(contentParts, modelName = 'gemini-1.5-flash', maxRetries = 3, baseDelay = 1000) {
+    let lastError = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(contentParts);
+        const response = await result.response;
+        const text = response.text();
+        const usageMetadata = response.usageMetadata || null;
+        if (process.env.NODE_ENV === 'development') {
+          if (attempt > 0) console.log(`✅ Gemini(parts) success on attempt ${attempt + 1}/${maxRetries + 1}`);
+          console.log(`Gemini(parts) Response (${modelName}) Usage:`, usageMetadata);
+        }
+        return { text, usageMetadata };
+      } catch (error) {
+        lastError = error;
+        const isRetryableError = this._isRetryableError(error);
+        const isLastAttempt = attempt === maxRetries;
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`❌ Gemini(parts) attempt ${attempt + 1}/${maxRetries + 1} failed:`, error.message);
+        }
+        if (!isRetryableError || isLastAttempt) {
+          throw error;
+        }
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+    throw new Error(`Failed to generate content with Gemini(parts) after ${maxRetries + 1} attempts: ${lastError?.message}`);
+  }
   
   // --- Public Methods Using _generateWithUsage --- //
 
@@ -130,8 +189,28 @@ class GeminiService {
    * @returns {Promise<object>} - Object with { text: string, usageMetadata: object | null }
    */
   static async testGeminiFlash(prompt, maxRetries = 3) {
-    // Use the internal method that returns metadata
-    return this._generateWithUsage(prompt, 'gemini-1.5-flash', maxRetries); 
+    // Use the internal method that returns metadata with optimized settings for factual quoting
+    return this._generateWithUsage(prompt, 'gemini-1.5-pro', maxRetries, 1000, {
+      generationConfig: {
+        temperature: 0.2,
+        topK: 20,
+        topP: 0.8,
+        maxOutputTokens: 2048
+      },
+      systemInstruction: 'You are a precise AI tutor. Use ONLY the provided context. ' +
+        'When possible, quote exact text and cite as [#] where # matches the source index. ' +
+        'If context is empty or unrelated, say so and suggest refreshing course context. Do NOT invent content.'
+    }); 
+  }
+
+  /**
+   * Generate a chat response from content parts (PDFs + text)
+   * @param {Array} contentParts
+   * @param {number} maxRetries
+   * @returns {Promise<object>} - { text, usageMetadata }
+   */
+  static async generateChatWithParts(contentParts, maxRetries = 3) {
+    return this._generateWithParts(contentParts, 'gemini-1.5-flash', maxRetries);
   }
   
   // Add more methods as needed, e.g., for specific tutoring tasks like explaining concepts, generating questions, etc.
@@ -229,6 +308,25 @@ Provide a day-by-day breakdown with specific tasks, estimated times, and suggest
     } catch (error) {
       console.error('Error processing PDF with Gemini:', error);
       throw new Error(`Failed to process PDF: ${error.message}`);
+    }
+  }
+
+  /**
+   * Process a PDF buffer directly with Gemini 1.5 Flash
+   * @param {Buffer} pdfBuffer
+   * @param {string} prompt
+   * @returns {Promise<object>} - { text, usageMetadata }
+   */
+  static async processPDFBuffer(pdfBuffer, prompt) {
+    try {
+      const contentParts = [
+        { inlineData: { mimeType: 'application/pdf', data: pdfBuffer.toString('base64') } },
+        { text: prompt }
+      ];
+      return this._generateWithParts(contentParts, 'gemini-1.5-flash');
+    } catch (error) {
+      console.error('Error processing PDF buffer with Gemini:', error);
+      throw new Error(`Failed to process PDF buffer: ${error.message}`);
     }
   }
 

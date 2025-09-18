@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const AIController = require('../controllers/ai.controller');
+const ChatController = require('../controllers/ai/chat.controller');
 const GeminiService = require('../services/gemini.service');
 const { verifyToken: auth } = require('../middleware/auth.middleware');
 
@@ -132,8 +133,8 @@ router.post('/test-gemini', AIController.testGemini);
 // Test form parsing (for debugging)
 router.post('/test-form', upload.single('pdf'), AIController.testFormParsing);
 
-// NOTE: practice-exam route removed to avoid conflict with unprotected route in index.js
-// The unprotected route in index.js handles: POST /api/ai/practice-exam
+// TODO: DEPRECATED - practice-exam route removed to avoid conflict with unprotected route in index.js
+// The unprotected route in index.js handles: POST /api/ai/practice-exam (guarded by RAG_ENABLED)
 
 // Download PDF
 router.get('/download-pdf/:filename', AIController.downloadPDF);
@@ -151,13 +152,28 @@ router.post('/explain', AIController.explainConcept);
 router.post('/practice-questions', AIController.generatePracticeQuestions);
 
 // Handle chat message (maintains history via request body)
-router.post('/chat', auth, AIController.handleChatMessage);
+// Use conditional auth based on DEV_NO_AUTH flag
+const flags = require('../config/flags');
+const conditionalAuth = (req, res, next) => {
+  if (flags.DEV_NO_AUTH) {
+    // Skip auth in development
+    console.log('[AI ROUTES] Skipping auth (DEV_NO_AUTH=true)');
+    next();
+  } else {
+    // Require auth in production
+    auth(req, res, next);
+  }
+};
+router.post('/chat', conditionalAuth, AIController.handleChatMessage);
 
 // Get available classrooms for AI context
 router.get('/classrooms', AIController.getAvailableClassrooms);
 
 // Get integrated materials for a classroom or course
-router.get('/materials/:contextId', AIController.getIntegratedMaterials);
+router.get('/materials/:contextId', ChatController.getIntegratedMaterials);
+
+// Preload and cache course or classroom context (extract PDFs, etc.)
+router.post('/preload/:contextId', auth, AIController.preloadContext);
 
 // Interactive Activities routes
 router.post('/activities', auth, AIController.createActivity);

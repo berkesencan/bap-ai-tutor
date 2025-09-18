@@ -1,0 +1,43 @@
+Firebase Admin SDK initialized successfully
+Firebase project ID: studyplan-81a4f
+Firebase storage bucket: studyplan-81a4f.firebasestorage.app
+🎯 OpenAI Shap-E Generator initialized - FAST AI GENERATION MODE
+🎯 OpenAI Shap-E Generator initialized - FAST AI GENERATION MODE
+🎯 OpenAI Shap-E Generator initialized - FAST AI GENERATION MODE
+[IMPORT STATUS] Controller loaded
+[IMPORT STATUS] Routes loaded
+🎯 OpenAI Shap-E Generator initialized - FAST AI GENERATION MODE
+[LEGACY-COMPAT] Enabled in development mode
+[LEGACY-COMPAT] Mapping 6 legacy routes
+[LEGACY-COMPAT] Mapped GET /api/ai/classrooms -> getAvailableClassrooms
+[LEGACY-COMPAT] Mapped GET /api/ai/materials/:contextId -> getIntegratedMaterials
+[LEGACY-COMPAT] Mapped POST /api/ai/practice-exam -> generatePracticeExam
+[LEGACY-COMPAT] Mapped POST /api/ai/generate-questions -> generatePracticeQuestions
+[LEGACY-COMPAT] Mapped POST /api/ai/study-plan -> generateStudyPlan
+[LEGACY-COMPAT] Mapped POST /api/ai/explain -> explainConcept
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1872:16)
+    at listenInCluster (node:net:1920:12)
+    at Server.listen (node:net:2008:7)
+    at Object.<anonymous> (/Users/peterperry/Desktop/NYU/Hackathons/bap-ai-tutor/backend/index.js:295:8)
+    at Module._compile (node:internal/modules/cjs/loader:1376:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)
+    at Module.load (node:internal/modules/cjs/loader:1207:32)
+    at Module._load (node:internal/modules/cjs/loader:1023:12)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)
+    at node:internal/main/run_main_module:28:49
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1899:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v20.11.1

@@ -892,6 +892,76 @@ async getCourses() {
   }
 
   /**
+   * Extracts text from a PDF buffer using Gemini Vision AI
+   * @param {Buffer} pdfBuffer - The PDF file as a Buffer
+   * @returns {Promise<string>} - The extracted text
+   */
+  async extractTextFromPDF(pdfBuffer) {
+    try {
+      // Use Gemini Vision AI to extract text from PDF
+      const GeminiService = require('./gemini.service');
+      
+      const prompt = "Extract all text content from this PDF document. Return only the text content, no formatting or additional commentary.";
+      const result = await GeminiService.processPDFBuffer(pdfBuffer, prompt);
+      return result.text;
+    } catch (error) {
+      console.error('Error extracting text from PDF:', error);
+      throw new Error(`Failed to extract text from PDF: ${error.message}`);
+    }
+  }
+
+  /**
+   * Gets assignment information including type from Gradescope.
+   * @param {string} courseId - The Gradescope course ID
+   * @param {string} assignmentId - The Gradescope assignment ID
+   * @returns {Promise<Object>} - Assignment info including type
+   */
+  async getAssignmentInfo(courseId, assignmentId) {
+    console.log('DEBUG: Entered getAssignmentInfo', courseId, assignmentId);
+    if (!(await this.ensureAuthenticated())) {
+      throw new Error('Not logged in');
+    }
+    
+    try {
+      const assignmentUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}`;
+      const response = await this.session.get(assignmentUrl);
+      const $ = cheerio.load(response.data);
+      
+      // Extract assignment type from page context
+      const pageContextScript = $('script').filter((i, el) => {
+        return $(el).html().includes('gon.page_context');
+      }).first().html();
+      
+      if (pageContextScript) {
+        try {
+          const pageContextMatch = pageContextScript.match(/gon\.page_context\s*=\s*({.*?});/);
+          if (pageContextMatch) {
+            const pageContext = JSON.parse(pageContextMatch[1]);
+            return {
+              assignmentType: pageContext.assignmentType || 'Unknown',
+              title: pageContext.assignment?.title || 'Unknown',
+              courseId: courseId,
+              assignmentId: assignmentId
+            };
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse page context:', parseError.message);
+        }
+      }
+      
+      return {
+        assignmentType: 'Unknown',
+        title: 'Unknown',
+        courseId: courseId,
+        assignmentId: assignmentId
+      };
+    } catch (error) {
+      console.error('Error getting assignment info:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Fetches the assignment PDF from Gradescope for a given course and assignment ID.
    * @param {string} courseId - The Gradescope course ID
    * @param {string} assignmentId - The Gradescope assignment ID
@@ -931,8 +1001,25 @@ async getCourses() {
       // Try to find the assignment PDF link (problem statement)
       let pdfUrl = null;
       
-      // Method 1: Look for "Download PDF" or similar links
-      $('a').each((i, elem) => {
+      // Method 0: Try the standard assignment PDF URL pattern first (this is what the working Assignments page uses)
+      const standardPdfUrl = `https://www.gradescope.com/courses/${courseId}/assignments/${assignmentId}.pdf`;
+      console.log(`[PDF DEBUG] Trying standard assignment PDF URL: ${standardPdfUrl}`);
+      try {
+        const stdResp = await this.session.get(standardPdfUrl, { responseType: 'arraybuffer' });
+        const ct = stdResp.headers['content-type'] || '';
+        console.log(`[PDF DEBUG] Standard URL status=${stdResp.status}, content-type=${ct}, size=${stdResp.data?.byteLength}`);
+        if (stdResp.status === 200 && ct.includes('pdf')) {
+          console.log('[PDF DEBUG] ✅ Standard assignment PDF download succeeded – returning buffer');
+          return Buffer.from(stdResp.data);
+        }
+      } catch (stdErr) {
+        console.log(`[PDF DEBUG] ❌ Standard PDF URL GET failed: ${stdErr.message}`);
+      }
+
+      // Proceed with HTML parsing fallback if standard direct download did not work
+      // Method 1: Look for "Download PDF" or similar links (fallback if standard URL didn't work)
+      if (!pdfUrl) {
+        $('a').each((i, elem) => {
         const href = $(elem).attr('href');
         const text = $(elem).text().toLowerCase().trim();
         
@@ -960,7 +1047,8 @@ async getCourses() {
           console.log(`Found PDF link: "${text}" -> ${pdfUrl}`);
           return false; // Break out of each loop
         }
-      });
+        });
+      }
 
       // Method 2: Look for direct PDF links in the assignment content
       if (!pdfUrl) {
@@ -1080,6 +1168,12 @@ async getCourses() {
       // Download the PDF
        const fileResponse = await this.session.get(pdfUrl, { responseType: 'arraybuffer' });
        
+       // Handle 5xx server errors
+       if (fileResponse.status >= 500) {
+         console.log(`[GRADESCOPE] Server error ${fileResponse.status} for PDF ${pdfUrl}, skipping assignment`);
+         return null;
+       }
+       
        // Check if it's actually a PDF by looking at content-type and magic bytes
        const buffer = Buffer.from(fileResponse.data);
        const contentType = fileResponse.headers['content-type'] || '';
@@ -1107,6 +1201,203 @@ async getCourses() {
       console.error('Error getting assignment PDF:', error);
       throw error;
     }
+  }
+
+  /**
+   * Ensure user is authenticated, with automatic retry and session management
+   * @returns {Promise<boolean|Object>} - true if authenticated, or { needsReauth: true } if failed
+   */
+  async ensureAuthenticated() {
+    try {
+      // Try to hydrate cookies from store
+      await this.hydrateCookiesFromStore();
+      
+      // Check if current session is valid
+      if (await this.validateSession()) {
+        return true;
+      }
+      
+      // Check failure count
+      const failureLimit = parseInt(process.env.GRADESCOPE_FAILURE_LIMIT) || 3;
+      const authData = await GradescopeAuth.getCredentials(this.userId);
+      
+      if (authData && authData.failureCount >= failureLimit) {
+        console.log(`User ${this.userId} has exceeded failure limit (${authData.failureCount}), needs manual reauth`);
+        return { needsReauth: true };
+      }
+      
+      // Try automatic re-authentication with stored credentials
+      if (this.credentials && this.credentials.email && this.credentials.password) {
+        console.log(`Attempting automatic re-authentication for user ${this.userId}`);
+        const loginSuccess = await this.login(this.credentials.email, this.credentials.password, false);
+        
+        if (loginSuccess) {
+          await this.persistCookiesToStore();
+          await GradescopeAuth.updateAuthStatus(this.userId, true);
+          return true;
+        } else {
+          await GradescopeAuth.updateAuthStatus(this.userId, false, 'Automatic re-login failed');
+          return { needsReauth: true };
+        }
+      }
+      
+      console.log(`No stored credentials for user ${this.userId}, needs manual reauth`);
+      return { needsReauth: true };
+      
+    } catch (error) {
+      console.error(`Error in ensureAuthenticated for user ${this.userId}:`, error);
+      await GradescopeAuth.updateAuthStatus(this.userId, false, error.message);
+      return { needsReauth: true };
+    }
+  }
+
+  /**
+   * Maybe refresh session if it's getting close to expiry
+   * @returns {Promise<boolean>} - true if session is still valid
+   */
+  async maybeRefreshSession() {
+    try {
+      const needsRefresh = await GradescopeAuth.needsSessionRefresh(this.userId);
+      
+      if (needsRefresh) {
+        console.log(`Session refresh needed for user ${this.userId}`);
+        
+        // Try to validate current session first
+        if (await this.validateSession()) {
+          return true;
+        }
+        
+        // If validation fails, try to re-authenticate
+        const authResult = await this.ensureAuthenticated();
+        return authResult === true;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error(`Error in maybeRefreshSession for user ${this.userId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Persist cookies to Firestore
+   * @returns {Promise<void>}
+   */
+  async persistCookiesToStore() {
+    try {
+      const cookies = await this.cookieJar.getCookies('https://www.gradescope.com');
+      const userAgent = process.env.GRADESCOPE_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36';
+      
+      const sessionData = {
+        cookies: cookies.map(cookie => cookie.toString()),
+        userAgent: userAgent,
+        updatedAt: new Date()
+      };
+      
+      await GradescopeAuth.storeSessionData(this.userId, sessionData);
+      console.log(`Persisted ${cookies.length} cookies for user ${this.userId}`);
+    } catch (error) {
+      console.error(`Error persisting cookies for user ${this.userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Hydrate cookies from Firestore
+   * @returns {Promise<void>}
+   */
+  async hydrateCookiesFromStore() {
+    try {
+      const sessionData = await GradescopeAuth.getSessionData(this.userId);
+      
+      if (!sessionData || !sessionData.cookies) {
+        console.log(`No stored session data for user ${this.userId}`);
+        return;
+      }
+      
+      // Clear existing cookies
+      this.cookieJar = new tough.CookieJar();
+      
+      // Restore cookies
+      for (const cookieStr of sessionData.cookies) {
+        try {
+          await this.cookieJar.setCookie(cookieStr, 'https://www.gradescope.com');
+        } catch (err) {
+          console.warn(`Failed to restore cookie for user ${this.userId}:`, cookieStr, err.message);
+        }
+      }
+      
+      // Update axios instance with restored cookies
+      this.session = wrapper(axios.create({
+        withCredentials: true,
+        maxRedirects: 5,
+        jar: this.cookieJar,
+        timeout: 30000,
+        headers: {
+          'User-Agent': sessionData.userAgent || process.env.GRADESCOPE_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
+        }
+      }));
+      
+      console.log(`Hydrated ${sessionData.cookies.length} cookies for user ${this.userId}`);
+    } catch (error) {
+      console.error(`Error hydrating cookies for user ${this.userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Wrapper for HTTP requests with retry logic
+   * @param {Function} requestFn - Function that makes the HTTP request
+   * @param {number} maxRetries - Maximum number of retries
+   * @returns {Promise<any>} - Response from the request
+   */
+  async withRetry(requestFn, maxRetries = 3) {
+    const baseDelay = parseInt(process.env.GRADESCOPE_RETRY_BASE_MS) || 400;
+    const maxDelay = parseInt(process.env.GRADESCOPE_RETRY_MAX_MS) || 5000;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await requestFn();
+        
+        // Check if response is a login page (auth failure)
+        if (response.data && typeof response.data === 'string') {
+          const html = response.data.toLowerCase();
+          if (html.includes('sign in') || html.includes('login') || 
+              response.request.res.responseUrl.includes('/login')) {
+            throw new Error('Authentication required - redirected to login page');
+          }
+        }
+        
+        return response;
+      } catch (error) {
+        const isRetryable = this.isRetryableError(error);
+        
+        if (attempt === maxRetries || !isRetryable) {
+          throw error;
+        }
+        
+        const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
+        console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error.message);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  /**
+   * Check if an error is retryable
+   * @param {Error} error - Error to check
+   * @returns {boolean} - True if error is retryable
+   */
+  isRetryableError(error) {
+    if (!error.response) {
+      // Network errors
+      return error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND';
+    }
+    
+    const status = error.response.status;
+    // Retry on 429 (rate limit) and 5xx (server errors)
+    return status === 429 || (status >= 500 && status < 600);
   }
 }
 

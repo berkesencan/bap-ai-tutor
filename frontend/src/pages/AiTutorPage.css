@@ -236,8 +236,9 @@
   border-radius: 1rem;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   border: 1px solid #e5e7eb;
-  overflow: hidden;
+  overflow: hidden; /* This is important to contain the chat component */
   min-height: 600px;
+  display: flex; /* This will make the child .tool-card fill the height */
 }
 
 /* Tool Cards */

@@ -1007,7 +1007,16 @@ class Course {
                 sourceIntegration: integration.integrationId,
                 sourcePlatform: integration.platform,
                 sourcePlatformName: integration.platformName,
-                aggregatedAt: new Date()
+                aggregatedAt: new Date(),
+                // Add raw data structure for PDF fetching (especially for Gradescope)
+                raw: {
+                  platform: integration.platform,
+                  sourcePlatform: integration.platform,
+                  courseId: integrationCourse.externalId || integration.integrationId, // Gradescope course ID (external ID)
+                  assignmentId: assignment.externalId || assignment.id, // Gradescope assignment ID
+                  gsCourseId: integrationCourse.externalId || integration.integrationId, // Backup field
+                  gsAssignmentId: assignment.externalId || assignment.id // Backup field
+                }
               });
             });
             console.log(`[Course Model] Added ${userAssignments.length} assignments from ${integration.courseName}`);
@@ -1025,7 +1034,16 @@ class Course {
               sourceIntegration: integration.integrationId,
               sourcePlatform: integration.platform,
               sourcePlatformName: integration.platformName,
-              aggregatedAt: new Date()
+              aggregatedAt: new Date(),
+              // Add raw data structure for PDF fetching (especially for Gradescope)
+              raw: {
+                platform: integration.platform,
+                sourcePlatform: integration.platform,
+                courseId: integrationCourse.externalId || integration.integrationId, // Gradescope course ID (external ID)
+                assignmentId: material.externalId || material.id, // Gradescope assignment ID
+                gsCourseId: integrationCourse.externalId || integration.integrationId, // Backup field
+                gsAssignmentId: material.externalId || material.id // Backup field
+              }
             });
           });
           console.log(`[Course Model] Added ${userMaterials.length} materials from ${integration.courseName}`);

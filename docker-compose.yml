@@ -1,0 +1,21 @@
+services:
+  typesense:
+    image: typesense/typesense:0.25.2
+    command: ["--api-key=xyz", "--enable-cors", "true", "--data-dir", "/data", "--listen-port", "8108"]
+    ports: ["8108:8108"]
+    volumes: ["./.typesense:/data"]
+
+  unstructured:
+    image: downloads.unstructured.io/unstructured-io/unstructured-api:latest
+    platform: linux/amd64
+    ports: ["8001:8000"] 
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: q7rT5EGCZiOxcE9D     # <-- matches what you told me
+      POSTGRES_DB: rag_db
+    ports: ["55432:5432"]
+    volumes:
+      - ./.pgdata:/var/lib/postgresql/data

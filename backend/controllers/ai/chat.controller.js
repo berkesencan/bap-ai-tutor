@@ -10,14 +10,19 @@ class ChatController {
    */
   static async handleChatMessage(req, res) {
     try {
-      const { history, message, classroomId, courseId } = req.body;
-      const userId = req.user.uid;
+      const { history, message, classroomId, courseId, sessionId } = req.body;
+      const userId = req.user?.uid || req.headers['x-dev-user-id'] || process.env.DEV_USER_ID || 'dev-cli';
       
-      if (!message) {
-        return res.status(400).json({ success: false, message: 'Missing required field: message' });
-      }
-      if (history && !Array.isArray(history)) {
-         return res.status(400).json({ success: false, message: 'Invalid history format: must be an array' });
+      console.log('[CHAT CONTROLLER] Request details:', {
+        userId,
+        message: message?.substring(0, 50),
+        courseId: courseId || classroomId,
+        sessionId,
+        hasHistory: !!history
+      });
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ success: false, error: 'BAD_REQUEST', message: 'message is required' });
       }
 
       // Use enhanced AI service with classroom context
@@ -26,22 +31,47 @@ class ChatController {
         question: message,
         courseId: courseId || classroomId,
         classroomId: classroomId,
+        sessionId: sessionId,
         context: history ? history.map(msg => {
-        const prefix = (msg.role === 'user' || msg.sender === 'user') ? 'User:' : 'AI:';
-        return `${prefix} ${msg.content || msg.text || msg.parts || ''}`;
+          const prefix = (msg.role === 'user' || msg.sender === 'user') ? 'User:' : 'AI:';
+          return `${prefix} ${msg.content || msg.text || msg.parts || ''}`;
         }).join('\n') : ''
       });
       
-      res.json({ 
-        success: true, 
-        data: { 
-          response: response.answer,
-          materials: response.materials,
-          usageMetadata: response.usageMetadata
-        } 
-      });
+      console.log('[CHAT CONTROLLER] AI service response type:', typeof response);
+      console.log('[CHAT CONTROLLER] AI service response keys:', Object.keys(response || {}));
+      
+      const answerText = response?.text ?? response?.response ?? '';
+      const payload = {
+        success: true,
+        data: {
+          response: answerText,
+          text: answerText,
+          sources: Array.isArray(response?.sources) ? response.sources : [],
+          materials: Array.isArray(response?.materials) ? response.materials : [],
+          usageMetadata: response?.usageMetadata || response?.usage || {},
+          confidence: response?.confidence || 'unknown',
+        },
+      };
+      
+      if (process.env.LOG_RAG_DEBUG === 'true') {
+        const raw = JSON.stringify(payload);
+        console.log('[CHAT][BYTES]', Buffer.byteLength(raw));
+        console.log('[CHAT][PREVIEW]', raw.slice(0, 200) + (raw.length > 200 ? '…' : ''));
+      }
+      
+      const pdfSources = payload.data.sources.filter(s => s.kind === 'gradescope-pdf').length;
+      console.log(`[CHAT] course=${courseId} hasText=${!!answerText} sources=${payload.data.sources.length} pdfSources=${pdfSources} bytes=${Buffer.byteLength(JSON.stringify(payload))}`);
+      res.json(payload);
+      
     } catch (error) {
-      handleError(error, res);
+      console.error('[CHAT CONTROLLER] Error:', error);
+      console.error('[CHAT CONTROLLER] Error stack:', error.stack);
+      res.status(500).json({ 
+        success: false, 
+        error: 'AI_CHAT_FAILED', 
+        message: error.message || 'Unknown error'
+      });
     }
   }
 
@@ -51,14 +81,22 @@ class ChatController {
    */
   static async getAvailableClassrooms(req, res) {
     try {
-      const userId = req.user.uid;
-      const classrooms = await aiService.getAvailableClassrooms(userId);
+      const { resolveEffectiveUser } = require('../../utils/effectiveUser');
+      const { effectiveReadUserId } = resolveEffectiveUser(req);
+      if (!effectiveReadUserId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
+      
+      // Use the new unified visible courses service
+      const { getUserVisibleCourses } = require('../../services/courses.visible.service');
+      const courses = await getUserVisibleCourses(effectiveReadUserId);
       
       res.json({ 
         success: true, 
-        data: classrooms
+        data: { courses }
       });
     } catch (error) {
+      console.error('[AI Chat] Error in getAvailableClassrooms:', error);
       handleError(error, res);
     }
   }
@@ -69,17 +107,67 @@ class ChatController {
    */
   static async getIntegratedMaterials(req, res) {
     try {
-      const userId = req.user.uid;
+      const { resolveEffectiveUser } = require('../../utils/effectiveUser');
+      const { effectiveReadUserId } = resolveEffectiveUser(req);
+      if (!effectiveReadUserId) {
+        return res.status(401).json({ success: false, error: 'No token provided', code: 'NO_TOKEN' });
+      }
+      
       const { contextId } = req.params;
       const { type = 'classroom' } = req.query; // 'classroom' or 'course'
       
-      const materials = await aiService.getIntegratedMaterials(userId, contextId, type);
+      console.log(`[AI Chat] Getting materials for context: ${contextId}, type: ${type}, user: ${effectiveReadUserId}`);
+      console.log(`[AI Chat] req.params:`, req.params);
+      console.log(`[AI Chat] req.url:`, req.url);
+      
+      // For course context, get assignments from authoritative source
+      if (type === 'course') {
+        const Assignment = require('../../models/assignment.model');
+        const Course = require('../../models/course.model');
+        
+        // Get course info
+        const course = await Course.getById(contextId);
+        if (!course) {
+          return res.status(404).json({ success: false, error: 'Course not found' });
+        }
+        
+        // Get assignments from assignments collection (authoritative source)
+        const assignments = await Assignment.getByCourseId(contextId);
+        console.log(`[AI Chat] Found ${assignments.length} assignments for course ${course.name}`);
+        
+        // Add necessary metadata for PDF fetching
+        const assignmentsWithMetadata = assignments.map(assignment => ({
+          ...assignment,
+          platform: 'gradescope',
+          raw: {
+            platform: 'gradescope',
+            sourcePlatform: 'gradescope',
+            courseId: course.externalId || contextId,
+            assignmentId: assignment.externalId || assignment.id,
+            gsCourseId: course.externalId || contextId,
+            gsAssignmentId: assignment.externalId || assignment.id
+          }
+        }));
+        
+        return res.json({
+          success: true,
+          data: {
+            materials: [], // No separate materials collection for now
+            assignments: assignmentsWithMetadata,
+            announcements: []
+          }
+        });
+      }
+      
+      // For classroom context, use existing logic
+      const materials = await aiService.getIntegratedMaterials(effectiveReadUserId, contextId, type);
       
       res.json({ 
         success: true, 
         data: materials
       });
     } catch (error) {
+      console.error('[AI Chat] Error in getIntegratedMaterials:', error);
       handleError(error, res);
     }
   }

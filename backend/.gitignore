@@ -43,4 +43,13 @@ coverage
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# Security - Firebase service account keys
+/secrets/
+*.pem
+*.p12
+*.key
+*.p8
+firebase-sa.json
+studyplan-*-firebase-adminsdk-*.json 

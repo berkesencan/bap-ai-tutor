@@ -11,6 +11,7 @@ const gradescopeRoutes = require('./gradescope.routes');
 const aiRoutes = require('./ai.routes');
 const activityRoutes = require('./activity.routes');
 const usersRoutes = require('./users.routes');
+const debugRoutes = require('./debug.routes');
 
 const router = express.Router();
 
@@ -26,6 +27,7 @@ router.use('/gradescope', gradescopeRoutes);
 router.use('/ai', aiRoutes);
 router.use('/activities', activityRoutes);
 router.use('/users', usersRoutes);
+router.use('/debug', debugRoutes);
 
 // 🎨 SERVE GENERATED 3D MODELS
 // Route to serve Shap-E generated OBJ files

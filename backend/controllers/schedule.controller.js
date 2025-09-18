@@ -211,7 +211,20 @@ class ScheduleController {
       const { icsData } = req.body;
       const userId = req.user.uid;
       
+      console.log('[Schedule Controller] ICS import request from user:', userId);
+      console.log('[Schedule Controller] ICS data type:', typeof icsData);
+      console.log('[Schedule Controller] ICS data length:', icsData?.length || 0);
+      
+      if (!icsData || typeof icsData !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid ICS data provided'
+        });
+      }
+      
       const importedEvents = await Schedule.importICS(icsData, userId);
+      
+      console.log('[Schedule Controller] Import completed:', importedEvents.length, 'events imported');
       
       res.status(200).json({
         success: true,
@@ -221,6 +234,62 @@ class ScheduleController {
         },
       });
     } catch (error) {
+      console.error('[Schedule Controller] ICS import error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get calendar events for the current user
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getCalendarEvents(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      const { startDate, endDate } = req.query;
+      
+      console.log('[Calendar] Fetching calendar events for user:', userId);
+      console.log('[Calendar] Date range:', { startDate, endDate });
+      
+      const events = await Schedule.getCalendarEvents(userId, startDate, endDate);
+      
+      console.log('[Calendar] Found', events.length, 'calendar events');
+      
+      res.status(200).json({
+        success: true,
+        data: events
+      });
+    } catch (error) {
+      console.error('[Schedule Controller] Error fetching calendar events:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get comprehensive calendar data (events + assignments)
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async getCalendarData(req, res, next) {
+    try {
+      const userId = req.user.uid;
+      const { startDate, endDate } = req.query;
+      
+      console.log('[Calendar] Fetching calendar data for date range:', startDate, 'to', endDate);
+      
+      const calendarData = await Schedule.getCalendarData(userId, startDate, endDate);
+      
+      console.log('[Calendar] Final result:', calendarData.events.length, 'events +', calendarData.assignments.length, 'assignments =', (calendarData.events.length + calendarData.assignments.length), 'total calendar items');
+      
+      res.status(200).json({
+        success: true,
+        data: calendarData
+      });
+    } catch (error) {
+      console.error('[Schedule Controller] Error fetching calendar data:', error);
       next(error);
     }
   }
@@ -569,6 +638,84 @@ class ScheduleController {
         message: 'Schedule deleted successfully',
       });
     } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete a calendar event
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async deleteCalendarEvent(req, res, next) {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user.uid;
+      
+      const success = await Schedule.deleteCalendarEvent(eventId, userId);
+      
+      if (success) {
+        res.status(200).json({
+          success: true,
+          message: 'Event deleted successfully',
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: 'Failed to delete event',
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete recurring events with options
+   * @param {Request} req - Express request object
+   * @param {Response} res - Express response object
+   * @param {NextFunction} next - Express next function
+   */
+  static async deleteRecurringEvent(req, res, next) {
+    try {
+      const { eventId } = req.params;
+      const { deleteType } = req.body; // 'this', 'all', or 'following'
+      const userId = req.user.uid;
+      
+      console.log('[Schedule Controller] Recurring event deletion request:', { eventId, deleteType, userId });
+      
+      if (!['this', 'all', 'following'].includes(deleteType)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid delete type. Must be "this", "all", or "following"'
+        });
+      }
+      
+      const results = await Schedule.deleteRecurringEvent(eventId, userId, deleteType);
+      
+      let message = '';
+      switch (deleteType) {
+        case 'this':
+          message = 'Event deleted successfully';
+          break;
+        case 'all':
+          message = `All ${results.deletedCount} events in the series deleted successfully`;
+          break;
+        case 'following':
+          message = `This and ${results.deletedCount} following events deleted successfully`;
+          break;
+      }
+      
+      console.log('[Schedule Controller] Recurring deletion completed:', results);
+      
+      res.status(200).json({
+        success: true,
+        message,
+        data: results
+      });
+    } catch (error) {
+      console.error('[Schedule Controller] Recurring event deletion error:', error);
       next(error);
     }
   }

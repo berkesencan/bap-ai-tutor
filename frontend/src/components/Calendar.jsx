@@ -3,12 +3,14 @@ import { Calendar as RBCalendar, dateFnsLocalizer } from 'react-big-calendar';
 import { startOfWeek, getDay, format, parse, add, sub, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay } from 'date-fns';
 import enUS from 'date-fns/locale/en-US';
 import YearGrid from './YearGrid';
+import CustomDateTimePicker from './CustomDateTimePicker';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getCalendarData,
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
+  deleteRecurringEvent,
   importICSCalendar
 } from '../services/api';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -51,9 +53,11 @@ const Calendar = () => {
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showDayModal, setShowDayModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showRecurringDeleteModal, setShowRecurringDeleteModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [eventToDelete, setEventToDelete] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
   const [dayLoading, setDayLoading] = useState(false); // Separate loading state for day popups
   const [cameFromDayModal, setCameFromDayModal] = useState(false); // Track if assignment modal was opened from day modal
@@ -80,6 +84,7 @@ const Calendar = () => {
       blackboard: true,
       brightspace: true,
       moodle: true,
+      imported: true, // Add imported events filter
       unknown: true
     },
     courses: {}
@@ -1395,19 +1400,215 @@ const Calendar = () => {
     }
   };
 
-  // Handle event deletion
-  const handleDeleteEvent = async () => {
-    if (!selectedEvent || !confirm('Are you sure you want to delete this event?')) {
-      return;
+  // Smart recurring event detection based on event patterns
+  const detectRecurringEvents = (targetEvent) => {
+    if (!targetEvent || !events.length) return [];
+    
+    // Find events with matching characteristics
+    const potentialMatches = events.filter(event => {
+      if (event.id === targetEvent.id) return true; // Include the target event itself
+      
+      // Must have same title (case insensitive)
+      if (event.title?.toLowerCase() !== targetEvent.title?.toLowerCase()) return false;
+      
+      // Must have same location (or both empty)
+      const eventLocation = (event.location || '').toLowerCase().trim();
+      const targetLocation = (targetEvent.location || '').toLowerCase().trim();
+      if (eventLocation !== targetLocation) return false;
+      
+      // Must have similar duration (within 15 minutes)
+      const eventDuration = new Date(event.end) - new Date(event.start);
+      const targetDuration = new Date(targetEvent.end) - new Date(targetEvent.start);
+      if (Math.abs(eventDuration - targetDuration) > 15 * 60 * 1000) return false;
+      
+      // Check if times align (same hour/minute, different dates)
+      const eventStart = new Date(event.start);
+      const targetStart = new Date(targetEvent.start);
+      const sameTimeOfDay = eventStart.getHours() === targetStart.getHours() && 
+                           eventStart.getMinutes() === targetStart.getMinutes();
+      
+      return sameTimeOfDay;
+    });
+    
+    // If we have multiple matches, analyze if they follow a pattern
+    if (potentialMatches.length >= 2) {
+      // Sort by date
+      potentialMatches.sort((a, b) => new Date(a.start) - new Date(b.start));
+      
+      // Check for regular intervals
+      const intervals = [];
+      for (let i = 1; i < potentialMatches.length; i++) {
+        const prevDate = new Date(potentialMatches[i-1].start);
+        const currDate = new Date(potentialMatches[i].start);
+        const daysDiff = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
+        intervals.push(daysDiff);
+      }
+      
+      // Check if intervals are consistent (within 1 day tolerance for monthly events)
+      const avgInterval = intervals.reduce((sum, int) => sum + int, 0) / intervals.length;
+      const isConsistent = intervals.every(interval => {
+        // Allow some flexibility for monthly events (28-31 days)
+        if (avgInterval >= 25 && avgInterval <= 35) {
+          return interval >= 25 && interval <= 35;
+        }
+        // For other intervals, must be exact or very close
+        return Math.abs(interval - avgInterval) <= 1;
+      });
+      
+      if (isConsistent && avgInterval >= 1) {
+        return potentialMatches;
+      }
     }
     
+    return [];
+  };
+
+  // Enhanced recurring event detection
+  const isRecurringEvent = (event) => {
+    // First check explicit flags
+    if (event.isRecurring || event.parentUid) return true;
+    
+    // Then use smart detection
+    const recurringMatches = detectRecurringEvents(event);
+    return recurringMatches.length >= 2;
+  };
+
+  // Handle event deletion - checks if recurring and shows appropriate modal
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    
+    console.log('Checking if event is recurring:', selectedEvent);
+    console.log('Event properties:', {
+      isRecurring: selectedEvent.isRecurring,
+      parentUid: selectedEvent.parentUid,
+      uid: selectedEvent.uid,
+      title: selectedEvent.title
+    });
+    
+    const isRecurring = isRecurringEvent(selectedEvent);
+    console.log('Is recurring event:', isRecurring);
+    
+    if (isRecurring) {
+      // Show recurring event deletion options
+      setEventToDelete(selectedEvent);
+      setShowRecurringDeleteModal(true);
+    } else {
+      // Regular single event deletion
+      if (!confirm('Are you sure you want to delete this event?')) {
+        return;
+      }
+      await deleteEventNow(selectedEvent.id, false);
+    }
+  };
+
+  // Get recurring series information for display
+  const getRecurringSeriesInfo = (clickedEvent) => {
+    if (!clickedEvent) return null;
+    
+    // First try the traditional way with UIDs
+    const seriesUid = clickedEvent.parentUid || clickedEvent.uid;
+    let seriesEvents = events.filter(event => 
+      event.parentUid === seriesUid || 
+      event.uid === seriesUid || 
+      (event.parentUid && event.parentUid === clickedEvent.parentUid)
+    );
+    
+    // If traditional way doesn't find multiple events, use smart detection
+    if (seriesEvents.length <= 1) {
+      seriesEvents = detectRecurringEvents(clickedEvent);
+    }
+    
+    if (seriesEvents.length <= 1) return null;
+    
+    // Sort events by date
+    seriesEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+    
+    const firstEvent = seriesEvents[0];
+    const lastEvent = seriesEvents[seriesEvents.length - 1];
+    
+    // Determine frequency by looking at the gap between first two events
+    const frequency = (() => {
+      if (seriesEvents.length < 2) return 'Unknown frequency';
+      
+      const firstDate = new Date(firstEvent.start);
+      const secondDate = new Date(seriesEvents[1].start);
+      const daysDiff = Math.round((secondDate - firstDate) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff === 1) return 'Daily';
+      if (daysDiff === 7) return 'Weekly';
+      if (daysDiff >= 13 && daysDiff <= 15) return 'Bi-weekly';
+      if (daysDiff >= 28 && daysDiff <= 31) return 'Monthly';
+      if (daysDiff >= 365 && daysDiff <= 367) return 'Yearly';
+      
+      return `Every ${daysDiff} day${daysDiff > 1 ? 's' : ''}`;
+    })();
+    
+    const dayOfWeek = firstDate => {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return days[firstDate.getDay()];
+    };
+    
+    const formatDate = date => {
+      return date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    };
+    
+    const firstDate = new Date(firstEvent.start);
+    const lastDate = new Date(lastEvent.start);
+    const clickedDate = new Date(clickedEvent.start);
+    
+    return {
+      frequency,
+      dayOfWeek: dayOfWeek(firstDate),
+      firstDate: formatDate(firstDate),
+      lastDate: formatDate(lastDate),
+      clickedDate: formatDate(clickedDate),
+      totalCount: seriesEvents.length,
+      futureCount: seriesEvents.filter(e => new Date(e.start) >= clickedDate).length
+    };
+  };
+
+  // Handle recurring event deletion with user choice
+  const handleRecurringEventDelete = async (deleteType) => {
+    if (!eventToDelete) return;
+    
     setLoading(true);
+    setShowRecurringDeleteModal(false);
     
     try {
-      const response = await deleteCalendarEvent(selectedEvent.id);
+      const response = await deleteRecurringEvent(eventToDelete.id, deleteType);
       
       if (response.success) {
         setShowEventModal(false);
+        // Clear all caches and reload
+        eventCache.current.clear();
+        dayEventsCache.current.clear();
+        loadCalendarData(currentDate, currentView, true);
+        alert(response.message || 'Events deleted successfully!');
+      } else {
+        alert(response.error || 'Failed to delete events');
+      }
+    } catch (err) {
+      console.error('Error deleting recurring events:', err);
+      alert('Failed to delete events: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+      setEventToDelete(null);
+    }
+  };
+
+  // Helper function for immediate event deletion (single events)
+  const deleteEventNow = async (eventId, isRecurring = false) => {
+    setLoading(true);
+    
+    try {
+      const response = await deleteCalendarEvent(eventId);
+      
+      if (response.success) {
+        if (!isRecurring) setShowEventModal(false);
         // Invalidate cache and reload
         const cacheKey = getCacheKey(currentDate, currentView);
         eventCache.current.delete(cacheKey);
@@ -1423,6 +1624,40 @@ const Calendar = () => {
     }
   };
 
+  // Handle drag and drop events for ICS import
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.classList.remove('drag-over');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.name.toLowerCase().endsWith('.ics')) {
+        setIcsFile(file);
+      } else {
+        alert('Please drop a valid ICS file');
+      }
+    }
+  };
+
   // Handle ICS file import
   const handleICSImport = async () => {
     if (!icsFile) {
@@ -1433,7 +1668,15 @@ const Calendar = () => {
     setLoading(true);
     
     try {
-      const response = await importICSCalendar(icsFile);
+      // Read the file content as text
+      const fileContent = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsText(icsFile);
+      });
+      
+      const response = await importICSCalendar(fileContent);
       
       if (response.success) {
         setShowImportModal(false);
@@ -1442,12 +1685,13 @@ const Calendar = () => {
         eventCache.current.clear();
         dayEventsCache.current.clear();
         loadCalendarData(currentDate, currentView, true);
+        alert(response.data?.message || 'Calendar imported successfully!');
       } else {
         alert(response.error || 'Failed to import calendar');
       }
     } catch (err) {
       console.error('Error importing calendar:', err);
-      alert('Failed to import calendar');
+      alert('Failed to import calendar: ' + (err.message || err));
     } finally {
       setLoading(false);
     }
@@ -2010,27 +2254,19 @@ const Calendar = () => {
               </div>
               
               <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="start">Start Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    id="start"
-                    value={formatDateTimeLocal(eventForm.start)}
-                    onChange={(e) => setEventForm({...eventForm, start: new Date(e.target.value)})}
-                    required
-                  />
-                </div>
+                <CustomDateTimePicker
+                  value={eventForm.start}
+                  onChange={(date) => setEventForm({...eventForm, start: date})}
+                  label="Start Date & Time"
+                  className="form-group"
+                />
                 
-                <div className="form-group">
-                  <label htmlFor="end">End Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    id="end"
-                    value={formatDateTimeLocal(eventForm.end)}
-                    onChange={(e) => setEventForm({...eventForm, end: new Date(e.target.value)})}
-                    required
-                  />
-                </div>
+                <CustomDateTimePicker
+                  value={eventForm.end}
+                  onChange={(date) => setEventForm({...eventForm, end: date})}
+                  label="End Date & Time"
+                  className="form-group"
+                />
               </div>
               
               <div className="form-group">
@@ -2075,11 +2311,13 @@ const Calendar = () => {
                 {selectedEvent && (
                   <button
                     type="button"
-                    className="action-button danger"
+                    className={`action-button danger ${isRecurringEvent(selectedEvent) ? 'recurring-event' : ''}`}
                     onClick={handleDeleteEvent}
                     disabled={loading}
+                    title={isRecurringEvent(selectedEvent) ? 'This appears to be a recurring event - click for options' : 'Delete this event'}
                   >
-                    🗑️ Delete
+                    🗑️ {isRecurringEvent(selectedEvent) ? 'Delete Series' : 'Delete'}
+                    {isRecurringEvent(selectedEvent) && <span className="recurring-indicator"> 🔄</span>}
                   </button>
                 )}
                 
@@ -2145,8 +2383,17 @@ const Calendar = () => {
                   className="file-input"
                   id="ics-file"
                 />
-                <label htmlFor="ics-file" className="file-label">
-                  {icsFile ? `📄 ${icsFile.name}` : '📁 Choose ICS file...'}
+                <label 
+                  htmlFor="ics-file" 
+                  className="file-label"
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <span className="file-label-text">
+                    {icsFile ? `📄 ${icsFile.name}` : '📁 Drop ICS file here or click to choose...'}
+                  </span>
                 </label>
               </div>
               
@@ -2276,6 +2523,125 @@ const Calendar = () => {
                 onClick={handleAssignmentModalClose}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring Event Deletion Modal */}
+      {showRecurringDeleteModal && eventToDelete && (
+        <div className="modal-overlay" onClick={() => setShowRecurringDeleteModal(false)}>
+          <div className="modal-content recurring-delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Delete Recurring Event</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowRecurringDeleteModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="recurring-delete-content">
+              <div className="event-info">
+                <div className="event-title">"{eventToDelete.title}"</div>
+                <div className="event-date">
+                  {new Date(eventToDelete.start).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                  })}
+                </div>
+                
+                {(() => {
+                  const seriesInfo = getRecurringSeriesInfo(eventToDelete);
+                  if (seriesInfo) {
+                    return (
+                      <div className="series-info">
+                        <div className="series-frequency">
+                          <strong>{seriesInfo.frequency}</strong> on {seriesInfo.dayOfWeek}s
+                        </div>
+                        <div className="series-range">
+                          {seriesInfo.firstDate} - {seriesInfo.lastDate}
+                        </div>
+                        <div className="series-count">
+                          {seriesInfo.totalCount} event{seriesInfo.totalCount !== 1 ? 's' : ''} in this series
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+              
+              <p className="delete-question">
+                This is a recurring event. What would you like to delete?
+              </p>
+              
+              <div className="delete-options">
+                {(() => {
+                  const seriesInfo = getRecurringSeriesInfo(eventToDelete);
+                  return (
+                    <>
+                      <button
+                        className="delete-option-btn this-only"
+                        onClick={() => handleRecurringEventDelete('this')}
+                        disabled={loading}
+                      >
+                        <div className="option-icon">📅</div>
+                        <div className="option-content">
+                          <div className="option-title">Delete this event only</div>
+                          <div className="option-subtitle">
+                            Keep all other {seriesInfo ? seriesInfo.totalCount - 1 : ''} events in the series
+                          </div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        className="delete-option-btn all-events"
+                        onClick={() => handleRecurringEventDelete('all')}
+                        disabled={loading}
+                      >
+                        <div className="option-icon">🗓️</div>
+                        <div className="option-content">
+                          <div className="option-title">Delete all events</div>
+                          <div className="option-subtitle">
+                            Remove all {seriesInfo ? seriesInfo.totalCount : ''} events in the recurring series
+                          </div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        className="delete-option-btn following-events"
+                        onClick={() => handleRecurringEventDelete('following')}
+                        disabled={loading}
+                      >
+                        <div className="option-icon">📆</div>
+                        <div className="option-content">
+                          <div className="option-title">Delete this and following events</div>
+                          <div className="option-subtitle">
+                            Delete {seriesInfo ? seriesInfo.futureCount : ''} events from {seriesInfo ? seriesInfo.clickedDate : ''} onward
+                          </div>
+                        </div>
+                      </button>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="action-button secondary"
+                onClick={() => setShowRecurringDeleteModal(false)}
+                disabled={loading}
+              >
+                Cancel
               </button>
             </div>
           </div>

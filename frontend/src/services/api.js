@@ -1,8 +1,17 @@
 import axios from 'axios';
 import { auth } from '../config/firebase'; // Fixed import path
 
+// Frontend flags configuration
+const FLAGS = {
+  RAG_ENABLED: (import.meta.env.VITE_RAG_ENABLED ?? 'true') === 'true',
+  DEV_NO_AUTH: (import.meta.env.VITE_DEV_NO_AUTH ?? 'true') === 'true',
+  USE_EMBEDDINGS: (import.meta.env.VITE_USE_EMBEDDINGS ?? 'false') === 'true',
+  USE_RERANK: (import.meta.env.VITE_USE_RERANK ?? 'false') === 'true',
+};
+
 // Use the backend URL from environment variables or default
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE_URL = `${API_BASE}/api`;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -24,6 +33,37 @@ const testApiClient = axios.create({
 // Interceptor to add the auth token to requests
 apiClient.interceptors.request.use(
   async (config) => {
+    const isGradescope = config.url?.includes('/gradescope/');
+    const devUid = (window?.localStorage?.getItem('devUid')) || 
+                   import.meta.env.VITE_DEV_USER_ID || 
+                   'dev-cli';
+
+    if (FLAGS.DEV_NO_AUTH) {
+      // best-effort: attach token if available
+      const user = auth.currentUser;
+      const shadowUid = (window?.localStorage?.getItem('shadowUid')) || 
+                       import.meta.env.VITE_DEV_SHADOW_USER_ID || 
+                       '';
+      
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          config.headers.Authorization = `Bearer ${token}`;
+          config.headers['X-Dev-User-Id'] = user.uid;
+        } catch { /* ignore */ }
+      } else {
+        config.headers['X-Dev-User-Id'] = devUid;
+      }
+      
+      // Add shadow header for course context reads
+      if (shadowUid) {
+        config.headers['X-Dev-Shadow-User-Id'] = shadowUid;
+      }
+      
+      return config;
+    }
+
+    // production (always attach token when available)
     const user = auth.currentUser;
     if (user) {
       try {
@@ -147,6 +187,160 @@ export const generatePracticeQuestions = async (data) => {
   }
 };
 
+// RAG API Functions
+export const ragIngest = async (payload) => {
+  try {
+    const response = await fetch(`${API_BASE}/api/rag/ingest`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/rag/ingest'))
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(`ragIngest failed: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const ragRetrieve = async (payload) => {
+  try {
+    const response = await fetch(`${API_BASE}/api/rag/retrieve`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/rag/retrieve'))
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(`ragRetrieve failed: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const ragHealth = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/api/rag/health`, {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/rag/health'))
+      },
+    });
+    if (!response.ok) throw new Error(`ragHealth failed: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  if (FLAGS.DEV_NO_AUTH) return {};
+  
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const token = await user.getIdToken();
+      return { Authorization: `Bearer ${token}` };
+    } catch (error) {
+      console.error('Error getting ID token:', error);
+      return {};
+    }
+  }
+  return {};
+};
+
+// Generate stable dev user ID for development
+const devUid = (() => {
+  const key = 'devUid';
+  let v = localStorage.getItem(key);
+  if (!v) {
+    v = 'dev-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem(key, v);
+  }
+  return v;
+})();
+
+// Helper function to get auth headers for specific URLs
+const authHeadersFor = async (url) => {
+  const isGradescope = url.includes('/api/gradescope/');
+  const headers = {};
+  
+  // Always include a stable dev user id for Gradescope endpoints
+  if (isGradescope) headers['X-Dev-User-Id'] = (auth.currentUser?.uid) || devUid;
+  
+  // Add shadow header for course context reads in dev
+  if (FLAGS.DEV_NO_AUTH) {
+    const shadowUid = localStorage.getItem('shadowUid') || import.meta.env.VITE_DEV_SHADOW_USER_ID || '';
+    if (shadowUid) {
+      headers['X-Dev-Shadow-User-Id'] = shadowUid;
+    }
+  }
+  
+  // Attach Firebase token if present (works in both dev and prod)
+  if (auth.currentUser) {
+    try {
+      headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`;
+    } catch (e) {
+      console.warn('Token fetch failed, proceeding without Authorization.');
+    }
+  }
+  
+  return headers;
+};
+
+// Updated chat function to use RAG
+export const chatAsk = async ({ sessionId, courseId, message }) => {
+  try {
+    const response = await fetch(`${API_BASE}/api/ai/chat`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/ai/chat'))
+      },
+      body: JSON.stringify({ sessionId, courseId, message }),
+    });
+    
+    const txt = await response.text();
+    if (import.meta.env.DEV) console.log('[CHAT RAW BYTES]', txt.length, '[RAW]', txt.slice(0, 200));
+    
+    if (!response.ok) throw new Error(`chatAsk failed: ${response.status}`);
+    
+    try { 
+      return JSON.parse(txt); 
+    } catch { 
+      return { success: false, error: 'BAD_JSON', raw: txt }; 
+    }
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// RAG retrieve fallback function (updated to match existing signature)
+export const ragRetrieveFallback = async ({ courseId, query }) => {
+  try {
+    const response = await fetch(`${API_BASE}/api/rag/retrieve`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json', 
+        ...(await authHeadersFor('/api/rag/retrieve')) 
+      },
+      body: JSON.stringify({ courseId, query, limit: 8 }),
+    });
+    
+    if (!response.ok) throw new Error(`ragRetrieve failed: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Legacy chat function for backward compatibility
 export const postChatMessage = async (data) => {
   // data should contain { history: [], message: "user's message" }
   try {
@@ -231,8 +425,16 @@ export const createAssignment = async (courseId, assignmentData) => {
 // Gradescope Endpoints
 export const gradescopeLogin = async (credentials) => {
   try {
-    const response = await apiClient.post('/gradescope/login', credentials);
-    return response.data;
+    const response = await fetch(`${API_BASE}/api/gradescope/login`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/gradescope/login'))
+      },
+      body: JSON.stringify(credentials),
+    });
+    if (!response.ok) throw new Error(`gradescopeLogin failed: ${response.status}`);
+    return response.json();
   } catch (error) {
     return handleApiError(error);
   }
@@ -240,8 +442,15 @@ export const gradescopeLogin = async (credentials) => {
 
 export const getGradescopeCourses = async () => {
   try {
-    const response = await apiClient.get('/gradescope/courses');
-    return response.data;
+    const response = await fetch(`${API_BASE}/api/gradescope/courses`, {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/gradescope/courses'))
+      },
+    });
+    if (!response.ok) throw new Error(`getGradescopeCourses failed: ${response.status}`);
+    return response.json();
   } catch (error) {
     return handleApiError(error);
   }
@@ -249,8 +458,47 @@ export const getGradescopeCourses = async () => {
 
 export const getGradescopeAssignments = async (courseId) => {
   try {
-    const response = await apiClient.get(`/gradescope/courses/${courseId}/assignments`);
-    return response.data;
+    const response = await fetch(`${API_BASE}/api/gradescope/courses/${courseId}/assignments`, {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor(`/api/gradescope/courses/${courseId}/assignments`))
+      },
+    });
+    if (!response.ok) throw new Error(`getGradescopeAssignments failed: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const checkGradescopeAuthStatus = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/api/gradescope/auth/status`, {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/gradescope/auth/status'))
+      },
+    });
+    if (!response.ok) throw new Error(`checkGradescopeAuthStatus failed: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getGradescopeHealth = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/api/gradescope/health`, {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(await authHeadersFor('/api/gradescope/health'))
+      },
+    });
+    if (!response.ok) throw new Error(`getGradescopeHealth failed: ${response.status}`);
+    return response.json();
   } catch (error) {
     return handleApiError(error);
   }
@@ -277,10 +525,30 @@ export const manageGradescopeImports = async (data) => {
 // Fetch Gradescope Assignment PDF
 export const getGradescopeAssignmentPDF = async (courseId, assignmentId) => {
   try {
-    const response = await apiClient.get(`/gradescope/assignments/${courseId}/${assignmentId}/pdf`, {
-      responseType: 'blob', // Important for PDF
+    const response = await fetch(`${API_BASE}/api/gradescope/assignments/${courseId}/${assignmentId}/pdf`, {
+      method: 'GET',
+      headers: { 
+        ...(await authHeadersFor('/api/gradescope/assignments'))
+      },
     });
-    return response.data; // Blob
+    
+    if (!response.ok) {
+      // Try to parse JSON error response first
+      try {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}`,
+          status: response.status,
+          details: errorData.details
+        };
+      } catch (jsonError) {
+        // If JSON parsing fails, throw generic error
+        throw new Error(`getGradescopeAssignmentPDF failed: ${response.status}`);
+      }
+    }
+    
+    return response.blob();
   } catch (error) {
     return handleApiError(error);
   }
@@ -395,15 +663,6 @@ export const processPDF = async (file, prompt = 'Please analyze this PDF and pro
   }
 };
 
-// Check Gradescope authentication status
-export const checkGradescopeAuthStatus = async () => {
-  try {
-    const response = await apiClient.get('/gradescope/auth/status');
-    return response.data;
-  } catch (error) {
-    return handleApiError(error);
-  }
-};
 
 // Calendar API Functions
 export const getCalendarData = async (startDate, endDate) => {
@@ -453,6 +712,17 @@ export const updateCalendarEvent = async (eventId, eventData) => {
 export const deleteCalendarEvent = async (eventId) => {
   try {
     const response = await apiClient.delete(`/schedules/events/${eventId}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const deleteRecurringEvent = async (eventId, deleteType) => {
+  try {
+    const response = await apiClient.delete(`/schedules/events/${eventId}/recurring`, {
+      data: { deleteType } // 'this', 'all', or 'following'
+    });
     return response.data;
   } catch (error) {
     return handleApiError(error);
@@ -706,6 +976,12 @@ export const neuralConquestAPI = {
 
 // Convenient API object for all functions
 export const api = {
+  // RAG functions
+  ragIngest,
+  ragRetrieve,
+  ragHealth,
+  chatAsk,
+  
   // Neural Conquest functions
   getNeuralConquestTopics: neuralConquestAPI.getAvailableTopics,
   startNeuralConquest: neuralConquestAPI.startNewGame,
@@ -725,12 +1001,20 @@ export const api = {
   generateStudyPlan,
   explainConcept,
   generatePracticeQuestions,
-  postChatMessage,
+  postChatMessage, // Legacy
   getCourses,
   createCourse,
   getAssignmentsForCourse,
   getAllAssignments,
   processPracticeExam,
+  getGradescopeAssignmentPDF,
+  
+  // Flags for frontend logic
+  FLAGS,
+  
+  // Dev helpers
+  setDevUid: (uid) => localStorage.setItem('devUid', uid),
+  setShadowUid: (uid) => localStorage.setItem('shadowUid', uid),
 };
 
 export default apiClient; 

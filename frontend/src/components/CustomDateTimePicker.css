@@ -1,0 +1,374 @@
+/* =================== CUSTOM DATE TIME PICKER =================== */
+.custom-datetime-picker {
+  position: relative;
+  width: 100%;
+}
+
+.datetime-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--calendar-text);
+  margin-bottom: 0.5rem;
+}
+
+.datetime-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.datetime-display-input {
+  width: 100%;
+  padding: 0.75rem;
+  padding-right: 3rem;
+  border: 1px solid var(--calendar-input-border);
+  border-radius: 0.375rem;
+  background: var(--calendar-input-bg);
+  color: var(--calendar-text);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.datetime-display-input:hover {
+  border-color: var(--calendar-today);
+}
+
+.datetime-display-input:focus {
+  outline: none;
+  border-color: var(--calendar-input-focus);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.1);
+}
+
+.datetime-display-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.datetime-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.125rem;
+  cursor: pointer;
+  color: var(--calendar-text-secondary);
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.datetime-toggle:hover {
+  background: var(--calendar-hover);
+  color: var(--calendar-today);
+}
+
+.datetime-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =================== DROPDOWN PICKER =================== */
+.datetime-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin-top: 0.25rem;
+  background: var(--calendar-modal-bg);
+  border: 1px solid var(--calendar-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--calendar-shadow-lg);
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =================== PICKER HEADER =================== */
+.picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--calendar-header-bg);
+  border-bottom: 1px solid var(--calendar-border);
+}
+
+.nav-button {
+  background: var(--calendar-button-bg);
+  border: 1px solid var(--calendar-button-border);
+  border-radius: 0.375rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.125rem;
+  color: var(--calendar-text);
+}
+
+.nav-button:hover {
+  background: var(--calendar-hover);
+  border-color: var(--calendar-today);
+  color: var(--calendar-today);
+  transform: scale(1.05);
+}
+
+.month-year {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--calendar-text);
+  margin: 0;
+}
+
+/* =================== CALENDAR GRID =================== */
+.calendar-grid {
+  padding: 1rem;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--calendar-text-secondary);
+  padding: 0.5rem 0;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  border: none;
+  background: transparent;
+  color: var(--calendar-text);
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+.calendar-day:not(.empty):hover {
+  background: var(--calendar-hover);
+  color: var(--calendar-today);
+  transform: scale(1.1);
+}
+
+.calendar-day.today {
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--calendar-today);
+  font-weight: 600;
+  border: 1px solid var(--calendar-today);
+}
+
+.calendar-day.selected {
+  background: var(--calendar-today);
+  color: white;
+  font-weight: 600;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+.calendar-day.empty {
+  cursor: default;
+}
+
+/* =================== TIME SELECTOR =================== */
+.time-selector {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid var(--calendar-border);
+  background: var(--calendar-header-bg);
+}
+
+.time-section {
+  flex: 1;
+}
+
+.time-section label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--calendar-text-secondary);
+  margin-bottom: 0.5rem;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.time-scroll {
+  max-height: 8rem;
+  overflow-y: auto;
+  border: 1px solid var(--calendar-border);
+  border-radius: 0.375rem;
+  background: var(--calendar-input-bg);
+  scroll-behavior: smooth;
+}
+
+.time-scroll::-webkit-scrollbar {
+  width: 0.25rem;
+}
+
+.time-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.time-scroll::-webkit-scrollbar-thumb {
+  background: var(--calendar-text-muted);
+  border-radius: 0.125rem;
+}
+
+.time-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--calendar-text-secondary);
+}
+
+.time-option {
+  width: 100%;
+  padding: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--calendar-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.time-option:hover {
+  background: var(--calendar-hover);
+  color: var(--calendar-today);
+}
+
+.time-option.selected {
+  background: var(--calendar-today);
+  color: white;
+  font-weight: 600;
+}
+
+/* =================== PICKER FOOTER =================== */
+.picker-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+  border-top: 1px solid var(--calendar-border);
+  background: var(--calendar-header-bg);
+}
+
+.footer-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--calendar-button-border);
+}
+
+.footer-button.secondary {
+  background: var(--calendar-button-bg);
+  color: var(--calendar-text);
+}
+
+.footer-button.secondary:hover {
+  background: var(--calendar-hover);
+  border-color: var(--calendar-today);
+  color: var(--calendar-today);
+}
+
+.footer-button.primary {
+  background: var(--calendar-today);
+  color: white;
+  border-color: var(--calendar-today);
+}
+
+.footer-button.primary:hover {
+  background: #15803d;
+  border-color: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+}
+
+/* =================== DARK MODE OVERRIDES =================== */
+.dark-mode .datetime-picker-dropdown {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark-mode .picker-header,
+.dark-mode .time-selector,
+.dark-mode .picker-footer {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark-mode .time-scroll {
+  background: #1f2937;
+  border-color: #4b5563;
+}
+
+.dark-mode .calendar-day.today {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+/* =================== RESPONSIVE DESIGN =================== */
+@media (max-width: 640px) {
+  .datetime-picker-dropdown {
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: 90vw;
+    max-width: 400px;
+    margin: 0;
+  }
+
+  .time-selector {
+    flex-direction: column;
+  }
+  
+  .time-scroll {
+    max-height: 6rem;
+  }
+  
+  .picker-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .footer-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
