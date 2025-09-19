@@ -130,21 +130,32 @@ class PracticeExamController {
         console.log('📄 LaTeX content length:', latexContent.length);
         console.log('📄 LaTeX preview:', latexContent.substring(0, 500));
         
-        let extractedQuestions = PracticeExamController.extractQuestionsFromLatex(latexContent);
+        const AIController = require('./ai.controller');
+        let extractedQuestions = AIController.extractQuestionsFromLatex(latexContent);
         console.log('🔍 Initial extraction found:', extractedQuestions.length, 'questions');
+        console.log('📋 EXTRACTION DEBUG: Direct call to AIController.extractQuestionsFromLatex()');
         
         // ENHANCED: If extraction fails, try alternative patterns specifically for OS homework
         if (extractedQuestions.length === 0) {
           console.log('⚠️ Initial extraction failed, trying alternative patterns...');
+          console.log('📋 EXTRACTION DEBUG: Entering fallback method: extractQuestionsWithFallback()');
           extractedQuestions = PracticeExamController.extractQuestionsWithFallback(latexContent);
           console.log('🔍 Fallback extraction found:', extractedQuestions.length, 'questions');
+          console.log('📋 EXTRACTION DEBUG: Fallback method completed');
+        } else {
+          console.log('📋 EXTRACTION DEBUG: Initial extraction succeeded, no fallback needed');
         }
         
         if (extractedQuestions.length > 0) {
+          console.log('📋 RESPONSE DEBUG: ✅ Questions extracted successfully, building response...');
           questions = extractedQuestions.map(q => q.text).join('\n\n');
           const pdfQuestions = PracticeExamController.distributePointsUniversally(extractedQuestions, parsedQuestionPoints, parseInt(numQuestions));
           const interactiveQuestions = PracticeExamController.distributePointsForInteractive(extractedQuestions, parsedQuestionPoints);
           parsedQuestions = pdfQuestions;
+          
+          console.log('📋 RESPONSE DEBUG: Created pdfQuestions:', pdfQuestions.length, 'items');
+          console.log('📋 RESPONSE DEBUG: Created interactiveQuestions:', interactiveQuestions.length, 'items');
+          console.log('📋 RESPONSE DEBUG: Questions text length:', questions.length, 'chars');
           
           // 🗝️ GENERATE ANSWER KEY
           let answerKeyData = null;
@@ -172,10 +183,32 @@ class PracticeExamController {
             pdfPath: relativePdfPath,
             answerKey: answerKeyData // 🗝️ Add answer key to response
           };
+          
+          console.log('📋 RESPONSE DEBUG: ===== FINAL RESPONSE SUMMARY =====');
+          console.log('📋 RESPONSE DEBUG: Response will contain:');
+          console.log('📋 RESPONSE DEBUG: - questions (text):', typeof responseData.questions, responseData.questions.length, 'chars');
+          console.log('📋 RESPONSE DEBUG: - parsedQuestions (array):', Array.isArray(responseData.parsedQuestions), responseData.parsedQuestions.length, 'items');
+          console.log('📋 RESPONSE DEBUG: - interactiveQuestions (array):', Array.isArray(responseData.interactiveQuestions), responseData.interactiveQuestions.length, 'items');
+          console.log('📋 RESPONSE DEBUG: - questionPoints (array):', Array.isArray(responseData.questionPoints), responseData.questionPoints.length, 'items');
+          console.log('📋 RESPONSE DEBUG: - pdfPath:', responseData.pdfPath);
+          console.log('📋 RESPONSE DEBUG: - answerKey:', responseData.answerKey ? 'present' : 'null');
+          console.log('📋 RESPONSE DEBUG: ✅ SUCCESS - Frontend will receive interactiveQuestions');
+          console.log('📋 RESPONSE DEBUG: ==========================================');
+          
           return res.json({ success: true, data: responseData });
         } else {
+          console.log('📋 RESPONSE DEBUG: ❌ NO QUESTIONS EXTRACTED - Creating fallback response');
+          console.log('📋 RESPONSE DEBUG: This will result in generic placeholder questions');
+          console.log('📋 RESPONSE DEBUG: Frontend will likely fall back to weak parsing');
           questions = `Generated ${numQuestions} practice exam questions with tables, diagrams, and code snippets`;
           parsedQuestions = Array.from({length: parseInt(numQuestions) || 5}, (_, index) => ({ id: index + 1, question: `Practice Question ${index + 1}: Complex problem with multiple parts`, points: parsedQuestionPoints[index] || Math.round(100 / (parseInt(numQuestions) || 5)) }));
+          
+          console.log('📋 RESPONSE DEBUG: ===== FAILURE RESPONSE SUMMARY =====');
+          console.log('📋 RESPONSE DEBUG: - interactiveQuestions: NOT CREATED (null/undefined)');
+          console.log('📋 RESPONSE DEBUG: - parsedQuestions: generic placeholders');
+          console.log('📋 RESPONSE DEBUG: - questions: generic text');
+          console.log('📋 RESPONSE DEBUG: ❌ FAILURE - Frontend will use weak parsing');
+          console.log('📋 RESPONSE DEBUG: ==========================================');
         }
       } catch (error) {
         console.error('❌ Error reading LaTeX file:', error);
@@ -266,14 +299,7 @@ class PracticeExamController {
 
   // ================= Helpers copied from original AIController (practice exam specific) =================
 
-  static extractQuestionsFromLatex(latexContent) {
-    // We will require and reuse the exact helper methods from the original controller file to avoid duplication
-    const AIController = require('./ai.controller');
-    if (typeof AIController.extractQuestionsFromLatex === 'function') {
-      return AIController.extractQuestionsFromLatex(latexContent);
-    }
-    return [];
-  }
+
 
   static distributePointsUniversally(extractedQuestions, frontendPointDistribution, requestedNumQuestions) {
     const AIController = require('./ai.controller');
@@ -296,19 +322,22 @@ class PracticeExamController {
    */
   static extractQuestionsWithFallback(latexContent) {
     console.log('🔧 FALLBACK: Enhanced question extraction...');
+    console.log('📋 FALLBACK DEBUG: Starting 3-tier fallback extraction system');
     const questions = [];
     
     try {
       // Method 1: Look for Problem sections with different patterns
+      console.log('📋 FALLBACK DEBUG: Trying Method 1 - Problem/Question section patterns');
       const problemPatterns = [
         /\\section\*?\{Problem\s+(\d+)[^}]*\}([\s\S]*?)(?=\\section\*?\{Problem\s+\d+|\\end\{document\}|$)/gi,
         /\\section\*?\{Question\s+(\d+)[^}]*\}([\s\S]*?)(?=\\section\*?\{Question\s+\d+|\\end\{document\}|$)/gi,
         /\\section\*?\{(\d+)\.[^}]*\}([\s\S]*?)(?=\\section\*?\{\d+\.|\\end\{document\}|$)/gi
       ];
       
-      for (const pattern of problemPatterns) {
+      for (let patternIndex = 0; patternIndex < problemPatterns.length; patternIndex++) {
+        const pattern = problemPatterns[patternIndex];
         const matches = [...latexContent.matchAll(pattern)];
-        console.log(`🔍 Pattern ${pattern} found ${matches.length} matches`);
+        console.log(`📋 FALLBACK DEBUG: Pattern ${patternIndex + 1} (${pattern.toString()}) found ${matches.length} matches`);
         
         matches.forEach((match, index) => {
           const questionNum = match[1];
@@ -327,17 +356,25 @@ class PracticeExamController {
               text: `Q${questionNum}) ${cleanContent}`,
               points: 10 // Default points
             });
-            console.log(`✅ Extracted Question ${questionNum}: ${cleanContent.substring(0, 80)}...`);
+            console.log(`✅ FALLBACK DEBUG: Method 1 extracted Question ${questionNum}: ${cleanContent.substring(0, 80)}...`);
           }
         });
         
-        if (questions.length > 0) break; // Stop if we found questions
+        if (questions.length > 0) {
+          console.log(`📋 FALLBACK DEBUG: Method 1 succeeded with pattern ${patternIndex + 1}, found ${questions.length} questions`);
+          break; // Stop if we found questions
+        }
+      }
+      
+      if (questions.length === 0) {
+        console.log('📋 FALLBACK DEBUG: Method 1 failed, no section patterns matched');
       }
       
       // Method 2: If still no questions, look for enumerate items
       if (questions.length === 0) {
-        console.log('🔍 Trying enumerate extraction...');
+        console.log('📋 FALLBACK DEBUG: Trying Method 2 - Enumerate item extraction');
         const itemMatches = latexContent.match(/\\item\s+([^\\]*(?:\\[^i][^t][^e][^m][^\\]*)*)/g);
+        console.log(`📋 FALLBACK DEBUG: Method 2 found ${itemMatches ? itemMatches.length : 0} \\item matches`);
         
         if (itemMatches) {
           itemMatches.forEach((item, index) => {
@@ -353,18 +390,25 @@ class PracticeExamController {
                 text: `Q${index + 1}) ${cleanItem}`,
                 points: 10
               });
-              console.log(`✅ Extracted Item ${index + 1}: ${cleanItem.substring(0, 80)}...`);
+              console.log(`✅ FALLBACK DEBUG: Method 2 extracted Item ${index + 1}: ${cleanItem.substring(0, 80)}...`);
+            } else {
+              console.log(`📋 FALLBACK DEBUG: Method 2 skipped item ${index + 1} (too short or honor code): ${cleanItem.substring(0, 50)}...`);
             }
           });
+          console.log(`📋 FALLBACK DEBUG: Method 2 completed, extracted ${questions.length} questions from items`);
+        } else {
+          console.log('📋 FALLBACK DEBUG: Method 2 failed, no \\item patterns found');
         }
       }
       
       // Method 3: Last resort - split by meaningful patterns
       if (questions.length === 0) {
-        console.log('🔍 Trying heuristic splitting...');
+        console.log('📋 FALLBACK DEBUG: Trying Method 3 - Heuristic line-by-line splitting');
         const lines = latexContent.split('\n');
+        console.log(`📋 FALLBACK DEBUG: Method 3 processing ${lines.length} lines`);
         let currentQuestion = '';
         let questionCount = 0;
+        let questionIndicatorsFound = 0;
         
         for (const line of lines) {
           const trimmed = line.trim();
@@ -377,6 +421,9 @@ class PracticeExamController {
               trimmed.match(/^[a-z]\)/) || 
               trimmed.match(/question|problem|what|how|why|explain|describe|calculate|find|solve|consider/i)) {
             
+            questionIndicatorsFound++;
+            console.log(`📋 FALLBACK DEBUG: Method 3 found question indicator ${questionIndicatorsFound}: ${trimmed.substring(0, 60)}...`);
+            
             // Save previous question
             if (currentQuestion.trim().length > 50) {
               questionCount++;
@@ -384,7 +431,7 @@ class PracticeExamController {
                 text: `Q${questionCount}) ${currentQuestion.trim()}`,
                 points: 10
               });
-              console.log(`✅ Extracted Heuristic ${questionCount}: ${currentQuestion.substring(0, 80)}...`);
+              console.log(`✅ FALLBACK DEBUG: Method 3 extracted Heuristic ${questionCount}: ${currentQuestion.substring(0, 80)}...`);
             }
             
             currentQuestion = trimmed;
@@ -400,14 +447,29 @@ class PracticeExamController {
             text: `Q${questionCount}) ${currentQuestion.trim()}`,
             points: 10
           });
+          console.log(`✅ FALLBACK DEBUG: Method 3 extracted final question ${questionCount}: ${currentQuestion.substring(0, 80)}...`);
         }
+        
+        console.log(`📋 FALLBACK DEBUG: Method 3 completed, found ${questionIndicatorsFound} indicators, extracted ${questions.length} questions`);
       }
       
     } catch (error) {
-      console.error('❌ Fallback extraction failed:', error);
+      console.error('❌ FALLBACK DEBUG: Fallback extraction failed:', error);
+      console.log('📋 FALLBACK DEBUG: Exception occurred, returning empty questions array');
     }
     
-    console.log(`✅ Fallback extraction completed: ${questions.length} questions found`);
+    console.log(`📋 FALLBACK DEBUG: ===== FALLBACK EXTRACTION SUMMARY =====`);
+    console.log(`📋 FALLBACK DEBUG: Final result: ${questions.length} questions extracted`);
+    if (questions.length > 0) {
+      console.log(`📋 FALLBACK DEBUG: Successfully used fallback extraction methods`);
+      questions.forEach((q, i) => {
+        console.log(`📋 FALLBACK DEBUG: Question ${i+1}: ${q.text.substring(0, 60)}...`);
+      });
+    } else {
+      console.log(`📋 FALLBACK DEBUG: ⚠️ ALL FALLBACK METHODS FAILED - No questions extracted`);
+    }
+    console.log(`📋 FALLBACK DEBUG: ==========================================`);
+    
     return questions;
   }
 }

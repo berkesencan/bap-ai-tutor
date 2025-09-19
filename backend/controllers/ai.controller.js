@@ -217,16 +217,58 @@ class AIController {
           .trim();
       };
 
+      console.log('🔍 EXTRACTION METHOD DEBUG: Starting extraction method cascade...');
+      
+      console.log('🔍 EXTRACTION METHOD DEBUG: Trying Method 1 - extractExamFormat...');
       const examQuestions = this.extractExamFormat(latexContent, cleanLatexText);
-      if (examQuestions.length > 0) return examQuestions;
+      if (examQuestions.length > 0) {
+        console.log('✅ EXTRACTION METHOD DEBUG: SUCCESS - extractExamFormat found', examQuestions.length, 'questions');
+        console.log('🎯 EXTRACTION METHOD DEBUG: This will be used for BOTH PDF generation AND interactive questions');
+        return examQuestions;
+      } else {
+        console.log('❌ EXTRACTION METHOD DEBUG: extractExamFormat failed (0 questions)');
+      }
+      
+      console.log('🔍 EXTRACTION METHOD DEBUG: Trying Method 2 - extractHomeworkFormat...');
       const homeworkQuestions = this.extractHomeworkFormat(latexContent, cleanLatexText);
-      if (homeworkQuestions.length > 0) return homeworkQuestions;
+      if (homeworkQuestions.length > 0) {
+        console.log('✅ EXTRACTION METHOD DEBUG: SUCCESS - extractHomeworkFormat found', homeworkQuestions.length, 'questions');
+        console.log('🎯 EXTRACTION METHOD DEBUG: This will be used for BOTH PDF generation AND interactive questions');
+        return homeworkQuestions;
+      } else {
+        console.log('❌ EXTRACTION METHOD DEBUG: extractHomeworkFormat failed (0 questions)');
+      }
+      
+      console.log('🔍 EXTRACTION METHOD DEBUG: Trying Method 3 - extractNumberedFormat...');
       const numberedQuestions = this.extractNumberedFormat(latexContent, cleanLatexText);
-      if (numberedQuestions.length > 0) return numberedQuestions;
+      if (numberedQuestions.length > 0) {
+        console.log('✅ EXTRACTION METHOD DEBUG: SUCCESS - extractNumberedFormat found', numberedQuestions.length, 'questions');
+        console.log('🎯 EXTRACTION METHOD DEBUG: This will be used for BOTH PDF generation AND interactive questions');
+        return numberedQuestions;
+      } else {
+        console.log('❌ EXTRACTION METHOD DEBUG: extractNumberedFormat failed (0 questions)');
+      }
+      
+      console.log('🔍 EXTRACTION METHOD DEBUG: Trying Method 4 - extractItemFormat...');
       const itemQuestions = this.extractItemFormat(latexContent, cleanLatexText);
-      if (itemQuestions.length > 0) return itemQuestions;
+      if (itemQuestions.length > 0) {
+        console.log('✅ EXTRACTION METHOD DEBUG: SUCCESS - extractItemFormat found', itemQuestions.length, 'questions');
+        console.log('🎯 EXTRACTION METHOD DEBUG: This will be used for BOTH PDF generation AND interactive questions');
+        return itemQuestions;
+      } else {
+        console.log('❌ EXTRACTION METHOD DEBUG: extractItemFormat failed (0 questions)');
+      }
+      
+      console.log('🔍 EXTRACTION METHOD DEBUG: Trying Method 5 - extractHeuristicFormat (last resort)...');
       const heuristicQuestions = this.extractHeuristicFormat(latexContent, cleanLatexText);
-      if (heuristicQuestions.length > 0) return heuristicQuestions;
+      if (heuristicQuestions.length > 0) {
+        console.log('✅ EXTRACTION METHOD DEBUG: SUCCESS - extractHeuristicFormat found', heuristicQuestions.length, 'questions');
+        console.log('🎯 EXTRACTION METHOD DEBUG: This will be used for BOTH PDF generation AND interactive questions');
+        return heuristicQuestions;
+      } else {
+        console.log('❌ EXTRACTION METHOD DEBUG: extractHeuristicFormat failed (0 questions)');
+        console.log('🚨 EXTRACTION METHOD DEBUG: ALL METHODS FAILED - No questions extracted!');
+      }
     } catch (error) {
       console.error('❌ Error in universal extraction:', error);
     }
@@ -236,26 +278,51 @@ class AIController {
   static extractExamFormat(latexContent, cleanLatexText) {
     const questions = [];
     if (!latexContent.includes('\\section*{Problem') && !latexContent.includes('\\section{Problem')) return questions;
-    const problemSections = latexContent.split(/\\section\*?\{Problem \d+\}/);
+    console.log('🔍 EXAM FORMAT DEBUG: Found Problem sections, starting extraction...');
+    const problemSections = latexContent.split(/\\section\*?\{Problem \d+[^}]*\}/);
+    console.log('🔍 EXAM FORMAT DEBUG: Split into', problemSections.length - 1, 'problem sections');
     for (let i = 1; i < problemSections.length; i++) {
       const problemContent = problemSections[i];
       const lines = problemContent.split('\n');
       let questionNumber = i;
       let mainQuestionContext = '';
       let foundFirstSubPart = false;
+      console.log(`🔍 EXAM FORMAT DEBUG: Processing Problem ${questionNumber} with ${lines.length} lines`);
       for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
         const line = lines[lineIndex].trim();
         if (line.match(/^\\section/)) break;
         const subPartMatch1 = line.match(/^([a-z])\.\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
         const subPartMatch2 = line.match(/^\(([a-z])\)\s*(.*)/);
-        const subPartMatch3 = line.match(/^\[([a-z])\.\]\s*(?:\[(\n?\d+)(?:\s*points?)?\]\s*)?(.*)/i);
-        const subPartMatch = subPartMatch1 || subPartMatch2 || subPartMatch3;
-        if (subPartMatch) { foundFirstSubPart = true; break; }
+        const subPartMatch3 = line.match(/^(?:\\item)?\[([a-z])\.\]\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
+        const subPartMatch4 = line.match(/^\\item\[([a-z])\.\]\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
+        const subPartMatch5 = line.match(/^\\item\[\(([a-z])\)\]\s*(.*)/i);
+        const subPartMatch = subPartMatch1 || subPartMatch2 || subPartMatch3 || subPartMatch4 || subPartMatch5;
+        if (subPartMatch) {
+          console.log(`🔍 EXAM FORMAT DEBUG: Found first subpart at line ${lineIndex}: "${line}"`);
+          if (subPartMatch1) {
+            console.log(`🎯 PATTERN DEBUG: PATTERN 1 DETECTED - "a. [10] Question" format`);
+            console.log(`🔍 EXAM FORMAT DEBUG: Matched with pattern: pattern1`);
+          } else if (subPartMatch2) {
+            console.log(`🎯 PATTERN DEBUG: PATTERN 2 DETECTED - "(a) Question" format`);
+            console.log(`🔍 EXAM FORMAT DEBUG: Matched with pattern: pattern2`);
+          } else if (subPartMatch3) {
+            console.log(`🎯 PATTERN DEBUG: PATTERN 3 DETECTED - "\\item[a.] [10]" or "[a.] [10]" format`);
+            console.log(`🔍 EXAM FORMAT DEBUG: Matched with pattern: pattern3`);
+          } else if (subPartMatch5) {
+            console.log(`🎯 PATTERN DEBUG: PATTERN 5 DETECTED - "\\item[(a)]" format`);
+            console.log(`🔍 EXAM FORMAT DEBUG: Matched with pattern: pattern5`);
+          }
+          foundFirstSubPart = true;
+          break; 
+        }
         else if (!foundFirstSubPart && line.length > 0) {
           if (mainQuestionContext.length > 0) mainQuestionContext += ' ';
           mainQuestionContext += line;
+          console.log(`🔍 EXAM FORMAT DEBUG: Added to main context: "${line}"`);
         }
       }
+      console.log(`🔍 EXAM FORMAT DEBUG: Main question context: "${mainQuestionContext}"`);
+      console.log(`🔍 EXAM FORMAT DEBUG: Found first subpart: ${foundFirstSubPart}`);
       let currentSubPart = '';
       let subPartLetter = '';
       let subPartPoints = null;
@@ -264,20 +331,45 @@ class AIController {
         if (line.match(/^\\section/)) break;
         const subPartMatch1 = line.match(/^([a-z])\.\s*\((\d+)\)\s*(.*)/i) || line.match(/^([a-z])\.\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
         const subPartMatch2 = line.match(/^\(([a-z])\)\s*(.*)/);
-        const subPartMatch3 = line.match(/^\[([a-z])\.\]\s*(?:\[(\n?\d+)(?:\s*points?)?\]\s*)?(.*)/i);
-        const subPartMatch = subPartMatch1 || subPartMatch2 || subPartMatch3;
+        const subPartMatch3 = line.match(/^(?:\\item)?\[([a-z])\.\]\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
+        const subPartMatch4 = line.match(/^\\item\[([a-z])\.\]\s*\[(\n?\d+)(?:\s*points?)?\]\s*(.*)/i);
+        const subPartMatch5 = line.match(/^\\item\[\(([a-z])\)\]\s*(.*)/i);
+        const subPartMatch = subPartMatch1 || subPartMatch2 || subPartMatch3 || subPartMatch4 || subPartMatch5;
         if (subPartMatch) {
           if (currentSubPart.trim() && subPartLetter) {
             const cleanSubPartText = cleanLatexText(currentSubPart);
-            if (cleanSubPartText.length > 10) {
+            if (cleanSubPartText.length > 3) {
               const cleanMainContext = cleanLatexText(mainQuestionContext);
               const fullQuestionText = cleanMainContext + (cleanMainContext.length > 0 ? '\n\n' : '') + `(${subPartLetter}) ${cleanSubPartText}`;
               questions.push({ text: `Q${questionNumber}${subPartLetter}) ${fullQuestionText}`, points: subPartPoints });
+              console.log(`✅ EXAM FORMAT DEBUG: Created question Q${questionNumber}${subPartLetter} with ${subPartPoints} points`);
+              console.log(`🔍 EXAM FORMAT DEBUG: Question text preview: "${fullQuestionText.substring(0, 100)}..."`);
             }
           }
-          if (subPartMatch1) { subPartLetter = subPartMatch1[1]; subPartPoints = parseInt(subPartMatch1[2]); currentSubPart = subPartMatch1[3]; }
-          else if (subPartMatch2) { subPartLetter = subPartMatch2[1]; subPartPoints = null; currentSubPart = subPartMatch2[2]; }
-          else if (subPartMatch3) { subPartLetter = subPartMatch3[1]; subPartPoints = subPartMatch3[2] ? parseInt(subPartMatch3[2]) : null; currentSubPart = subPartMatch3[3]; }
+          if (subPartMatch1) {
+            subPartLetter = subPartMatch1[1];
+            subPartPoints = parseInt(subPartMatch1[2]);
+            currentSubPart = subPartMatch1[3];
+            console.log(`🔍 EXAM FORMAT DEBUG: New subpart ${subPartLetter} (${subPartPoints} pts) starting: "${currentSubPart}"`);
+          }
+          else if (subPartMatch2) { 
+            subPartLetter = subPartMatch2[1];
+            subPartPoints = null; 
+            currentSubPart = subPartMatch2[2];
+            console.log(`🔍 EXAM FORMAT DEBUG: New subpart ${subPartLetter} (no pts) starting: "${currentSubPart}"`);
+          }
+          else if (subPartMatch3) { 
+            subPartLetter = subPartMatch3[1]; 
+            subPartPoints = subPartMatch3[2] ? parseInt(subPartMatch3[2]) : null; 
+            currentSubPart = subPartMatch3[3]; 
+            console.log(`🔍 EXAM FORMAT DEBUG: New subpart ${subPartLetter} (${subPartPoints} pts) starting: "${currentSubPart}"`);
+          }
+          else if (subPartMatch5) { 
+            subPartLetter = subPartMatch5[1]; 
+            subPartPoints = null; 
+            currentSubPart = subPartMatch5[2]; 
+            console.log(`🔍 EXAM FORMAT DEBUG: New subpart ${subPartLetter} (no pts) starting: "${currentSubPart}"`);
+          }
         } else if (subPartLetter && line.length > 0) {
           currentSubPart += ' ' + line;
         } else if (!subPartLetter && line.length > 0) {
@@ -286,16 +378,22 @@ class AIController {
         }
       if (currentSubPart.trim() && subPartLetter) {
         const cleanSubPartText = cleanLatexText(currentSubPart);
-        if (cleanSubPartText.length > 10) {
+        if (cleanSubPartText.length > 3) {
           const cleanMainContext = cleanLatexText(mainQuestionContext);
           const fullQuestionText = cleanMainContext + (cleanMainContext.length > 0 ? '\n\n' : '') + `(${subPartLetter}) ${cleanSubPartText}`;
           questions.push({ text: `Q${questionNumber}${subPartLetter}) ${fullQuestionText}`, points: subPartPoints });
+          console.log(`✅ EXAM FORMAT DEBUG: Created final question Q${questionNumber}${subPartLetter} with ${subPartPoints} points`);
         }
       } else if (currentSubPart.trim() && !subPartLetter) {
         const cleanText = cleanLatexText(currentSubPart);
-        if (cleanText.length > 20) questions.push({ text: `Q${questionNumber}) ${cleanText}`, points: null });
+        if (cleanText.length > 20) {
+          questions.push({ text: `Q${questionNumber}) ${cleanText}`, points: null });
+          console.log(`✅ EXAM FORMAT DEBUG: Created single question Q${questionNumber} (no subparts)`);
+        }
       }
+      console.log(`🔍 EXAM FORMAT DEBUG: Problem ${questionNumber} completed, total questions so far: ${questions.length}`);
     }
+    console.log(`✅ EXAM FORMAT DEBUG: Extraction complete, total questions: ${questions.length}`);
     return questions;
   }
 
@@ -371,8 +469,14 @@ class AIController {
 
   static extractItemFormat(latexContent, cleanLatexText) {
     const questions = [];
-    const itemMatches = latexContent.match(/\\item[^\\]*(?:\\[^i][^t][^e][^m][^\\]*)*(?=\\item|\\end|$)/gs);
+    const itemMatches = latexContent.match(/\\item\s*\[[^\]]*\]\s*[^]*?(?=\\item|\\section|\n\d+\.|\\end|$)/gs);
+    console.log('🔍 ITEM FORMAT DEBUG: Found', itemMatches ? itemMatches.length : 0, 'total \\item matches');
     if (itemMatches) {
+      console.log('🔍 ITEM FORMAT DEBUG: Raw items found:');
+      itemMatches.forEach((item, index) => {
+        const preview = cleanLatexText(item).substring(0, 100);
+        console.log(`  ${index + 1}. "${preview}..."`);
+      });
       let mainQuestionContext = '';
       let mainQuestionNumber = 0;
       for (let i = 0; i < itemMatches.length; i++) {
@@ -384,18 +488,51 @@ class AIController {
           const subPartLetter = subPartMatch[1];
           const subPartText = subPartMatch[2];
           if (subPartLetter === 'a') {
-            if (i > 0) {
-              const previousItem = itemMatches[i - 1];
-              const previousCleanText = cleanLatexText(previousItem);
-              const isPreviousSubPart = previousCleanText.match(/^\[\(([a-z])\)\]/);
-              if (!isPreviousSubPart && previousCleanText.length > 20) {
-                mainQuestionContext = previousCleanText;
+            // Find main context by looking at LaTeX structure before this item
+            const itemPosition = latexContent.indexOf(item);
+            if (itemPosition !== -1) {
+              const beforeContent = latexContent.substring(0, itemPosition);
+              
+              // Look for the last meaningful content before enumerate
+              const enumerateMatch = beforeContent.lastIndexOf('\\begin{enumerate}');
+              if (enumerateMatch !== -1) {
+                // Look backwards from enumerate for the problem statement
+                let contextStart = enumerateMatch - 500; // Look back 500 chars
+                if (contextStart < 0) contextStart = 0;
+                
+                const contextContent = beforeContent.substring(contextStart, enumerateMatch);
+                const contextLines = contextContent.split('\n').filter(line => {
+                  const trimmed = line.trim();
+                  return trimmed && 
+                    !trimmed.includes('\\section') && 
+                    !trimmed.includes('\\begin') && 
+                    !trimmed.includes('\\end') &&
+                    !trimmed.includes('\\item') &&
+                    !trimmed.includes('\\maketitle') &&
+                    !trimmed.includes('\\noindent') &&
+                    trimmed.length > 30 &&
+                    !trimmed.match(/^\d+\./) && // Skip numbered items
+                    !trimmed.toLowerCase().includes('homework') &&
+                    !trimmed.toLowerCase().includes('due ');
+                });
+                
+                if (contextLines.length > 0) {
+                  // Take the last meaningful line as main context
+                  const rawContext = contextLines[contextLines.length - 1];
+                  mainQuestionContext = cleanLatexText(rawContext);
+                  console.log(`🔍 ITEM FORMAT DEBUG: Found main context for Problem ${mainQuestionNumber + 1}: "${mainQuestionContext.substring(0, 150)}..."`);
+                } else {
+                  console.log(`🔍 ITEM FORMAT DEBUG: No main context found for Problem ${mainQuestionNumber + 1}`);
+                  mainQuestionContext = '';
+                }
               }
             }
             mainQuestionNumber++;
           }
           const fullQuestionText = mainQuestionContext + (mainQuestionContext.length > 0 ? '\n\n' : '') + `(${subPartLetter}) ${subPartText}`;
           questions.push({ text: `Q${mainQuestionNumber}${subPartLetter}) ${fullQuestionText}`, points: null });
+          console.log(`✅ ITEM FORMAT DEBUG: Created Q${mainQuestionNumber}${subPartLetter}: "${cleanText.substring(0, 80)}..."`);
+          console.log(`🔍 ITEM FORMAT DEBUG: Main context length: ${mainQuestionContext.length} chars`);
         } else {
           const nextItem = i < itemMatches.length - 1 ? itemMatches[i + 1] : null;
           if (nextItem) {
@@ -405,8 +542,10 @@ class AIController {
           }
           mainQuestionNumber++;
           questions.push({ text: `Q${mainQuestionNumber}) ${cleanText}`, points: null });
+          console.log(`✅ ITEM FORMAT DEBUG: Created Q${mainQuestionNumber}: "${cleanText.substring(0, 80)}..."`);
         }
       }
+      console.log(`🔍 ITEM FORMAT DEBUG: Final extraction complete, created ${questions.length} questions`);
       return questions;
     }
     return questions;
