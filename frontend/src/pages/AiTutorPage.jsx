@@ -1552,25 +1552,32 @@ CORRECT ANSWER: [Complete but concise answer - 1-3 sentences]`;
           // Use backend's interactive questions (ALL extracted questions)
           questionsArray = response.data.interactiveQuestions.map(q => q.question);
           questionPoints = response.data.interactiveQuestions.map(q => q.points);
-          console.log('✅ Using backend interactive questions (ALL questions)');
-          console.log(`Questions: ${questionsArray.length} total questions`);
-          console.log('Questions preview:', questionsArray.slice(0, 3).map((q, i) => `${i+1}: ${q.substring(0, 50)}...`));
-          console.log('Points:', questionPoints);
+          console.log('✅ 🎯 FRONTEND DEBUG: Using backend interactive questions (BEST CASE)');
+          console.log(`🎯 FRONTEND DEBUG: Questions: ${questionsArray.length} total questions`);
+          console.log('🎯 FRONTEND DEBUG: Questions preview:', questionsArray.slice(0, 3).map((q, i) => `${i+1}: ${q.substring(0, 50)}...`));
+          console.log('🎯 FRONTEND DEBUG: Points:', questionPoints);
+          console.log('🎯 FRONTEND DEBUG: ✅ SUCCESS - Backend extraction worked perfectly');
         } else if (response.data.parsedQuestions && Array.isArray(response.data.parsedQuestions)) {
           // Fallback to parsedQuestions if interactiveQuestions not available
           questionsArray = response.data.parsedQuestions.map(q => q.question);
           questionPoints = response.data.parsedQuestions.map(q => q.points);
-          console.log('⚠️ Fallback to backend parsed questions (limited)');
-          console.log('Questions:', questionsArray.map((q, i) => `${i+1}: ${q.substring(0, 50)}...`));
-          console.log('Points:', questionPoints);
+          console.log('⚠️ 🎯 FRONTEND DEBUG: Fallback to backend parsed questions (FALLBACK LEVEL 1)');
+          console.log('🎯 FRONTEND DEBUG: interactiveQuestions was:', response.data.interactiveQuestions);
+          console.log('🎯 FRONTEND DEBUG: Questions:', questionsArray.map((q, i) => `${i+1}: ${q.substring(0, 50)}...`));
+          console.log('🎯 FRONTEND DEBUG: Points:', questionPoints);
+          console.log('🎯 FRONTEND DEBUG: ⚠️ PARTIAL SUCCESS - Using limited backend extraction');
         } else {
           // Last resort: parse raw text
-          console.log('⚠️ Last resort: frontend parsing (backend questions not available)');
-          console.log('🔍 Backend response data keys:', Object.keys(response.data || {}));
-          console.log('🔍 Available data:', response.data);
+          console.log('❌ 🎯 FRONTEND DEBUG: Last resort - frontend parsing (FALLBACK LEVEL 2 - WORST CASE)');
+          console.log('🎯 FRONTEND DEBUG: Backend response data keys:', Object.keys(response.data || {}));
+          console.log('🎯 FRONTEND DEBUG: interactiveQuestions was:', response.data.interactiveQuestions);
+          console.log('🎯 FRONTEND DEBUG: parsedQuestions was:', response.data.parsedQuestions);
+          console.log('🎯 FRONTEND DEBUG: Raw questions text length:', (response.data.questions || '').length);
+          console.log('🎯 FRONTEND DEBUG: Raw questions preview:', (response.data.questions || '').substring(0, 200));
           questionsArray = parseNumberedQuestions(response.data.questions || '');
           questionPoints = response.data.questionPoints || [];
-          console.log('📋 Parsed questions count:', questionsArray.length);
+          console.log('🎯 FRONTEND DEBUG: Frontend parsed questions count:', questionsArray.length);
+          console.log('🎯 FRONTEND DEBUG: ❌ FAILURE - Had to use weak frontend parsing (this causes bad questions)');
         }
         
         // UNIFIED: Always run multiple choice detection regardless of data source
