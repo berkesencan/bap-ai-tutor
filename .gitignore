@@ -195,3 +195,81 @@ thumb
 sketch
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,react,firebase,node
+
+### Project Specific Test Files and Generated Content ###
+
+# Test and debug files
+debug-*.js
+test-*.js
+*-test.js
+test-*.tex
+PATTERN_TEST_GUIDE.md
+MANUAL-TEST-GUIDE.md
+TABLE-CONVERSION-TEST-GUIDE.md
+
+# Generated PDFs and output files
+backend/uploads/*.pdf
+step1-output/
+step1.5-output/
+step2-output/
+step2-fixed-output/
+step2-precise-output/
+step2-updated-output/
+step2.5-output/
+step3-output/
+step3-fixed-output/
+comparison-output/
+enhanced-simple-output/
+simple-gemini-output/
+temp/
+
+# Generated HTML and image files
+*.html
+*.png
+*001.png
+*002.png
+*003.png
+*004.png
+*005.png
+*006.png
+*007.png
+*008.png
+extracted-layout.html
+
+# Generated text and analysis files
+*.txt
+format-analysis-report-*.txt
+format-comparison-report-*.txt
+generated-text.txt
+debug-generated-questions.txt
+midterm-extracted.txt
+extracted-text.txt
+extraction-analysis.json
+extracted-images.json
+extracted-tables.json
+
+# Generated LaTeX files
+*.tex
+*.aux
+native-latex-test.tex
+
+# Generated exam PDFs
+generated-*.pdf
+downloaded-exam-*.pdf
+debug-generated-exam.pdf
+generated-pdf-to-analyze.pdf
+latest-fixed.pdf
+latest-improved-fixed.pdf
+
+# Comparison and analysis files
+comparison-*.html
+generated-*.html
+original-*.html
+improved-*.html
+final-*.html
+native-*.html
+exact-fonts-*.html
+extracted-layout.html
+
+# Test component files
+answer-key-button-simple.jsx
